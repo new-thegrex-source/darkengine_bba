@@ -113,6 +113,8 @@ cvar_t	*cl_consoleKeys;
 
 cvar_t  *cl_gamename;
 
+cvar_t  *cl_language; //  
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -3343,6 +3345,7 @@ CL_Init
 */
 void CL_Init( void ) {
 	Com_Printf( "----- Client Initialization -----\n" );
+	Com_Printf( "^1WARNING: THIS IS CLOSED BETA: NO SCREENSHOTS, VIDEOS OR STREAMS!\n" );
 
 	Con_Init ();
 
@@ -3353,6 +3356,8 @@ void CL_Init( void ) {
 	cls.realtime = 0;
 
 	CL_InitInput ();
+	
+	CL_LocINIT ();
 
 	//
 	// register our variables
@@ -3450,6 +3455,9 @@ void CL_Init( void ) {
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60", CVAR_ARCHIVE);
 
 	cl_gamename = Cvar_Get("cl_gamename", GAMENAME_FOR_MASTER, CVAR_TEMP);
+	
+	//fuck..lmao
+	cl_language = Cvar_Get ("cl_language", "default", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

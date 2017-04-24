@@ -1547,11 +1547,19 @@ void UI_Load( void )
     strcpy( lastName, menu->window.name );
 
   String_Init();
-
-  UI_LoadMenus( "ui/menus.txt", qtrue );
-  UI_LoadMenus( "ui/ingame.txt", qfalse );
-  UI_LoadMenus( "ui/tremulous.txt", qfalse );
-  UI_LoadHelp( "ui/help.txt" );
+  if ( !cl_language.integer )
+  {
+	UI_LoadMenus( "%s/ui/menus.txt", language, qtrue );
+	UI_LoadMenus( "%s/ui/ingame.txt", language, qfalse );
+	UI_LoadMenus( "%s/ui/tremulous.txt", language, qfalse );
+	UI_LoadHelp( "%s/ui/help.txt", language );
+  }	  
+  else if( !Q_stricmp( cl_language, "default" ) {
+	UI_LoadMenus( "ui/menus.txt", qtrue );
+	UI_LoadMenus( "ui/ingame.txt", qfalse );
+	UI_LoadMenus( "ui/tremulous.txt", qfalse );
+	UI_LoadHelp( "ui/help.txt" );
+  }
   Menus_CloseAll( );
   Menus_ActivateByName( lastName );
 
@@ -4106,12 +4114,22 @@ void UI_Init( qboolean inGameLoad )
   AssetCache();
 
   start = trap_Milliseconds();
-
-  UI_LoadMenus( "ui/menus.txt", qtrue );
-  UI_LoadMenus( "ui/ingame.txt", qfalse );
-  UI_LoadMenus( "ui/tremulous.txt", qfalse );
-  UI_LoadHelp( "ui/help.txt" );
-
+  
+  if ( cl_language.integer) 
+  {
+	UI_LoadMenus( "%s/ui/menus.txt", language, qtrue );
+	UI_LoadMenus( "%s/ui/ingame.txt", language, qfalse );
+	UI_LoadMenus( "%s/ui/tremulous.txt", language, qfalse );
+	UI_LoadHelp( "%s/ui/help.txt" language );
+  }
+  
+  else if( !Q_stricmp( cl_language, "default" )
+  {
+	UI_LoadMenus( "ui/menus.txt", qtrue );
+	UI_LoadMenus( "ui/ingame.txt", qfalse );
+	UI_LoadMenus( "ui/tremulous.txt", qfalse );
+	UI_LoadHelp( "ui/help.txt" );
+  }
   Menus_CloseAll( );
 
   trap_LAN_LoadCachedServers();

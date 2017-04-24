@@ -225,7 +225,7 @@ static const buildableAttributes_t bg_buildableList[ ] =
    {
     BA_A_HIVE,             //int       buildNum;
     "hive",                //char      *buildName;
-    "Hive",                //char      *humanName;
+    "Jellyfishes Hive",                //char      *humanName;
     "Houses millions of tiny insectoid aliens. When a human "
     "approaches this structure, the insectoids attack.",
     "team_alien_hive",     //char      *entityName;
@@ -2497,7 +2497,7 @@ static const classAttributes_t bg_classList[ ] =
     0.002f,                                         //float   bob;
     1.0f,                                           //float   bobCycle;
     100,                                            //int     steptime;
-    1.0f,                                           //float   speed;
+    2.0f,                                           //float   speed;
     10.0f,                                          //float   acceleration;
     1.0f,                                           //float   airAcceleration;
     6.0f,                                           //float   friction;
@@ -2983,8 +2983,14 @@ void BG_InitClassConfigs( void )
   {
     cc = BG_ClassConfig( i );
 
-    BG_ParseClassFile( va( "configs/classes/%s.cfg",
+	    if ( cl_language.integer) {
+		BG_ParseClassFile( va( "%s/configs/classes/%s.cfg",
+                           BG_Class( i )->name ), cc );		
+		}
+    else if( !Q_stricmp( cl_language, "default" ) {
+		BG_ParseClassFile( va( "configs/classes/%s.cfg",
                            BG_Class( i )->name ), cc );
+		}
   }
 }
 
@@ -3822,7 +3828,7 @@ static const upgradeAttributes_t bg_upgrades[ ] =
     STAGE_GE_5,             //int  stages
     SLOT_HEAD|SLOT_TORSO|SLOT_ARMS|SLOT_LEGS|SLOT_BACKPACK, //int   slots;
     "bsuit",                //char  *upgradeName;
-    "[yeshield]Battlesuit",           //char  *humanName;
+    "[yeshield]Megasuit",           //char  *humanName;
     "A full body armour that is highly effective at repelling alien attacks. "
       "It allows the user to enter hostile situations with a greater degree "
       "of confidence.",

@@ -2,6 +2,7 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2009 Darklegion Development
+Copyright (C) 2017 New Source
 
 This file is part of Tremulous.
 
@@ -27,14 +28,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME              "tremulous"
+#define PRODUCT_NAME              "Bikini Bottom Arena"
 
 #ifdef _MSC_VER
-# define PRODUCT_VERSION          "gpp1"
+# define PRODUCT_VERSION          "CBT0001x01"
 #endif
 
-#define CLIENT_WINDOW_TITLE       "Tremulous " PRODUCT_VERSION
-#define CLIENT_WINDOW_MIN_TITLE   "Tremulous"
+#define CLIENT_WINDOW_TITLE       "BBA " PRODUCT_VERSION
+#define CLIENT_WINDOW_MIN_TITLE   "BBA"
 #define Q3_VERSION                 PRODUCT_NAME " " PRODUCT_VERSION
 
 #define GAMENAME_FOR_MASTER       "Tremulous"

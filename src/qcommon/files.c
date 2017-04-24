@@ -1140,6 +1140,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 						   !FS_IsExt(filename, ".bot", l) &&
 						   !FS_IsExt(filename, ".arena", l) &&
 						   !FS_IsExt(filename, ".menu", l) &&
+						   !FS_IsExt(filename, ".lang", l) &&
 						   !strstr(filename, "levelshots"))
 						{
 							pak->referenced |= FS_GENERAL_REF;
@@ -3338,6 +3339,10 @@ void FS_InitFilesystem( void ) {
 	if ( FS_ReadFile( "default.cfg", NULL ) <= 0 ) {
 		Com_Error( ERR_FATAL, "Couldn't load default.cfg" );
 	}
+	
+	if ( FS_ReadFile( "default.lang", NULL ) <= 0 ) {
+		Com_Error( ERR_FATAL, "Couldn't load default.lang" );
+	}
 
 	Q_strncpyz(lastValidBase, fs_basepath->string, sizeof(lastValidBase));
 	Q_strncpyz(lastValidGame, fs_gamedirvar->string, sizeof(lastValidGame));
@@ -3415,6 +3420,52 @@ qboolean FS_ConditionalRestart(int checksumFeed)
 	}
 	
 	return qfalse;
+}
+
+/*
+======================================
+Localization Strings
+
+Loading .lang files
+======================================
+*
+void LOC_Load ()
+{
+			if (nPaks > 0) {
+				nLen = strlen(name) + 1;
+				// nLen is the length of the mod path
+				// we need to see if there is a description available
+				descPath[0] = '\0';
+				strcpy(descPath, name);
+				strcat(descPath, "/%s.lang", LANGUAGE );
+				nDescLen = FS_SV_FOpenFileRead( descPath, &descHandle );
+				if ( nDescLen > 0 && descHandle) {
+					FILE *file;
+					file = FS_FileForHandle(descHandle);
+					Com_Memset( descPath, 0, sizeof( descPath ) );
+					nDescLen = fread(descPath, 1, 48, file);
+					if (nDescLen >= 0) {
+						descPath[nDescLen] = '\0';
+					}
+					FS_FCloseFile(descHandle);
+				} else {
+					strcpy(descPath, name);
+				}
+				nDescLen = strlen(descPath) + 1;
+
+				if (nTotal + nLen + 1 + nDescLen + 1 < bufsize) {
+					strcpy(listbuf, name);
+					listbuf += nLen;
+					strcpy(listbuf, descPath);
+					listbuf += nDescLen;
+					nTotal += nLen + nDescLen;
+					nMods++;
+				}
+				else {
+					break;
+				}
+			}
+	
 }
 
 /*
