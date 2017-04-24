@@ -206,6 +206,7 @@ vmCvar_t  g_MaxHumanExtraBuildPoints;
 vmCvar_t  g_BuildingCreditsFactor;
 vmCvar_t  g_buildPointDeletion;
 vmCvar_t  g_emptyTeamsSkipMapTime;
+vmCvar_t  g_language;
 
 // copy cvars that can be set in worldspawn so they can be restored later
 static char cv_gravity[ MAX_CVAR_VALUE_STRING ];
@@ -381,7 +382,8 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_MaxHumanExtraBuildPoints, "g_MaxHumanExtraBuildPoints", "800", CVAR_ARCHIVE, 0, qfalse },
   { &g_BuildingCreditsFactor, "g_BuildingCreditsFactor", "0.25", CVAR_ARCHIVE, 0, qfalse },
   { &g_buildPointDeletion, "g_buildPointDeletion", "1", CVAR_ARCHIVE, 0, qfalse },
-  { &g_emptyTeamsSkipMapTime, "g_emptyTeamsSkipMapTime", "15", CVAR_ARCHIVE, 0, qfalse }
+  { &g_emptyTeamsSkipMapTime, "g_emptyTeamsSkipMapTime", "15", CVAR_ARCHIVE, 0, qfalse },
+  { &g_language, "g_language", "russian", CVAR_ARCHIVE, 0, qfalse },
 };
 
 static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 0 ] );

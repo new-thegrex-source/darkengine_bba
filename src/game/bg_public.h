@@ -814,6 +814,12 @@ typedef enum
   PCL_NUM_CLASSES
 } class_t;
 
+typedef enum
+{
+  DEFAULT,
+  RUSSIAN
+} lang_t;
+
 // spectator state
 typedef enum
 {
@@ -847,6 +853,14 @@ typedef enum
 
 
 //---------------------------------------------------------
+
+typedef struct
+{
+  lang_t	number;
+
+  char		*name;  
+	
+} langAttributes_t;
 
 // player class record
 typedef struct
@@ -1076,7 +1090,9 @@ void                        BG_BuildableBoundingBox( buildable_t buildable,
 void                        BG_InitBuildableConfigs( void );
 
 const classAttributes_t     *BG_ClassByName( const char *name );
+const langAttributes_t      *BG_LangByName( const char *name );
 const classAttributes_t     *BG_Class( class_t class );
+const langAttributes_t      *BG_Lang( lang_t lang );
 qboolean                    BG_ClassAllowedInStage( class_t class,
                                                     stage_t stage );
 

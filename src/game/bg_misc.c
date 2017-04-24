@@ -27,6 +27,7 @@ TREMULOUS EDGE MOD SRC FILE
 */
 
 // bg_misc.c -- both games misc functions, all completely stateless
+
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 
@@ -2128,6 +2129,21 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
 
 /*
 ===============
+BG_InitBGame
+
+rlly, idk, but
+===============
+*
+void G_InitBGame( int NULL )
+{
+  G_Printf( "SHIT" );
+  trap_Cvar_Set( "bg_language", "russian" );
+  G_RegisterCommands( );
+	//FUCKYOUSUKA
+}
+
+/*
+===============
 BG_InitBuildableConfigs
 ===============
 */
@@ -2145,6 +2161,24 @@ void BG_InitBuildableConfigs( void )
                                BG_Buildable( i )->name ), bc );
   }
 }
+
+//langs
+
+static const langAttributes_t bg_langList[ ] =
+{
+  {
+	DEFAULT,	// langnum
+	"default"   // langName
+  },	
+  {
+	RUSSIAN,	// langnum
+	"russian"   // langName
+  },
+	
+};
+
+int   bg_numLangs = sizeof( bg_langList ) / sizeof( bg_langList[ 0 ] );
+static const langAttributes_t nullLang = { 0 };
 
 //CLASSES
 static const classAttributes_t bg_classList[ ] =
@@ -2540,6 +2574,24 @@ const classAttributes_t *BG_Class( class_t class )
   return ( class >= PCL_NONE && class < PCL_NUM_CLASSES ) ?
     &bg_classList[ class ] : &nullClass;
 }
+
+/*
+==============
+BG_Lang
+==============
+*
+const langAttributes_t *BG_Lang( lang_t lang )
+{
+	
+}
+*
+void BG_Lang2 ( void ){
+	
+	return G_InitGame;
+	
+	trap_Cvar_Set ("g_language", "russian");
+	
+}; 
 
 /*
 ==============
@@ -2971,6 +3023,16 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
 
 /*
 ===============
+SomeShitForLangs
+===============
+*
+void language ( void )
+{
+	LocINIT ();
+}
+
+/*
+===============
 BG_InitClassConfigs
 ===============
 */
@@ -2978,19 +3040,22 @@ void BG_InitClassConfigs( void )
 {
   int           i;
   classConfig_t *cc;
+  lang_t        *name;
+ // float			g_language;
 
   for( i = PCL_NONE; i < PCL_NUM_CLASSES; i++ )
   {
     cc = BG_ClassConfig( i );
-
-	    if ( cl_language.integer) {
-		BG_ParseClassFile( va( "%s/configs/classes/%s.cfg",
+/*
+	    if ( !g_language, "russian" ) {
+		BG_ParseClassFile( va( "russian/configs/classes/%s.cfg" , 
                            BG_Class( i )->name ), cc );		
-		}
-    else if( !Q_stricmp( cl_language, "default" ) {
+		}*/
+  //  else 
+	//{
 		BG_ParseClassFile( va( "configs/classes/%s.cfg",
                            BG_Class( i )->name ), cc );
-		}
+		//}
   }
 }
 

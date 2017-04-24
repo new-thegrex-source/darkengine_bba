@@ -91,6 +91,7 @@ vmCvar_t  ui_developer;
 vmCvar_t  ui_emoticons;
 vmCvar_t  ui_winner;
 vmCvar_t  ui_chatCommands;
+vmCvar_t  ui_language;
 
 static cvarTable_t    cvarTable[ ] =
 {
@@ -116,7 +117,8 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT },
   { &ui_emoticons, "cg_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE },
   { &ui_winner, "ui_winner", "", CVAR_ROM },
-  { &ui_chatCommands, "ui_chatCommands", "1", CVAR_ARCHIVE }
+  { &ui_chatCommands, "ui_chatCommands", "1", CVAR_ARCHIVE },
+  { &ui_language, "ui_language", "default", CVAR_ARCHIVE }
 };
 
 static int    cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -1547,14 +1549,14 @@ void UI_Load( void )
     strcpy( lastName, menu->window.name );
 
   String_Init();
-  if ( !cl_language.integer )
+  if ( ui_language, "russian" )
   {
-	UI_LoadMenus( "%s/ui/menus.txt", language, qtrue );
-	UI_LoadMenus( "%s/ui/ingame.txt", language, qfalse );
-	UI_LoadMenus( "%s/ui/tremulous.txt", language, qfalse );
-	UI_LoadHelp( "%s/ui/help.txt", language );
+	UI_LoadMenus( "russian/ui/menus.txt", qtrue );
+	UI_LoadMenus( "russian/ui/ingame.txt", qfalse );
+	UI_LoadMenus( "russian/ui/tremulous.txt", qfalse );
+	UI_LoadHelp( "russian/ui/help.txt" );
   }	  
-  else if( !Q_stricmp( cl_language, "default" ) {
+  else {
 	UI_LoadMenus( "ui/menus.txt", qtrue );
 	UI_LoadMenus( "ui/ingame.txt", qfalse );
 	UI_LoadMenus( "ui/tremulous.txt", qfalse );
@@ -4115,15 +4117,14 @@ void UI_Init( qboolean inGameLoad )
 
   start = trap_Milliseconds();
   
-  if ( cl_language.integer) 
+  if ( ui_language, "russian" ) 
   {
-	UI_LoadMenus( "%s/ui/menus.txt", language, qtrue );
-	UI_LoadMenus( "%s/ui/ingame.txt", language, qfalse );
-	UI_LoadMenus( "%s/ui/tremulous.txt", language, qfalse );
-	UI_LoadHelp( "%s/ui/help.txt" language );
-  }
-  
-  else if( !Q_stricmp( cl_language, "default" )
+	UI_LoadMenus( "russian/ui/menus.txt", qtrue );
+	UI_LoadMenus( "russian/ui/ingame.txt", qfalse );
+	UI_LoadMenus( "russian/ui/tremulous.txt", qfalse );
+	UI_LoadHelp( "russian/ui/help.txt" );
+  }  
+  else
   {
 	UI_LoadMenus( "ui/menus.txt", qtrue );
 	UI_LoadMenus( "ui/ingame.txt", qfalse );

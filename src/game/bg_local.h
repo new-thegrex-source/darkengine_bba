@@ -79,6 +79,8 @@ extern  float pm_waterfriction;
 extern  float pm_flightfriction;
 extern  int   c_pmove;
 
+extern  int   bg_language;
+
 void PM_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce );
 void PM_AddTouchEnt( int entityNum );
 void PM_AddEvent( int newEvent );
