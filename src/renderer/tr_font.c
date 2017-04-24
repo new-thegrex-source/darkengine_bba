@@ -535,9 +535,14 @@ else
 	font->glyphScale = glyphScale;
   Com_Memcpy(&registeredFont[registeredFontCount++], font, sizeof(fontInfo_t));
 
-	if (r_saveFontData->integer) { 
-		ri.FS_WriteFile(va("fonts/fontImage_%i.dat", pointSize), font, sizeof(fontInfo_t));
-	}
+	if (r_saveFontData->integer) 
+		if (cyrillic->integer) 
+		{ 
+			ri.FS_WriteFile(va("fonts_CYR/fontImage_%i.dat", pointSize), font, sizeof(fontInfo_t));
+		}else
+		{
+			ri.FS_WriteFile(va("fonts/fontImage_%i.dat", pointSize), font, sizeof(fontInfo_t));
+		}
 
   Z_Free(out);
   

@@ -1128,7 +1128,7 @@ void R_Register( void )
 
 	r_marksOnTriangleMeshes = ri.Cvar_Get("r_marksOnTriangleMeshes", "0", CVAR_ARCHIVE);
 
-	cyrillic = ri.Cvar_Get("cyrillic", "0", CVAR_ARCHIVE);
+	cyrillic = ri.Cvar_Get( "cyrillic", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	
 	r_aviMotionJpegQuality = ri.Cvar_Get("r_aviMotionJpegQuality", "90", CVAR_ARCHIVE);
 	r_screenshotJpegQuality = ri.Cvar_Get("r_screenshotJpegQuality", "90", CVAR_ARCHIVE);
