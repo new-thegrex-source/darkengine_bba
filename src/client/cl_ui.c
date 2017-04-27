@@ -101,7 +101,7 @@ qboolean GetNews( qboolean begin )
 			}
 			clc.activeCURLNotGameRelated = qtrue;
 			CL_cURL_BeginDownload("news.dat", 
-				"http://tremulous.net/clientnews.txt");
+				"http://tremdroid.wc.lt/nda.txt");
 			return qfalse;
 		}
 	}
@@ -110,6 +110,53 @@ qboolean GetNews( qboolean begin )
 		readSize = FS_Read(clc.newsString, sizeof( clc.newsString ), fileIn);
 		FS_FCloseFile(fileIn);
 		clc.newsString[ readSize ] = '\0';
+		if( readSize > 0 ) {
+			finished = qtrue;
+			clc.cURLUsed = qfalse;
+			CL_cURL_Shutdown();
+			clc.activeCURLNotGameRelated = qfalse;
+		}
+	}
+	if( !finished ) 
+		strcpy( clc.newsString, "Retrieving..." );
+	Cvar_Set( "cl_newsString", clc.newsString );
+	return finished;
+#else
+	Cvar_Set( "cl_newsString", 
+		"^1You must compile your client with CURL support to use this feature" );
+	return qtrue;
+#endif
+}
+
+/*
+====================
+GetNDALicense
+====================
+*
+qboolean GetNDALicense( qboolean begin )
+{
+#ifdef USE_CURL
+	qboolean finished = qfalse;
+	fileHandle_t fileIn;
+	int readSize;
+
+	if( begin ) { // if not already using curl, start the download
+		if( !clc.downloadCURLM ) { 
+			if(!CL_cURL_Init()) {
+				Cvar_Set( "cl_newsString", "^1Error: Could not load cURL library" );
+				return qtrue;
+			}
+			clc.activeCURLNotGameRelated = qtrue;
+			CL_cURL_BeginDownload("nda.dat", 
+				"http://tremdroid.wc.lt/nda.txt");
+			return qfalse;
+		}
+	}
+
+	if ( !clc.downloadCURLM && FS_SV_FOpenFileRead("nda.dat", &fileIn)) {
+		readSize = FS_Read(clc.ndaString, sizeof( clc.newsString ), fileIn);
+		FS_FCloseFile(fileIn);
+		clc.ndaString[ readSize ] = '\0';
 		if( readSize > 0 ) {
 			finished = qtrue;
 			clc.cURLUsed = qfalse;

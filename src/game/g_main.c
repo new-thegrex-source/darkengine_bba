@@ -357,7 +357,7 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_minTeamSizePerBuilderA, "g_minTeamSizePerBuilderA", "4", CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART, 0, qtrue },
   { &g_minTeamSizePerBuilderH, "g_minTeamSizePerBuilderH", "4", CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART, 0, qtrue },
   { &g_buildableSvfBroadcast, "g_buildableSvfBroadcast", "1", CVAR_ARCHIVE, 0, qfalse  },
-  { &g_tag, "g_tag", "gpp", CVAR_INIT, 0, qfalse },
+  { &g_tag, "g_tag", "base", CVAR_INIT, 0, qfalse },
   { &g_JumppadPower, "g_JumppadPower", "600", CVAR_ARCHIVE, 0, qfalse  },//
   { &g_InstantRewardMultiplierA, "g_InstantRewardMultiplierA", "1", CVAR_ARCHIVE, 0, qfalse },
   { &g_InstantRewardMultiplierH, "g_InstantRewardMultiplierH", "1", CVAR_ARCHIVE, 0, qfalse },

@@ -501,7 +501,7 @@ else
 
         imageBuff[left++] = ((float)out[k] * max);
       }
-		if (cyrillic->integer){
+		if (cyrillic->integer >== 1 ){
 			Com_sprintf (name, sizeof(name), "fonts_CYR/fontImage_%i_%i.tga", imageNumber++, pointSize);
 			if (r_saveFontData->integer) { 
 			  WriteTGA(name, imageBuff, 256, 256);

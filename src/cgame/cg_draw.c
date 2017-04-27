@@ -1608,13 +1608,13 @@ static void CG_DrawTeamLabel( rectDef_t *rect, team_t team, float text_x, float 
   switch( team )
   {
     case TEAM_ALIENS:
-      t = "Aliens";
+      t = "Jellyfishes";
       if( cg.intermissionStarted )
         Com_sprintf( stage, MAX_TOKEN_CHARS, "(Stage %d)", cgs.alienStage + 1 );
       break;
 
     case TEAM_HUMANS:
-      t = "Humans";
+      t = "Robots";
       if( cg.intermissionStarted )
         Com_sprintf( stage, MAX_TOKEN_CHARS, "(Stage %d)", cgs.humanStage + 1 );
       break;

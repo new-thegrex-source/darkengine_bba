@@ -60,7 +60,7 @@ cvar_t		*con_conspeed;
 
 #define	DEFAULT_CONSOLE_WIDTH	78
 
-vec4_t	console_color = {1.0, 1.0, 1.0, 1.0};
+vec4_t	console_color = {1.0, 7.0, 2.0, 1.0};
 
 
 /*

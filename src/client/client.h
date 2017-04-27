@@ -215,6 +215,7 @@ typedef struct {
 	char		downloadList[MAX_INFO_STRING]; // list of paks we need to download
 	qboolean	downloadRestart;	// if true, we need to do another FS_Restart because we downloaded a pak
 	char		newsString[ MAX_NEWS_STRING ];
+//	char		ndaString[ MAX_NEWS_STRING ];
 
 	// demo information
 	char		demoName[MAX_QPATH];

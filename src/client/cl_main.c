@@ -1317,7 +1317,7 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		return;
 	}
 
-	Cvar_Set("fs_game", "gpp");
+	Cvar_Set("fs_game", "base");
 
 	// shutting down the client so enter full screen ui mode
 	Cvar_Set("r_uiFullScreen", "1");

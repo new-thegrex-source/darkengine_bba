@@ -1135,6 +1135,8 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 					{
 						if(!FS_IsExt(filename, ".shader", l) &&
 						   !FS_IsExt(filename, ".txt", l) &&
+						   !FS_IsExt(filename, ".ttf", l) &&
+						   !FS_IsExt(filename, ".otf", l) &&
 						   !FS_IsExt(filename, ".cfg", l) &&
 						   !FS_IsExt(filename, ".config", l) &&
 						   !FS_IsExt(filename, ".bot", l) &&
@@ -1197,6 +1199,8 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			{
 				if(!FS_IsExt(filename, ".cfg", l) &&		// for config files
 				   !FS_IsExt(filename, ".menu", l) &&		// menu files
+				   !FS_IsExt(filename, ".otf", l) &&		// menu files
+				   !FS_IsExt(filename, ".ttf", l) &&		// menu files
 				   !FS_IsExt(filename, ".game", l) &&		// menu files
 				   !FS_IsExt(filename, ".cfg", l) &&		// for journal files
 				   !FS_IsDemoExt(filename, l))			// demos

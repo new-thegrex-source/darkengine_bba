@@ -1556,7 +1556,7 @@ void UI_Load( void )
 	UI_LoadMenus( "russian/ui/tremulous.txt", qfalse );
 	UI_LoadHelp( "russian/ui/help.txt" );
   }	  
-  else {
+  else if ( ui_language, "default" ) {
 	UI_LoadMenus( "ui/menus.txt", qtrue );
 	UI_LoadMenus( "ui/ingame.txt", qfalse );
 	UI_LoadMenus( "ui/tremulous.txt", qfalse );
@@ -4036,6 +4036,8 @@ UI_Init
 void UI_Init( qboolean inGameLoad )
 {
   int start;
+  
+  const char ui_language = {""};
 
   BG_InitClassConfigs( );
   BG_InitAllowedGameElements( );
@@ -4117,14 +4119,14 @@ void UI_Init( qboolean inGameLoad )
 
   start = trap_Milliseconds();
   
-  if ( ui_language, "russian" ) 
+  if( !strcmp( ui_language, "russian" ) )
   {
 	UI_LoadMenus( "russian/ui/menus.txt", qtrue );
 	UI_LoadMenus( "russian/ui/ingame.txt", qfalse );
 	UI_LoadMenus( "russian/ui/tremulous.txt", qfalse );
 	UI_LoadHelp( "russian/ui/help.txt" );
   }  
-  else
+  else if( !strcmp( ui_language, "default" ) )
   {
 	UI_LoadMenus( "ui/menus.txt", qtrue );
 	UI_LoadMenus( "ui/ingame.txt", qfalse );
