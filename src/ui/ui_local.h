@@ -387,6 +387,17 @@ int       trap_LAN_CompareServers( int source, int sortKey, int sortDir, int s1,
 int       trap_MemoryRemaining( void );
 void      trap_R_RegisterFont( const char *pFontname, int pointSize, fontInfo_t *font );
 void      trap_R_LoadFace(const char *fileName, int pointSize, const char *name, face_t *face);
+void      trap_R_FreeFace(face_t *face);
+void      trap_R_LoadGlyph(face_t *face, const char *str, int img, glyphInfo_t *glyphInfo);
+void      trap_R_FreeGlyph(face_t *face, int img, glyphInfo_t *glyphInfo);
+void      trap_R_Glyph(fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph);
+void      trap_R_FreeCachedGlyphs(face_t *face);
+void      LoadFace(const char *fileName, int pointSize, const char *name, face_t *face);
+void      FreeFace(face_t *face);
+void      LoadGlyph(face_t *face, const char *str, int img, glyphInfo_t *glyphInfo);
+void      FreeGlyph(face_t *face, int img, glyphInfo_t *glyphInfo);
+void      Glyph(fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph);
+void      FreeCachedGlyphs(face_t *face);
 void      trap_S_StopBackgroundTrack( void );
 void      trap_S_StartBackgroundTrack( const char *intro, const char *loop );
 void      LoadFace(const char *fileName, int pointSize, const char *name, face_t *face);

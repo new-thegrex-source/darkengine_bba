@@ -95,6 +95,21 @@ static qboolean Menu_OverActiveItem( menuDef_t *menu, float x, float y );
 
 /*
 ===============
+UIS_Shutdown
+===============
+*/
+void UIS_Shutdown( void )
+{
+  FreeCachedGlyphs( &DC->Assets.dynFont );
+  FreeFace( &DC->Assets.dynFont );
+  FreeCachedGlyphs( &DC->Assets.smallDynFont );
+  FreeFace( &DC->Assets.smallDynFont );
+  FreeCachedGlyphs( &DC->Assets.bigDynFont );
+  FreeFace( &DC->Assets.bigDynFont );
+}
+
+/*
+===============
 UI_InstallCaptureFunc
 ===============
 */

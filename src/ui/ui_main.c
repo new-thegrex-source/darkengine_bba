@@ -4164,20 +4164,11 @@ void UI_Init( qboolean inGameLoad )
 
   start = trap_Milliseconds();
   
-  if( !strcmp( ui_language, "russian" ) )
-  {
-	UI_LoadMenus( "russian/ui/menus.txt", qtrue );
-	UI_LoadMenus( "russian/ui/ingame.txt", qfalse );
-	UI_LoadMenus( "russian/ui/tremulous.txt", qfalse );
-	UI_LoadHelp( "russian/ui/help.txt" );
-  }  
-  else if( !strcmp( ui_language, "default" ) )
-  {
 	UI_LoadMenus( "ui/menus.txt", qtrue );
 	UI_LoadMenus( "ui/ingame.txt", qfalse );
 	UI_LoadMenus( "ui/tremulous.txt", qfalse );
 	UI_LoadHelp( "ui/help.txt" );
-  }
+  
   Menus_CloseAll( );
 
   trap_LAN_LoadCachedServers();

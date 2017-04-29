@@ -326,6 +326,7 @@ itemDef_t;
 typedef struct
 {
   Window window;
+  const char  *dynFont;             // dynFont
   const char  *font;                // font
   qboolean fullScreen;              // covers entire screen
   int itemCount;                    // number of items;
@@ -353,6 +354,9 @@ typedef struct
   fontInfo_t textFont;
   fontInfo_t smallFont;
   fontInfo_t bigFont;
+  face_t     dynFont;
+  face_t     smallDynFont;
+  face_t     bigDynFont;
   qhandle_t cursor;
   qhandle_t gradientBar;
   qhandle_t scrollBarArrowUp;
