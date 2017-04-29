@@ -327,6 +327,10 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 			if ( edit->scroll < 0 ) {
 				edit->scroll = 0;
 			}
+      while( Q_UTF8ContByte( edit->buffer[ edit->scroll ] ) && edit->scroll > 0 )
+      {
+        edit->scroll--;
+      }
 		}
 		prestep = edit->scroll;
 	}
@@ -335,11 +339,14 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 		drawLen = len - prestep;
 	}
 
+  while( Q_UTF8ContByte( edit->buffer[ prestep + drawLen ] ) && prestep + drawLen < len )
+    drawLen++;
+
 	// extract <drawLen> characters from the field at <prestep>
 	if ( drawLen >= MAX_STRING_CHARS ) {
 		Com_Error( ERR_DROP, "drawLen >= MAX_STRING_CHARS" );
 	}
-
+	
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
 
@@ -366,10 +373,13 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 			cursorChar = 10;
 		}
 
-		i = drawLen - strlen( str );
+		i = drawLen - Q_UTF8Strlen( str );
 
-		if ( size == SMALLCHAR_WIDTH ) {
-			SCR_DrawSmallChar( x + ( edit->cursor - prestep - i ) * size, y, cursorChar );
+		if ( SMALLCHAR_WIDTH ) {
+            static char c;
+            float xlocation = x + SCR_ConsoleFontStringWidth( str, edit->cursor) ;
+            c = (char) cursorChar & 0x7F;
+            SCR_DrawConsoleFontChar( xlocation , y, &c );
 		} else {
 			str[0] = cursorChar;
 			str[1] = 0;
@@ -396,6 +406,7 @@ Field_Paste
 */
 void Field_Paste( field_t *edit ) {
 	char	*cbd;
+	int  width;
 	int		pasteLen, i;
 
 	cbd = Sys_GetClipboardData();
@@ -406,8 +417,12 @@ void Field_Paste( field_t *edit ) {
 
 	// send as if typed, so insert / overstrike works properly
 	pasteLen = strlen( cbd );
-	for ( i = 0 ; i < pasteLen ; i++ ) {
-		Field_CharEvent( edit, cbd[i] );
+	while( pasteLen >= ( width = ( Q_UTF8Width( cbd ) > 0 ? Q_UTF8Width( cbd ) : 1 ) ) )
+	{
+		Field_CharEvent( edit, cbd );
+
+		cbd += width;
+		pasteLen -= width;
 	}
 
 	Z_Free( cbd );
@@ -424,7 +439,9 @@ Key events are used for non-printable characters, others are gotten from char ev
 =================
 */
 void Field_KeyDownEvent( field_t *edit, int key ) {
-	int		len;
+//	int		len;
+	int	len, width;
+  char *s;
 
 	// shift-insert is paste
 	if ( ( ( key == K_INS ) || ( key == K_KP_INS ) ) && keys[K_SHIFT].down ) {
@@ -434,6 +451,8 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 
 	key = tolower( key );
 	len = strlen( edit->buffer );
+  s = &edit->buffer[ edit->cursor ];
+  width = Q_UTF8Width( edit->buffer + edit->cursor );
 
 	switch ( key ) {
 		case K_DEL:
@@ -450,8 +469,10 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 			break;
 
 		case K_LEFTARROW:
-			if ( edit->cursor > 0 ) {
+			while ( edit->cursor > 0 ) {
 				edit->cursor--;
+        if( !Q_UTF8ContByte( edit->buffer[ edit->cursor ] ) )
+          break;
 			}
 			break;
 
@@ -460,12 +481,13 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 			break;
 
 		case K_END:
-			edit->cursor = len;
-			break;
-
-		case K_INS:
-			key_overstrikeMode = !key_overstrikeMode;
-			break;
+      edit->cursor = len;
+      while( s > edit->buffer && edit->cursor > 0 && Q_UTF8ContByte( *s ) )
+      {
+        edit->cursor--;
+        s--;
+      }
+      break;
 
 		default:
 			break;
@@ -474,8 +496,10 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 	// Change scroll if cursor is no longer visible
 	if ( edit->cursor < edit->scroll ) {
 		edit->scroll = edit->cursor;
-	} else if ( edit->cursor >= edit->scroll + edit->widthInChars && edit->cursor <= len ) {
+	} else if ( edit->cursor >= edit->scroll + edit->widthInChars + Q_UTF8Width( edit->buffer + edit->scroll ) && edit->cursor <= len ) {
 		edit->scroll = edit->cursor - edit->widthInChars + 1;
+		while( Q_UTF8ContByte( edit->buffer[ edit->scroll ] && edit->scroll > 0 ) )
+      edit->scroll--;
 	}
 }
 
@@ -485,7 +509,7 @@ Field_CharEvent
 ==================
 */
 void Field_CharEvent( field_t *edit, int ch ) {
-	int		len;
+	int		len, width;
 
 	if ( ch == 'v' - 'a' + 1 ) {	// ctrl-v is paste
 		Field_Paste( edit );
@@ -500,7 +524,8 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	len = strlen( edit->buffer );
 
 	if ( ch == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
-		if ( edit->cursor > 0 ) {
+		while ( edit->cursor > 0 ) {
+      qboolean isContinue = Q_UTF8ContByte( edit->buffer[ edit->cursor - 1 ] );
 			memmove( edit->buffer + edit->cursor - 1, 
 				edit->buffer + edit->cursor, len + 1 - edit->cursor );
 			edit->cursor--;
@@ -508,6 +533,8 @@ void Field_CharEvent( field_t *edit, int ch ) {
 			{
 				edit->scroll--;
 			}
+      if( !isContinue )
+        break;
 		}
 		return;
 	}
@@ -532,16 +559,16 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	}
 
 	if ( key_overstrikeMode ) {	
-		// - 2 to leave room for the leading slash and trailing \0
-		if ( edit->cursor == MAX_EDIT_LINE - 2 )
+		if ( edit->cursor == MAX_EDIT_LINE - 1 )
 			return;
 		edit->buffer[edit->cursor] = ch;
 		edit->cursor++;
 	} else {	// insert mode
-		// - 2 to leave room for the leading slash and trailing \0
-		if ( len == MAX_EDIT_LINE - 2 ) {
+    width = Q_UTF8Width( ch );
+		if ( len == MAX_EDIT_LINE - 1 )
 			return; // all full
-		}
+		if( edit->cursor + width >= MAX_EDIT_LINE )
+			return;
 		memmove( edit->buffer + edit->cursor + 1, 
 			edit->buffer + edit->cursor, len + 1 - edit->cursor );
 		edit->buffer[edit->cursor] = ch;
@@ -550,7 +577,10 @@ void Field_CharEvent( field_t *edit, int ch ) {
 
 
 	if ( edit->cursor >= edit->widthInChars ) {
-		edit->scroll++;
+    do
+    {
+      edit->scroll++;
+    } while( Q_UTF8ContByte( edit->buffer[ edit->scroll ] ) && edit->scroll < edit->cursor );
 	}
 
 	if ( edit->cursor == len + 1) {
@@ -1269,17 +1299,18 @@ void CL_CharEvent( int key ) {
 
 	// distribute the key down event to the apropriate handler
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-	{
 		Field_CharEvent( &g_consoleField, key );
-	}
 	else if ( Key_GetCatcher( ) & KEYCATCH_UI )
-	{
-		VM_Call( uivm, UI_KEY_EVENT, key | K_CHAR_FLAG, qtrue );
-	}
+		// VMs that don't support i18n distinguish between char and key events by looking at the 11th least significant bit.
+		// Patched vms look at the second least significant bit to determine whether the event is a char event, and at the third bit
+		// to determine the original 11th least significant bit of the key.
+		VM_Call( uivm, UI_KEY_EVENT, Q_UTF8Store( key ) | (1 << (K_CHAR_BIT - 1)),
+				(qtrue << KEYEVSTATE_DOWN) |
+        (qtrue << KEYEVSTATE_CHAR) |
+        ((Q_UTF8Store( key ) & (1 << (K_CHAR_BIT - 1))) >> ((K_CHAR_BIT - 1) - KEYEVSTATE_BIT)) |
+        (qtrue << KEYEVSTATE_SUP) );
 	else if ( cls.state == CA_DISCONNECTED )
-	{
 		Field_CharEvent( &g_consoleField, key );
-	}
 }
 
 

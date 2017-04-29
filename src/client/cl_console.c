@@ -34,7 +34,8 @@ int g_console_field_width = 78;
 typedef struct {
 	qboolean	initialized;
 
-	short	text[CON_TEXTSIZE];
+	char  text[CON_TEXTSIZE];
+	char  tcolor[CON_TEXTSIZE];
 	int		current;		// line where next message will be printed
 	int		x;				// offset in current line for next print
 	int		display;		// bottom of console displays this line
@@ -404,14 +405,14 @@ void Con_DrawInput (void) {
 		return;
 	}
 
-	y = con.vislines - ( SMALLCHAR_HEIGHT * 2 );
+	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
 	re.SetColor( con.color );
 
-	SCR_DrawSmallChar( con.xadjust + 1 * SMALLCHAR_WIDTH, y, ']' );
+	SCR_DrawConsoleFontChar( con.xadjust + cl_conXOffset->integer, y, "]" );
 
-	Field_Draw( &g_consoleField, con.xadjust + 2 * SMALLCHAR_WIDTH, y,
-		SCREEN_WIDTH - 3 * SMALLCHAR_WIDTH, qtrue, qtrue );
+	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontCharWidth("]"), y,
+		SCREEN_WIDTH - 3 * SCR_ConsoleFontCharWidth(" "), qtrue, qtrue );
 }
 
 /*
@@ -424,12 +425,15 @@ Draws the console with the solid background
 void Con_DrawSolidConsole( float frac ) {
 	int				i, x, y;
 	int				rows;
-	short			*text;
+	char      *text;
+	char      *tcolor;
 	int				row;
 	int				lines;
 //	qhandle_t		conShader;
 	int				currentColor;
 	vec4_t			color;
+    char            *s, *end;
+	float           totalWidth, currentWidthLocation;
 
 	lines = cls.glconfig.vidHeight * frac;
 	if (lines <= 0)
@@ -442,6 +446,20 @@ void Con_DrawSolidConsole( float frac ) {
 	con.xadjust = 0;
 	SCR_AdjustFrom640( &con.xadjust, NULL, NULL, NULL );
 
+    // read from cl_consoleColor, default to black on failure
+	s = cl_consoleColor->string;
+    for( i=0; i<4; i++)
+    {
+        color[ i ] = strtod( s, &end );
+        if( s == end) //no digits read
+        {
+            if( i < 3 ) color[ i ] = 0.0;
+            else color [ i ] = 1.0;
+        }
+        else
+            s = end;
+    }
+
 	// draw the background
 	y = frac * SCREEN_HEIGHT;
 	if ( y < 1 ) {
@@ -449,44 +467,48 @@ void Con_DrawSolidConsole( float frac ) {
 	}
 	else {
 		SCR_DrawPic( 0, 0, SCREEN_WIDTH, y, cls.consoleShader );
+        re.SetColor( color );
+        SCR_DrawPic( 0, 0, SCREEN_WIDTH, y, cls.consoleShader );
+        re.SetColor( NULL );
 	}
 
 	color[0] = 1;
 	color[1] = 0;
 	color[2] = 0;
-	color[3] = 1;
 	SCR_FillRect( 0, y, SCREEN_WIDTH, 2, color );
 
 
 	// draw the version number
 
 	re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
+    totalWidth = SCR_ConsoleFontStringWidth( Q3_VERSION, i ) + cl_conXOffset->integer;
+    currentWidthLocation = 0;
 
 	i = strlen( Q3_VERSION );
 
 	for (x=0 ; x<i ; x++) {
 		SCR_DrawSmallChar( cls.glconfig.vidWidth - ( i - x + 1 ) * SMALLCHAR_WIDTH,
-			lines - SMALLCHAR_HEIGHT, Q3_VERSION[x] );
+			lines - SMALLCHAR_HEIGHT, &Q3_VERSION[x] );
 	}
 
 
 	// draw the text
 	con.vislines = lines;
-	rows = (lines-SMALLCHAR_WIDTH)/SMALLCHAR_WIDTH;		// rows of text to draw
+	rows = (lines)/SCR_ConsoleFontCharHeight();		// rows of text to draw
 
-	y = lines - (SMALLCHAR_HEIGHT*3);
+	y = lines - (SCR_ConsoleFontCharHeight()*3);
 
 	// draw from the bottom up
 	if (con.display != con.current)
 	{
 	// draw arrows to show the buffer is backscrolled
-		re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
-		for (x=0 ; x<con.linewidth ; x+=4)
-			SCR_DrawSmallChar( con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, '^' );
-		y -= SMALLCHAR_HEIGHT;
-		rows--;
+	    re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
+        for (x=0 ; x<con.linewidth ; x+=4)
+            SCR_DrawConsoleFontChar( con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, "^" );
+        y -= SCR_ConsoleFontCharHeight();
+        rows--;
 	}
-	
+
 	row = con.display;
 
 	if ( con.x == 0 ) {
@@ -496,8 +518,10 @@ void Con_DrawSolidConsole( float frac ) {
 	currentColor = 7;
 	re.SetColor( g_color_table[currentColor] );
 
-	for (i=0 ; i<rows ; i++, y -= SMALLCHAR_HEIGHT, row--)
+	for (i=0 ; i<rows ; i++, y -= SCR_ConsoleFontCharHeight(), row--)
 	{
+		float currentWidthLocation;
+
 		if (row < 0)
 			break;
 		if (con.current - row >= con.totallines) {
@@ -506,18 +530,24 @@ void Con_DrawSolidConsole( float frac ) {
 		}
 
 		text = con.text + (row % con.totallines)*con.linewidth;
+		tcolor = con.tcolor + (row % con.totallines)*con.linewidth;
 
-		for (x=0 ; x<con.linewidth ; x++) {
-			if ( ( text[x] & 0xff ) == ' ' ) {
-				continue;
-			}
+    currentWidthLocation = cl_conXOffset->integer;
 
-			if ( ( (text[x]>>8)&7 ) != currentColor ) {
-				currentColor = (text[x]>>8)&7;
-				re.SetColor( g_color_table[currentColor] );
-			}
-			SCR_DrawSmallChar(  con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, text[x] & 0xff );
-		}
+    x = 0;
+    while( x < con.linewidth )
+    {
+      if( ( tcolor[x] & 0x07 ) != currentColor )
+      {
+        currentColor = tcolor[x] & 0x07;
+        re.SetColor( g_color_table[currentColor] );
+      }
+
+      SCR_DrawConsoleFontChar( con.xadjust + currentWidthLocation, y, text + x );
+      currentWidthLocation += SCR_ConsoleFontCharWidth( text + x );
+
+      x += Q_UTF8Width( text + x);
+    }
 	}
 
 	// draw the input prompt, user text, and cursor if desired
@@ -565,7 +595,7 @@ Scroll it up or down
 void Con_RunConsole (void) {
 	// decide on the destination height of the console
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-		con.finalFrac = 0.5;		// half screen
+		con.finalFrac = MAX(0.10, 0.01 * cl_consoleHeight->integer);  // configured console percentage
 	else
 		con.finalFrac = 0;				// none visible
 	
