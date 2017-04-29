@@ -34,7 +34,7 @@ int g_console_field_width = 78;
 typedef struct {
 	qboolean	initialized;
 
-	char  text[CON_TEXTSIZE];
+	short  text[CON_TEXTSIZE];
 	char  tcolor[CON_TEXTSIZE];
 	int		current;		// line where next message will be printed
 	int		x;				// offset in current line for next print
@@ -595,7 +595,8 @@ Scroll it up or down
 void Con_RunConsole (void) {
 	// decide on the destination height of the console
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-		con.finalFrac = MAX(0.10, 0.01 * cl_consoleHeight->integer);  // configured console percentage
+	//	con.finalFrac = MAX(0.10, 0.01 * cl_consoleHeight->integer);  // configured console percentage
+		con.finalFrac = 0.5;
 	else
 		con.finalFrac = 0;				// none visible
 	

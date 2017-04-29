@@ -170,6 +170,7 @@ void SCR_DrawConsoleFontChar( float x, float y, const char *s )
 {
   float xadj, yadj;
   glyphInfo_t *glyph;
+  int ch;
 
   if( cls.useLegacyConsoleFont )
   {
@@ -180,9 +181,9 @@ void SCR_DrawConsoleFontChar( float x, float y, const char *s )
   if( *s == ' ' )
     return;
 
-  glyph = Glyph( s );
+  glyph = Glyph( ch );
 
-  xadj = ( SCR_ConsoleFontCharWidth( s ) - glyph->xSkip ) / 2.0f;
+  xadj = ( SCR_ConsoleFontCharWidth( ch ) - glyph->xSkip ) / 2.0f;
   yadj = glyph->top;
 
   re.DrawStretchPic( x + xadj, y - yadj, glyph->imageWidth, glyph->imageHeight,
