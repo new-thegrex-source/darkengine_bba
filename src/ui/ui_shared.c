@@ -1890,6 +1890,30 @@ static ID_INLINE float UI_EmoticonWidth( fontInfo_t *font, float scale )
   return UI_EmoticonHeight( font, scale ) * DC->aspectScale;
 }
 
+static int UI_UTF8Width( face_t *face, const char *str )
+{
+  if( DC->getCVarValue( "ui_ascii" ) )
+    return 1;
+
+  if( !face )
+    return 1;
+
+  return Q_UTF8Width( str );
+}
+
+glyphInfo_t *UI_Glyph( fontInfo_t *font, face_t *face, const char *str )
+{
+  static glyphInfo_t glyphs[8];
+  static int index = 0;
+  glyphInfo_t *glyph = &glyphs[index++ & 7];
+
+  if( !str || !*str || !face || UI_UTF8Width( face, str ) <= 1 )
+    return &font->glyphs[ (int)*str ];
+
+  DC->glyph( font, face, str, glyph );
+  return glyph;
+}
+
 void UI_EscapeEmoticons( char *dest, const char *src, int destsize )
 {
   int len;

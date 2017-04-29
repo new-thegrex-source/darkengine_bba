@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../cgame/cg_public.h"
 #include "../game/bg_public.h"
 
-#define DEFAULT_CONSOLE_FONT "ttf/font.ttf"
+#define DEFAULT_CONSOLE_FONT "ttf/spongebob.otf"
 
 #ifdef USE_CURL
 #include "cl_curl.h"
@@ -432,8 +432,11 @@ extern	cvar_t	*cl_autoRecordDemo;
 
 extern	cvar_t	*cl_consoleKeys;
 
+extern  cvar_t  *cl_consoleColor;
+extern  cvar_t  *cl_consoleHeight;
 extern  cvar_t  *cl_consoleFont;
 extern  cvar_t  *cl_consoleFontSize;
+extern  cvar_t  *cl_consoleFontKerning;
 
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
