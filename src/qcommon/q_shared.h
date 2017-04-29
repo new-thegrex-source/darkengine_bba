@@ -1339,6 +1339,16 @@ typedef struct {
 
 #define Square(x) ((x)*(x))
 
+#define MAX_FACE_GLYPHS 384
+
+typedef struct {
+  void *opaque;
+  void *mem;
+  void *images[MAX_FACE_GLYPHS];
+  char name[MAX_QPATH];
+  float glyphScale;
+} face_t;
+
 // real time
 //=============================================
 

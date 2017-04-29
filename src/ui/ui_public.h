@@ -137,7 +137,15 @@ typedef enum
   UI_ATAN2,
   UI_SQRT,
   UI_FLOOR,
-  UI_CEIL
+  UI_CEIL,
+  
+  //i18 Tremulous patch:
+  UI_R_LOADFACE,
+  UI_R_FREEFACE,
+  UI_R_LOADGLYPH,
+  UI_R_FREEGLYPH,
+  UI_R_GLYPH,
+  UI_R_FREECACHEDGLYPHS
 }
 uiImport_t;
 

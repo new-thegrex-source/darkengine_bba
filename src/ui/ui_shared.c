@@ -28,6 +28,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define SCROLL_TIME_ADJUSTOFFSET  40
 #define SCROLL_TIME_FLOOR         20
 
+void FreeFace(face_t *face);
+void FreeCachedGlyphs(face_t *face);
+
 typedef struct scrollInfo_s
 {
   int nextScrollTime;
@@ -3250,6 +3253,7 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 {
   char buff[1024];
   int len;
+  face_t *face = &DC->Assets.dynFont;
   itemDef_t *newItem = NULL;
   editFieldDef_t *editPtr = item->typeData.edit;
   qboolean releaseFocus = qtrue;
@@ -4318,6 +4322,7 @@ const char *Item_Text_Wrap( const char *text, float scale, float width )
   const char    *p;
   const char    *eos;
   float         indentWidth = 0.0f;
+  face_t        *face = &DC->Assets.dynFont;
 
   if( !text )
     return NULL;
@@ -7410,6 +7415,22 @@ qboolean MenuParse_font( itemDef_t *item, int handle )
   return qtrue;
 }
 
+qboolean MenuParse_dynFont( itemDef_t *item, int handle )
+{
+  menuDef_t *menu = ( menuDef_t* )item;
+
+  if( !PC_String_Parse( handle, &menu->dynFont ) )
+    return qfalse;
+
+  if( !DC->Assets.dynFontRegistered )
+  {
+    DC->loadFace( menu->dynFont, 48, menu->dynFont, &DC->Assets.dynFont );
+    DC->Assets.dynFontRegistered = qtrue;
+  }
+
+  return qtrue;
+}
+
 qboolean MenuParse_name( itemDef_t *item, int handle )
 {
   menuDef_t *menu = ( menuDef_t* )item;
@@ -7754,6 +7775,7 @@ qboolean MenuParse_itemDef( itemDef_t *item, int handle )
 
 keywordHash_t menuParseKeywords[] = {
   {"font", MenuParse_font},
+  {"dynfont", MenuParse_dynFont},
   {"name", MenuParse_name},
   {"fullscreen", MenuParse_fullscreen},
   {"rect", MenuParse_rect},

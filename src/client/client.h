@@ -31,6 +31,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../cgame/cg_public.h"
 #include "../game/bg_public.h"
 
+#define DEFAULT_CONSOLE_FONT "ttf/font.ttf"
+
 #ifdef USE_CURL
 #include "cl_curl.h"
 #endif /* USE_CURL */
@@ -353,6 +355,11 @@ typedef struct {
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
+	
+    qboolean useLegacyConsoleFont;
+    qboolean useLegacyConsoleFace;
+    fontInfo_t  consoleFont; 
+    face_t      consoleFace;
 } clientStatic_t;
 
 extern	clientStatic_t		cls;
@@ -424,6 +431,9 @@ extern	cvar_t	*cl_lanForcePackets;
 extern	cvar_t	*cl_autoRecordDemo;
 
 extern	cvar_t	*cl_consoleKeys;
+
+extern  cvar_t  *cl_consoleFont;
+extern  cvar_t  *cl_consoleFontSize;
 
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;

@@ -330,6 +330,36 @@ void trap_R_RegisterFont( const char *fontName, int pointSize, fontInfo_t *font 
   syscall(CG_R_REGISTERFONT, fontName, pointSize, font );
 }
 
+void trap_R_LoadFace( const char *fileName, int pointSize, const char *name, face_t *face )
+{
+  syscall( CG_R_LOADFACE, fileName, pointSize, name, face );
+}
+
+void trap_R_FreeFace( face_t *face )
+{
+  syscall( CG_R_FREEFACE, face );
+}
+
+void trap_R_LoadGlyph( face_t *face, const char *str, int img, glyphInfo_t *glyphInfo )
+{
+  syscall( CG_R_LOADGLYPH, face, str, img, glyphInfo );
+}
+
+void trap_R_FreeGlyph( face_t *face, int img, glyphInfo_t *glyphInfo )
+{
+  syscall( CG_R_FREEGLYPH, face, img, glyphInfo );
+}
+
+void trap_R_Glyph( fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph )
+{
+  syscall( CG_R_GLYPH, font, face, str, glyph );
+}
+
+void trap_R_FreeCachedGlyphs( face_t *face )
+{
+  syscall( CG_R_FREECACHEDGLYPHS, face );
+}
+
 void  trap_R_ClearScene( void )
 {
   syscall( CG_R_CLEARSCENE );

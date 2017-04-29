@@ -1184,6 +1184,15 @@ UI_Shutdown
 void UI_Shutdown( void )
 {
   trap_LAN_SaveCachedServers();
+
+  FreeCachedGlyphs( &uiInfo.uiDC.Assets.dynFont );
+  FreeFace( &uiInfo.uiDC.Assets.dynFont );
+  FreeCachedGlyphs( &uiInfo.uiDC.Assets.smallDynFont );
+  FreeFace( &uiInfo.uiDC.Assets.smallDynFont );
+  FreeCachedGlyphs( &uiInfo.uiDC.Assets.bigDynFont );
+  FreeFace( &uiInfo.uiDC.Assets.bigDynFont );
+
+  UIS_Shutdown( );
 }
 
 qboolean Asset_Parse( int handle )
@@ -1241,7 +1250,39 @@ qboolean Asset_Parse( int handle )
       trap_R_RegisterFont( tempStr, pointSize, &uiInfo.uiDC.Assets.bigFont );
       continue;
     }
+    if( Q_stricmp( token.string, "dynFont" ) == 0 )
+    {
+      int pointSize;
 
+      if( !PC_String_Parse( handle, &tempStr ) || !PC_Int_Parse( handle, &pointSize ) )
+        return qfalse;
+
+      LoadFace( tempStr, pointSize, tempStr, &uiInfo.uiDC.Assets.dynFont );
+      uiInfo.uiDC.Assets.dynFontRegistered = qtrue;
+      continue;
+    }
+
+    if( Q_stricmp( token.string, "smallDynFont" ) == 0 )
+    {
+      int pointSize;
+
+      if( !PC_String_Parse( handle, &tempStr ) || !PC_Int_Parse( handle, &pointSize ) )
+        return qfalse;
+
+      LoadFace( tempStr, pointSize, tempStr, &uiInfo.uiDC.Assets.smallDynFont );
+      continue;
+    }
+
+    if( Q_stricmp( token.string, "bigDynFont" ) == 0 )
+    {
+      int pointSize;
+
+      if( !PC_String_Parse( handle, &tempStr ) || !PC_Int_Parse( handle, &pointSize ) )
+        return qfalse;
+
+      LoadFace( tempStr, pointSize, tempStr, &uiInfo.uiDC.Assets.bigDynFont );
+      continue;
+    }
 
     // gradientbar
     if( Q_stricmp( token.string, "gradientbar" ) == 0 )
@@ -4036,8 +4077,6 @@ UI_Init
 void UI_Init( qboolean inGameLoad )
 {
   int start;
-  
-  const char ui_language = {""};
 
   BG_InitClassConfigs( );
   BG_InitAllowedGameElements( );
@@ -4076,6 +4115,12 @@ void UI_Init( qboolean inGameLoad )
   uiInfo.uiDC.addRefEntityToScene = &trap_R_AddRefEntityToScene;
   uiInfo.uiDC.renderScene = &trap_R_RenderScene;
   uiInfo.uiDC.registerFont = &trap_R_RegisterFont;
+  uiInfo.uiDC.loadFace = &LoadFace;
+  uiInfo.uiDC.freeFace = &FreeFace;
+  uiInfo.uiDC.loadGlyph = &LoadGlyph;
+  uiInfo.uiDC.freeGlyph = &FreeGlyph;
+  uiInfo.uiDC.glyph = &Glyph;
+  uiInfo.uiDC.freeCachedGlyphs = &FreeCachedGlyphs;
   uiInfo.uiDC.ownerDrawItem = &UI_OwnerDraw;
   uiInfo.uiDC.getValue = &UI_GetValue;
   uiInfo.uiDC.ownerDrawVisible = &UI_OwnerDrawVisible;
@@ -4686,5 +4731,125 @@ void UI_UpdateNews( qboolean begin )
 
   if( finished )
     uiInfo.newsInfo.refreshActive = qfalse;
+}
+
+void LoadFace( const char *fileName, int pointSize, const char *name, face_t *face )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( engineState & 0x02 )
+    trap_R_LoadFace( fileName, pointSize, name, face );
+}
+
+void FreeFace( face_t *face )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( engineState & 0x02 )
+    trap_R_FreeFace( face );
+}
+
+void LoadGlyph( face_t *face, const char *str, int img, glyphInfo_t *glyphInfo )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( engineState & 0x02 )
+    trap_R_LoadGlyph( face, str, img, glyphInfo );
+}
+
+void FreeGlyph( face_t *face, int img, glyphInfo_t *glyphInfo )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( engineState & 0x02 )
+    trap_R_FreeGlyph( face, img, glyphInfo );
+}
+
+void Glyph( fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( engineState & 0x02 )
+    trap_R_Glyph( font, face, str, glyph );
+}
+
+void FreeCachedGlyphs( face_t *face )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( engineState & 0x02 )
+    trap_R_FreeCachedGlyphs( face );
 }
 

@@ -111,9 +111,14 @@ cvar_t	*cl_guidServerUniq;
 
 cvar_t	*cl_consoleKeys;
 
+cvar_t  *cl_consoleFont;
+cvar_t  *cl_consoleFontSize;
+
 cvar_t  *cl_gamename;
 
-cvar_t  *cl_language; //  
+cvar_t  *cl_language; // 
+
+cvar_t  *cl_consoleDynFont; 
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -1752,6 +1757,9 @@ void CL_Vid_Restart_f( void ) {
 	CL_ShutdownUI();
 	// shutdown the CGame
 	CL_ShutdownCGame();
+  // free face
+    re.FreeCachedGlyphs( &cls.consoleFace );
+    re.FreeFace( &cls.consoleFace );
 	// shutdown the renderer and clear the renderer interface
 	CL_ShutdownRef();
 	// client is no longer pure untill new checksums are sent
@@ -3071,6 +3079,7 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
+	fileHandle_t f; 
 	// this sets up the renderer and calls R_Init
 	re.BeginRegistration( &cls.glconfig );
 
@@ -3080,7 +3089,25 @@ void CL_InitRenderer( void ) {
 	cls.consoleShader = re.RegisterShader( "console" );
 	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
+	
+  if( *cl_consoleDynFont->string )
+  {
+    if( FS_FOpenFileRead( cl_consoleDynFont->string, &f, FS_READ ) >= 0 )
+    {
+        re.LoadFace( cl_consoleDynFont->string, cl_consoleFontSize->integer, cl_consoleDynFont->string, &cls.consoleFace );
+        cls.useLegacyConsoleFace = qfalse;
+    }
+    FS_FCloseFile( f );
+  }
 }
+
+/*
+============================
+CL_Fuck
+
+Some code shit for ttf
+============================
+*/
 
 /*
 ============================
@@ -3458,6 +3485,8 @@ void CL_Init( void ) {
 	
 	//fuck..lmao
 	cl_language = Cvar_Get ("cl_language", "default", CVAR_ARCHIVE);
+	
+	cl_consoleDynFont = Cvar_Get ("cl_consoleDynFont", DEFAULT_CONSOLE_FONT, CVAR_ARCHIVE | CVAR_LATCH);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

@@ -1265,6 +1265,9 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	ri.Cmd_RemoveCommand ("gfxinfo");
 	ri.Cmd_RemoveCommand( "modelist" );
 	ri.Cmd_RemoveCommand( "shaderstate" );
+	
+	R_DoneFreeType();
+    R_FreeImages();
 
 
 	if ( tr.registered ) {
@@ -1353,6 +1356,12 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	re.UploadCinematic = RE_UploadCinematic;
 
 	re.RegisterFont = RE_RegisterFont;
+	re.LoadFace = RE_LoadFace;
+	re.FreeFace = RE_FreeFace;
+	re.LoadGlyph = RE_LoadGlyph;
+	re.FreeGlyph = RE_FreeGlyph;
+    re.Glyph = RE_Glyph;
+    re.FreeCachedGlyphs = RE_FreeCachedGlyphs;
 	re.RemapShader = R_RemapShader;
 	re.GetEntityToken = R_GetEntityToken;
 	re.inPVS = R_inPVS;

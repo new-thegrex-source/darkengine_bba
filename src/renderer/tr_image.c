@@ -841,6 +841,38 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	return image;
 }
 
+void R_FreeImage( image_t *image )
+{
+  int i;
+
+	for ( i=0; i<MAX_DRAWIMAGES ; i++ ) {
+    if( tr.used_images[ i ] && tr.images[ i ] == image ) {
+      tr.used_images[ i ] = qfalse;
+      free( image );
+      tr.images[ i ] = NULL;
+
+      return;
+    }
+  }
+
+  ri.Printf( PRINT_ALL, "R_FreeImage: image not found\n" );
+}
+
+void R_FreeImages( void )
+{
+  int i;
+
+	for ( i=0; i<MAX_DRAWIMAGES ; i++ ) {
+    if( tr.used_images[ i ] && tr.images[ i ] ) {
+      tr.used_images[ i ] = qfalse;
+      free( tr.images[ i ] );
+      tr.images[ i ] = NULL;
+
+      return;
+    }
+  }
+}
+
 //===================================================================
 
 typedef struct

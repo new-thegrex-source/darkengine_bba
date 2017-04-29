@@ -162,6 +162,36 @@ void trap_R_RegisterFont( const char *fontName, int pointSize, fontInfo_t *font 
   syscall( UI_R_REGISTERFONT, fontName, pointSize, font );
 }
 
+void trap_R_LoadFace( const char *fileName, int pointSize, const char *name, face_t *face )
+{
+  syscall( UI_R_LOADFACE, fileName, pointSize, name, face );
+}
+
+void trap_R_FreeFace( face_t *face )
+{
+  syscall( UI_R_FREEFACE, face );
+}
+
+void trap_R_LoadGlyph( face_t *face, const char *str, int img, glyphInfo_t *glyphInfo )
+{
+  syscall( UI_R_LOADGLYPH, face, str, img, glyphInfo );
+}
+
+void trap_R_FreeGlyph( face_t *face, int img, glyphInfo_t *glyphInfo )
+{
+  syscall( UI_R_FREEGLYPH, face, img, glyphInfo );
+}
+
+void trap_R_Glyph( fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph )
+{
+  syscall( UI_R_GLYPH, font, face, str, glyph );
+}
+
+void trap_R_FreeCachedGlyphs( face_t *face )
+{
+  syscall( UI_R_FREECACHEDGLYPHS, face );
+}
+
 qhandle_t trap_R_RegisterShaderNoMip( const char *name )
 {
   return syscall( UI_R_REGISTERSHADERNOMIP, name );

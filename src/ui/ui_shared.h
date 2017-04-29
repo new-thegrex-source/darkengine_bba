@@ -378,6 +378,7 @@ typedef struct
   vec4_t shadowColor;
   float shadowFadeClamp;
   qboolean fontRegistered;
+  qboolean dynFontRegistered;
   emoticon_t emoticons[ MAX_EMOTICONS ];
   int emoticonCount;
 }
@@ -406,6 +407,12 @@ typedef struct
   void ( *addRefEntityToScene ) ( const refEntity_t *re );
   void ( *renderScene ) ( const refdef_t *fd );
   void ( *registerFont ) ( const char *pFontname, int pointSize, fontInfo_t *font );
+  void ( *loadFace )( const char *fileName, int pointSize, const char *name, face_t *face );
+  void ( *freeFace )( face_t *face );
+	void ( *loadGlyph )( face_t *face, const char *str, int img, glyphInfo_t *glyphInfo );
+	void ( *freeGlyph )( face_t *face, int img, glyphInfo_t *glyphInfo );
+	void ( *glyph )( fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph );
+  void ( *freeCachedGlyphs )( face_t *face );
   void ( *ownerDrawItem ) ( float x, float y, float w, float h, float text_x,
                             float text_y, int ownerDraw, int ownerDrawFlags,
                             int align, int textalign, int textvalign,
