@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 
@@ -50,15 +46,15 @@ void G_WriteClientSessionData( gclient_t *client )
   const char  *s;
   const char  *var;
 
-  s = va( "%i %i %i %i %i",
+  s = va( "%i %i %i %i %s",
     client->sess.spectatorTime,
     client->sess.spectatorState,
     client->sess.spectatorClient,
     client->sess.restartTeam,
-    client->sess.seenWelcome
-  );
+    Com_ClientListString( &client->sess.ignoreList )
+    );
 
-  var = va( "session%i", (int)(client - level.clients) );
+  var = va( "session%i", client - level.clients );
 
   trap_Cvar_Set( var, s );
 }
@@ -78,19 +74,20 @@ void G_ReadSessionData( gclient_t *client )
   int         restartTeam;
   char        ignorelist[ 17 ];
 
-  var = va( "session%i", (int)(client - level.clients) );
+  var = va( "session%i", client - level.clients );
   trap_Cvar_VariableStringBuffer( var, s, sizeof(s) );
 
-  sscanf( s, "%i %i %i %i %i", 
+  sscanf( s, "%i %i %i %i %16s",
     &client->sess.spectatorTime,
     &spectatorState,
     &client->sess.spectatorClient,
     &restartTeam,
-	&client->sess.seenWelcome
+    ignorelist
     );
 
   client->sess.spectatorState = (spectatorState_t)spectatorState;
   client->sess.restartTeam = (team_t)restartTeam;
+  Com_ClientListParse( &client->sess.ignoreList, ignorelist );
 }
 
 
@@ -128,7 +125,8 @@ void G_InitSessionData( gclient_t *client, char *userinfo )
   sess->spectatorState = SPECTATOR_FREE;
   sess->spectatorTime = level.time;
   sess->spectatorClient = -1;
-  sess->seenWelcome = 0; 
+  memset( &sess->ignoreList, 0, sizeof( sess->ignoreList ) );
+
   G_WriteClientSessionData( client );
 }
 

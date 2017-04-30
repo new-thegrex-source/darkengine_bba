@@ -148,7 +148,7 @@ qboolean	CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot ) {
 	snapshot->ps = clSnap->ps;
 	count = clSnap->numEntities;
 	if ( count > MAX_ENTITIES_IN_SNAPSHOT ) {
-		Com_DPrintf( "CL_GetSnapshot: truncated %i entities to %i\n", count, MAX_ENTITIES_IN_SNAPSHOT );
+		Com_DPrintf( _("CL_GetSnapshot: truncated %i entities to %i\n"), count, MAX_ENTITIES_IN_SNAPSHOT );
 		count = MAX_ENTITIES_IN_SNAPSHOT;
 	}
 	snapshot->numEntities = count;
@@ -236,7 +236,7 @@ void CL_ConfigstringModified( void ) {
 		len = strlen( dup );
 
 		if ( len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS ) {
-			Com_Error( ERR_DROP, "MAX_GAMESTATE_CHARS exceeded" );
+			Com_Error( ERR_DROP, _("MAX_GAMESTATE_CHARS exceeded") );
 		}
 
 		// append it to the gameState string buffer
@@ -272,12 +272,12 @@ qboolean CL_GetServerCommand( int serverCommandNumber ) {
 		// reliable commands then the client never got those first reliable commands
 		if ( clc.demoplaying )
 			return qfalse;
-		Com_Error( ERR_DROP, "CL_GetServerCommand: a reliable command was cycled out" );
+		Com_Error( ERR_DROP, _("CL_GetServerCommand: a reliable command was cycled out") );
 		return qfalse;
 	}
 
 	if ( serverCommandNumber > clc.serverCommandSequence ) {
-		Com_Error( ERR_DROP, "CL_GetServerCommand: requested a command not received" );
+		Com_Error( ERR_DROP, _("CL_GetServerCommand: requested a command not received") );
 		return qfalse;
 	}
 
@@ -295,9 +295,9 @@ rescan:
 		// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=552
 		// allow server to indicate why they were disconnected
 		if ( argc >= 2 )
-			Com_Error( ERR_SERVERDISCONNECT, "Server disconnected - %s", Cmd_Argv( 1 ) );
+			Com_Error( ERR_SERVERDISCONNECT, _("Server disconnected - %s"), Cmd_Argv( 1 ) );
 		else
-			Com_Error( ERR_SERVERDISCONNECT, "Server disconnected\n" );
+			Com_Error( ERR_SERVERDISCONNECT, _("Server disconnected\n") );
 	}
 
 	if ( !strcmp( cmd, "bcs0" ) ) {
@@ -308,7 +308,7 @@ rescan:
 	if ( !strcmp( cmd, "bcs1" ) ) {
 		s = Cmd_Argv(2);
 		if( strlen(bigConfigString) + strlen(s) >= BIG_INFO_STRING ) {
-			Com_Error( ERR_DROP, "bcs exceeded BIG_INFO_STRING" );
+			Com_Error( ERR_DROP, _("bcs exceeded BIG_INFO_STRING") );
 		}
 		strcat( bigConfigString, s );
 		return qfalse;
@@ -317,7 +317,7 @@ rescan:
 	if ( !strcmp( cmd, "bcs2" ) ) {
 		s = Cmd_Argv(2);
 		if( strlen(bigConfigString) + strlen(s) + 1 >= BIG_INFO_STRING ) {
-			Com_Error( ERR_DROP, "bcs exceeded BIG_INFO_STRING" );
+			Com_Error( ERR_DROP, _("bcs exceeded BIG_INFO_STRING") );
 		}
 		strcat( bigConfigString, s );
 		strcat( bigConfigString, "\"" );
@@ -428,7 +428,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		Cvar_Update( VMA(1) );
 		return 0;
 	case CG_CVAR_SET:
-		Cvar_SetSafe( VMA(1), VMA(2) );
+		Cvar_Set( VMA(1), VMA(2) );
 		return 0;
 	case CG_CVAR_VARIABLESTRINGBUFFER:
 		Cvar_VariableStringBuffer( VMA(1), VMA(2), args[3] );
@@ -466,7 +466,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		CL_AddCgameCommand( VMA(1) );
 		return 0;
 	case CG_REMOVECOMMAND:
-		Cmd_RemoveCommandSafe( VMA(1) );
+		Cmd_RemoveCommand( VMA(1) );
 		return 0;
 	case CG_SENDCLIENTCOMMAND:
 		CL_AddReliableCommand(VMA(1), qfalse);
@@ -737,10 +737,14 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
 
-    case CG_R_LOADFACE:
-         re.LoadFace( VMA(1), args[2], VMA(3), VMA(4) );
-        return 0;
-		
+  case CG_GETTEXT:
+    strncpy( VMA(1), _(VMA(2)), args[3] );
+    return 0;
+
+  case CG_R_LOADFACE:
+    re.LoadFace( VMA(1), args[2], VMA(3), VMA(4) );
+    return 0;
+
   case CG_R_FREEFACE:
     re.FreeFace( VMA(1) );
     return 0;
@@ -760,10 +764,10 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
   case CG_R_FREECACHEDGLYPHS:
     re.FreeCachedGlyphs( VMA(1) );
     break;
-		
+
 	default:
 	        assert(0);
-		Com_Error( ERR_DROP, "Bad cgame system trap: %ld", (long int) args[0] );
+		Com_Error( ERR_DROP, _("Bad cgame system trap: %ld"), (long int) args[0] );
 	}
 	return 0;
 }
@@ -802,7 +806,7 @@ void CL_InitCGame( void ) {
 	}
 	cgvm = VM_Create( "cgame", CL_CgameSystemCalls, interpret );
 	if ( !cgvm ) {
-		Com_Error( ERR_DROP, "VM_Create on cgame failed" );
+		Com_Error( ERR_DROP, _("VM_Create on cgame failed") );
 	}
 	cls.state = CA_LOADING;
 
@@ -821,7 +825,7 @@ void CL_InitCGame( void ) {
 
 	t2 = Sys_Milliseconds();
 
-	Com_Printf( "CL_InitCGame: %5.2f seconds\n", (t2-t1)/1000.0 );
+	Com_Printf( _("CL_InitCGame: %5.2f seconds\n"), (t2-t1)/1000.0 );
 
 	// have the renderer touch all its images, so they are present
 	// on the card even if the driver does deferred loading
@@ -987,7 +991,7 @@ void CL_FirstSnapshot( void ) {
 #ifdef USE_MUMBLE
 	if ((cl_useMumble->integer) && !mumble_islinked()) {
 		int ret = mumble_link(CLIENT_WINDOW_TITLE);
-		Com_Printf("Mumble: Linking to Mumble application %s\n", ret==0?"ok":"failed");
+		Com_Printf(_("Mumble: Linking to Mumble application %s\n"), ret==0?"ok":"failed");
 	}
 #endif
 

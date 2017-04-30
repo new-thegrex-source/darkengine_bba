@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // this file holds commands that can be executed by the server console, but not remote clients
 
 #include "g_local.h"
@@ -61,9 +57,6 @@ void  Svcmd_EntityList_f( void )
         break;
       case ET_BUILDABLE:
         G_Printf( "ET_BUILDABLE        " );
-        break;
-      case ET_LOCATION:
-        G_Printf( "ET_LOCATION         " );
         break;
       case ET_MISSILE:
         G_Printf( "ET_MISSILE          " );
@@ -124,15 +117,23 @@ void  Svcmd_EntityList_f( void )
 
 static gclient_t *ClientForString( char *s )
 {
-  int  idnum;
-  char err[ MAX_STRING_CHARS ];
+  int idnum, count;
+  int pids[ MAX_CLIENTS ];
 
-  idnum = G_ClientNumberFromString( s, err, sizeof( err ) );
-  if( idnum == -1 )
+  if( ( count = G_ClientNumbersFromString( s, pids, MAX_CLIENTS ) ) != 1 )
   {
-    G_Printf( "%s", err );
-    return NULL;
+    idnum = G_ClientNumberFromString( s );
+
+    if( idnum == -1 )
+    {
+      char err[ MAX_STRING_CHARS ];
+      G_MatchOnePlayer( pids, count, err, sizeof( err ) );
+      G_Printf( "%s\n", err );
+      return NULL;
+    }
   }
+  else
+    idnum = pids[ 0 ];
 
   return &level.clients[ idnum ];
 }
@@ -287,13 +288,13 @@ static void Svcmd_AdmitDefeat_f( void )
   team = G_TeamFromString( teamNum );
   if( team == TEAM_ALIENS )
   {
-    G_TeamCommand( TEAM_ALIENS, "cp \"^5Hivemind Link Broken\" 1");
-    trap_SendServerCommand( -1, "print \"^5Alien team has admitted defeat\n\"" );
+    G_TeamCommand( TEAM_ALIENS, "cp \"Hivemind Link Broken\" 1");
+    trap_SendServerCommand( -1, "print \"Alien team has admitted defeat\n\"" );
   }
   else if( team == TEAM_HUMANS )
   {
-    G_TeamCommand( TEAM_HUMANS, "cp \"^5Life Support Terminated\" 1");
-    trap_SendServerCommand( -1, "print \"^5Human team has admitted defeat\n\"" );
+    G_TeamCommand( TEAM_HUMANS, "cp \"Life Support Terminated\" 1");
+    trap_SendServerCommand( -1, "print \"Human team has admitted defeat\n\"" );
   }
   else
   {
@@ -329,9 +330,8 @@ static void Svcmd_Evacuation_f( void )
 {
   trap_SendServerCommand( -1, "print \"Evacuation ordered\n\"" );
   level.lastWin = TEAM_NONE;
-  trap_SetConfigstring( CS_WINNER, "[yeewin]" );
+  trap_SetConfigstring( CS_WINNER, "Evacuation" );
   LogExit( "Evacuation." );
-  G_MapLog_Result( 'd' );
 }
 
 static void Svcmd_MapRotation_f( void )
@@ -457,29 +457,6 @@ static void Svcmd_DumpUser_f( void )
   }
 }
 
-static void Svcmd_Pr_f( void )
-{
-  char targ[ 4 ];
-  int cl;
-
-  if( trap_Argc( ) < 3 )
-  {
-    G_Printf( "usage: <clientnum|-1> <message>\n" );
-    return;
-  }
-
-  trap_Argv( 1, targ, sizeof( targ ) );
-  cl = atoi( targ );
-
-  if( cl >= MAX_CLIENTS || cl < -1 )
-  {
-    G_Printf( "invalid clientnum %d\n", cl );
-    return;
-  }
-
-  trap_SendServerCommand( cl, va( "print \"%s\n\"", ConcatArgs( 2 ) ) );
-}
-
 static void Svcmd_PrintQueue_f( void )
 {
   char team[ MAX_STRING_CHARS ];
@@ -515,6 +492,8 @@ static void Svcmd_MessageWrapper( void )
 
   if( !Q_stricmp( cmd, "a" ) )
     Cmd_AdminMessage_f( NULL );
+  else if( !Q_stricmp( cmd, "m" ) )
+    Cmd_PrivateMessage_f( NULL );
   else if( !Q_stricmp( cmd, "say" ) )
     G_Say( NULL, SAY_ALL, ConcatArgs( 1 ) );
   else if( !Q_stricmp( cmd, "chat" ) )
@@ -524,32 +503,6 @@ static void Svcmd_MessageWrapper( void )
 static void Svcmd_ListMapsWrapper( void )
 {
   Cmd_ListMaps_f( NULL );
-}
-static void Svcmd_ListEmoticonsWrapper( void )
-{
-  Cmd_ListEmoticons_f( NULL );
-}
-static void Svcmd_MapRotationWrapper( void )
-{
-  Cmd_MapRotation_f( NULL );
-}
-
-static void Svcmd_MapLogWrapper( void )
-{
-  Cmd_MapLog_f( NULL );
-}
-
-static void Svcmd_WeakSuddenDeath_f( void )
-{
-  char secs[ 5 ];
-  int  offset;
-  trap_Argv( 1, secs, sizeof( secs ) );
-  offset = atoi( secs );
-
-  level.weakSuddenDeathBeginTime = level.time - level.startTime + offset * 1000;
-  trap_SendServerCommand( -1,
-    va( "cp \"Weak Sudden Death will begin in %d second%s\"",
-      offset, offset == 1 ? "" : "s" ) );
 }
 
 static void Svcmd_SuddenDeath_f( void )
@@ -564,57 +517,6 @@ static void Svcmd_SuddenDeath_f( void )
     va( "cp \"Sudden Death will begin in %d second%s\"",
       offset, offset == 1 ? "" : "s" ) );
 }
-
-static void Svcmd_Armageddon_f( void )
-{
-  int       e;
-  gentity_t *ent;
-  char      arg[ 5 ];
-  float     threshold;
-
-  trap_Argv( 1, arg, sizeof( arg ) );
-  threshold = atof( arg ) / 100.0f;
-
-  if( threshold <= 0.0f )
-    return;
-
-  for( e = 0, ent = g_entities; e < level.num_entities; e++, ent++ )
-  {
-  if( !ent->inuse )
-      continue;
-    if( ent->s.eType != ET_BUILDABLE )
-      continue;
-
-    switch( ent->s.modelindex )
-    {
-      case BA_H_MGTURRET:
-      case BA_H_MGTURRET2:
-	  case BA_A_ACIDTUBE:
-      case BA_H_TESLAGEN:
-	  case BA_A_INFESTATION_SLIME:
-	  case BA_A_INFESTATION_BLISTER:
-	  case BA_A_INFESTATION_THICKET:
-	  case BA_A_SPITEFUL_ABCESS:
-	  case BA_A_HIVE:
-      case BA_H_SHIELD:
-	  case BA_H_LIGHT:
-        break; // continue processing
-      default:
-        continue;
-    }
-
-    if( random() < threshold )
-    {
-      ent->health = -999;
-      ent->enemy = &g_entities[ ENTITYNUM_WORLD ];
-      ent->die( ent, ent->enemy, ent->enemy, 999, MOD_HDOG );
-    }
-  }
-
-  trap_SendServerCommand( -1,
-    va( "cp \"[yeshdog] ^5A flying hotdog destroyed some defensive buildings! [yeshdog]\"" ) );
-}
-
 
 static void Svcmd_G_AdvanceMapRotation_f( void )
 {
@@ -631,31 +533,26 @@ struct svcmd
   { "admitDefeat", qfalse, Svcmd_AdmitDefeat_f },
   { "advanceMapRotation", qfalse, Svcmd_G_AdvanceMapRotation_f },
   { "alienWin", qfalse, Svcmd_TeamWin_f },
-  { "armageddon", qfalse, Svcmd_Armageddon_f }, 
   { "chat", qtrue, Svcmd_MessageWrapper },
   { "cp", qtrue, Svcmd_CenterPrint_f },
   { "dumpuser", qfalse, Svcmd_DumpUser_f },
   { "eject", qfalse, Svcmd_EjectClient_f },
   { "entityList", qfalse, Svcmd_EntityList_f },
   { "evacuation", qfalse, Svcmd_Evacuation_f },
-  { "forceTeam", qtrue, Svcmd_ForceTeam_f },
+  { "forceTeam", qfalse, Svcmd_ForceTeam_f },
   { "game_memory", qfalse, BG_MemoryInfo },
   { "humanWin", qfalse, Svcmd_TeamWin_f },
   { "layoutLoad", qfalse, Svcmd_LayoutLoad_f },
   { "layoutSave", qfalse, Svcmd_LayoutSave_f },
   { "listmaps", qtrue, Svcmd_ListMapsWrapper },
-  { "listemoticons", qtrue, Svcmd_ListEmoticonsWrapper },
   { "loadcensors", qfalse, G_LoadCensors },
-  { "maplog", qtrue, Svcmd_MapLogWrapper },
+  { "m", qtrue, Svcmd_MessageWrapper },
   { "mapRotation", qfalse, Svcmd_MapRotation_f },
-  { "pr", qfalse, Svcmd_Pr_f },
   { "printqueue", qfalse, Svcmd_PrintQueue_f },
-  { "rotation", qtrue, Svcmd_MapRotationWrapper },
   { "say", qtrue, Svcmd_MessageWrapper },
   { "say_team", qtrue, Svcmd_TeamMessage_f },
   { "status", qfalse, Svcmd_Status_f },
   { "stopMapRotation", qfalse, G_StopMapRotation },
-  { "weaksuddendeath", qfalse, Svcmd_WeakSuddenDeath_f },
   { "suddendeath", qfalse, Svcmd_SuddenDeath_f }
 };
 

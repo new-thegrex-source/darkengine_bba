@@ -138,8 +138,8 @@ typedef enum
   UI_SQRT,
   UI_FLOOR,
   UI_CEIL,
-  
-  //i18 Tremulous patch:
+
+  UI_GETTEXT = 300,
   UI_R_LOADFACE,
   UI_R_FREEFACE,
   UI_R_LOADGLYPH,
@@ -162,8 +162,7 @@ typedef enum
   SORT_HOST,
   SORT_MAP,
   SORT_CLIENTS,
-  SORT_PING,
-  SORT_GAME
+  SORT_PING
 }
 serverSortField_t;
 
@@ -178,7 +177,7 @@ typedef enum
   //  void  UI_Shutdown( void );
 
   UI_KEY_EVENT,
-  //  void  UI_KeyEvent( int key );
+  //  void  UI_KeyEvent( const char *key );
 
   UI_MOUSE_EVENT,
   //  void  UI_MouseEvent( int dx, int dy );

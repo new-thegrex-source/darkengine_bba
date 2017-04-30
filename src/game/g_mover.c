@@ -20,12 +20,10 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
+
+
 
 /*
 ===============================================================================
@@ -2053,19 +2051,6 @@ void Reached_Train( gentity_t *ent )
 
   ent->s.pos.trDuration = length * 1000 / speed;
 
-  // Be sure to send to clients after any fast move case
-  ent->r.svFlags &= ~SVF_NOCLIENT;
-
-  // Fast move case
-  if( ent->s.pos.trDuration < 1 )
-  {
-    // As trDuration is used later in a division, we need to avoid that case now
-    ent->s.pos.trDuration = 1;
-
-    // Don't send entity to clients so it becomes really invisible
-    ent->r.svFlags |= SVF_NOCLIENT;
-  }
-
   // looping sound
   ent->s.loopSound = next->soundLoop;
 
@@ -2371,7 +2356,7 @@ void SP_func_rotating( gentity_t *ent )
     ent->s.apos.trDelta[ 1 ] = ent->speed;
 
   if( !ent->damage )
-    ent->damage = 10;
+    ent->damage = 2;
 
   trap_SetBrushModel( ent, ent->model );
   InitMover( ent );

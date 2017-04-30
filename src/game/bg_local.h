@@ -20,16 +20,12 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // bg_local.h -- local definitions for the bg (both games) files
 
 #define MIN_WALK_NORMAL 0.7f   // can't walk on very steep slopes
 
-#define STEPSIZE    20
+#define STEPSIZE    18
 
 #define TIMER_LAND        130
 #define TIMER_GESTURE     (34*66+50)
@@ -38,6 +34,8 @@ TREMULOUS EDGE MOD SRC FILE
 #define OVERCLIP    1.001f
 
 #define FALLING_THRESHOLD -900.0f //what vertical speed to start falling sound at
+
+#define _(String) gettext(String)
 
 
 // all of the locals will be zeroed before each
@@ -70,16 +68,17 @@ extern  float pm_stopspeed;
 extern  float pm_duckScale;
 extern  float pm_swimScale;
 extern  float pm_wadeScale;
+
 extern  float pm_accelerate;
 extern  float pm_airaccelerate;
 extern  float pm_wateraccelerate;
 extern  float pm_flyaccelerate;
+
 extern  float pm_friction;
 extern  float pm_waterfriction;
 extern  float pm_flightfriction;
-extern  int   c_pmove;
 
-extern  int   bg_language;
+extern  int   c_pmove;
 
 void PM_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce );
 void PM_AddTouchEnt( int entityNum );

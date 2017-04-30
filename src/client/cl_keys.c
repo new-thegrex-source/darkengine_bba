@@ -346,7 +346,7 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 	if ( drawLen >= MAX_STRING_CHARS ) {
 		Com_Error( ERR_DROP, "drawLen >= MAX_STRING_CHARS" );
 	}
-	
+
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
 
@@ -405,9 +405,9 @@ Field_Paste
 ================
 */
 void Field_Paste( field_t *edit ) {
-	char	*cbd;
+	char *cbd;
 	int  width;
-	int		pasteLen, i;
+	int	 pasteLen;
 
 	cbd = Sys_GetClipboardData();
 
@@ -439,7 +439,6 @@ Key events are used for non-printable characters, others are gotten from char ev
 =================
 */
 void Field_KeyDownEvent( field_t *edit, int key ) {
-//	int		len;
 	int	len, width;
   char *s;
 
@@ -456,15 +455,15 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 
 	switch ( key ) {
 		case K_DEL:
-			if ( edit->cursor < len ) {
+			if ( edit->cursor + width <= len ) {
 				memmove( edit->buffer + edit->cursor, 
-					edit->buffer + edit->cursor + 1, len - edit->cursor );
+					edit->buffer + edit->cursor + width, len - edit->cursor );
 			}
 			break;
 
 		case K_RIGHTARROW:
-			if ( edit->cursor < len ) {
-				edit->cursor++;
+			if ( edit->cursor + width <= len ) {
+				edit->cursor += width;
 			}
 			break;
 
@@ -489,6 +488,10 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
       }
       break;
 
+		case K_INS:
+			key_overstrikeMode = !key_overstrikeMode;
+			break;
+
 		default:
 			break;
 	}
@@ -508,22 +511,22 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 Field_CharEvent
 ==================
 */
-void Field_CharEvent( field_t *edit, int ch ) {
-	int		len, width;
+void Field_CharEvent( field_t *edit, const char *s ) {
+	int len, width;
 
-	if ( ch == 'v' - 'a' + 1 ) {	// ctrl-v is paste
+	if ( *s == 'v' - 'a' + 1 ) {	// ctrl-v is paste
 		Field_Paste( edit );
 		return;
 	}
 
-	if ( ch == 'c' - 'a' + 1 ) {	// ctrl-c clears the field
+	if ( *s == 'c' - 'a' + 1 ) {	// ctrl-c clears the field
 		Field_Clear( edit );
 		return;
 	}
 
 	len = strlen( edit->buffer );
 
-	if ( ch == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
+	if ( *s == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
 		while ( edit->cursor > 0 ) {
       qboolean isContinue = Q_UTF8ContByte( edit->buffer[ edit->cursor - 1 ] );
 			memmove( edit->buffer + edit->cursor - 1, 
@@ -539,13 +542,13 @@ void Field_CharEvent( field_t *edit, int ch ) {
 		return;
 	}
 
-	if ( ch == 'a' - 'a' + 1 ) {	// ctrl-a is home
+	if ( *s == 'a' - 'a' + 1 ) {	// ctrl-a is home
 		edit->cursor = 0;
 		edit->scroll = 0;
 		return;
 	}
 
-	if ( ch == 'e' - 'a' + 1 ) {	// ctrl-e is end
+	if ( *s == 'e' - 'a' + 1 ) {	// ctrl-e is end
 		edit->cursor = len;
 		edit->scroll = edit->cursor - edit->widthInChars;
 		return;
@@ -554,25 +557,26 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	//
 	// ignore any other non printable chars
 	//
-	if ( ch < 32 ) {
+	if ( *(unsigned char *)s < 32 ) {
 		return;
 	}
 
 	if ( key_overstrikeMode ) {	
 		if ( edit->cursor == MAX_EDIT_LINE - 1 )
 			return;
-		edit->buffer[edit->cursor] = ch;
+		edit->buffer[edit->cursor] = *s;
 		edit->cursor++;
 	} else {	// insert mode
-    width = Q_UTF8Width( ch );
+    width = Q_UTF8Width( s );
 		if ( len == MAX_EDIT_LINE - 1 )
 			return; // all full
 		if( edit->cursor + width >= MAX_EDIT_LINE )
 			return;
-		memmove( edit->buffer + edit->cursor + 1, 
-			edit->buffer + edit->cursor, len + 1 - edit->cursor );
-		edit->buffer[edit->cursor] = ch;
-		edit->cursor++;
+    memmove( edit->buffer + edit->cursor + width, 
+      edit->buffer + edit->cursor, len + 1 - edit->cursor );
+
+    Com_Memcpy( edit->buffer + edit->cursor, s, width );
+    edit->cursor += width;
 	}
 
 
@@ -613,10 +617,8 @@ void Console_Key (int key) {
 	// enter finishes the line
 	if ( key == K_ENTER || key == K_KP_ENTER ) {
 		// if not in the game explicitly prepend a slash if needed
-		if ( cls.state != CA_ACTIVE &&
-				g_consoleField.buffer[0] &&
-				g_consoleField.buffer[0] != '\\' &&
-				g_consoleField.buffer[0] != '/' ) {
+		if ( cls.state != CA_ACTIVE && g_consoleField.buffer[0] != '\\' 
+			&& g_consoleField.buffer[0] != '/' ) {
 			char	temp[MAX_EDIT_LINE-1];
 
 			Q_strncpyz( temp, g_consoleField.buffer, sizeof( temp ) );
@@ -919,14 +921,14 @@ void Key_Unbind_f (void)
 
 	if (Cmd_Argc() != 2)
 	{
-		Com_Printf ("unbind <key> : remove commands from a key\n");
+		Com_Printf (_("unbind <key> : remove commands from a key\n"));
 		return;
 	}
 	
 	b = Key_StringToKeynum (Cmd_Argv(1));
 	if (b==-1)
 	{
-		Com_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
+		Com_Printf (_("\"%s\" isn't a valid key\n"), Cmd_Argv(1));
 		return;
 	}
 
@@ -962,13 +964,13 @@ void Key_Bind_f (void)
 
 	if (c < 2)
 	{
-		Com_Printf ("bind <key> [command] : attach a command to a key\n");
+		Com_Printf (_("bind <key> [command] : attach a command to a key\n"));
 		return;
 	}
 	b = Key_StringToKeynum (Cmd_Argv(1));
 	if (b==-1)
 	{
-		Com_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
+		Com_Printf (_("\"%s\" isn't a valid key\n"), Cmd_Argv(1));
 		return;
 	}
 
@@ -977,7 +979,7 @@ void Key_Bind_f (void)
 		if (keys[b].binding)
 			Com_Printf ("\"%s\" = \"%s\"\n", Cmd_Argv(1), keys[b].binding );
 		else
-			Com_Printf ("\"%s\" is not bound\n", Cmd_Argv(1) );
+			Com_Printf (_("\"%s\" is not bound\n"), Cmd_Argv(1) );
 		return;
 	}
 	
@@ -1157,7 +1159,7 @@ void CL_KeyDownEvent( int key, unsigned time )
 {
 	keys[key].down = qtrue;
 	keys[key].repeats++;
-	if( keys[key].repeats == 1 && key != K_SCROLLOCK && key != K_KP_NUMLOCK && key != K_CAPSLOCK )
+	if( keys[key].repeats == 1 )
 		anykeydown++;
 
 	if( keys[K_ALT].down && key == K_ENTER )
@@ -1178,7 +1180,7 @@ void CL_KeyDownEvent( int key, unsigned time )
 
 	// keys can still be used for bound actions
 	if ( ( key < 128 || key == K_MOUSE1 ) &&
-		( !clc.demoplaying && cls.state == CA_CINEMATIC ) && Key_GetCatcher( ) == 0 ) {
+		( clc.demoplaying || cls.state == CA_CINEMATIC ) && Key_GetCatcher( ) == 0 ) {
 
 		if (Cvar_VariableValue ("com_cameraMode") == 0) {
 			Cvar_Set ("nextdemo","");
@@ -1242,9 +1244,7 @@ void CL_KeyUpEvent( int key, unsigned time )
 {
 	keys[key].repeats = 0;
 	keys[key].down = qfalse;
-	if (key != K_SCROLLOCK && key != K_KP_NUMLOCK && key != K_CAPSLOCK)
-		anykeydown--;
-
+	anykeydown--;
 	if (anykeydown < 0) {
 		anykeydown = 0;
 	}
@@ -1290,26 +1290,25 @@ CL_CharEvent
 Normal keyboard characters, already shifted / capslocked / etc
 ===================
 */
-void CL_CharEvent( int key ) {
+void CL_CharEvent( const char *key ) {
 	// delete is not a printable character and is
 	// otherwise handled by Field_KeyDownEvent
-	if ( key == 127 ) {
+	if ( *key == 127 ) {
 		return;
 	}
 
 	// distribute the key down event to the apropriate handler
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-	{
 		Field_CharEvent( &g_consoleField, key );
-	}
 	else if ( Key_GetCatcher( ) & KEYCATCH_UI )
 		// VMs that don't support i18n distinguish between char and key events by looking at the 11th least significant bit.
 		// Patched vms look at the second least significant bit to determine whether the event is a char event, and at the third bit
 		// to determine the original 11th least significant bit of the key.
-		
-	{
- 		VM_Call( uivm, UI_KEY_EVENT, Q_UTF8Store, key | K_CHAR_FLAG, qtrue );
-	}
+		VM_Call( uivm, UI_KEY_EVENT, Q_UTF8Store( key ) | (1 << (K_CHAR_BIT - 1)),
+				(qtrue << KEYEVSTATE_DOWN) |
+        (qtrue << KEYEVSTATE_CHAR) |
+        ((Q_UTF8Store( key ) & (1 << (K_CHAR_BIT - 1))) >> ((K_CHAR_BIT - 1) - KEYEVSTATE_BIT)) |
+        (qtrue << KEYEVSTATE_SUP) );
 	else if ( cls.state == CA_DISCONNECTED )
 		Field_CharEvent( &g_consoleField, key );
 }
@@ -1327,9 +1326,6 @@ void Key_ClearStates (void)
 	anykeydown = 0;
 
 	for ( i=0 ; i < MAX_KEYS ; i++ ) {
-		if (i == K_SCROLLOCK || i == K_KP_NUMLOCK || i == K_CAPSLOCK)
-			continue;
-
 		if ( keys[i].down ) {
 			CL_KeyEvent( i, qfalse, 0 );
 
@@ -1411,7 +1407,7 @@ void CL_LoadConsoleHistory( void )
 	consoleSaveBufferSize = FS_FOpenFileRead( CONSOLE_HISTORY_FILE, &f, qfalse );
 	if( !f )
 	{
-		Com_Printf( "Couldn't read %s.\n", CONSOLE_HISTORY_FILE );
+		Com_Printf( _("Couldn't read %s.\n"), CONSOLE_HISTORY_FILE );
 		return;
 	}
 
@@ -1439,7 +1435,7 @@ void CL_LoadConsoleHistory( void )
 			text_p++;
 			if( numChars > ( strlen( consoleSaveBuffer ) -	( text_p - consoleSaveBuffer ) ) )
 			{
-				Com_DPrintf( S_COLOR_YELLOW "WARNING: probable corrupt history\n" );
+				Com_DPrintf( _(S_COLOR_YELLOW "WARNING: probable corrupt history\n") );
 				break;
 			}
 			Com_Memcpy( historyEditLines[ i ].buffer,
@@ -1458,7 +1454,7 @@ void CL_LoadConsoleHistory( void )
 		historyLine = nextHistoryLine = numLines;
 	}
 	else
-		Com_Printf( "Couldn't read %s.\n", CONSOLE_HISTORY_FILE );
+		Com_Printf( _("Couldn't read %s.\n"), CONSOLE_HISTORY_FILE );
 
 	FS_FCloseFile( f );
 }
@@ -1511,12 +1507,12 @@ void CL_SaveConsoleHistory( void )
 	f = FS_FOpenFileWrite( CONSOLE_HISTORY_FILE );
 	if( !f )
 	{
-		Com_Printf( "Couldn't write %s.\n", CONSOLE_HISTORY_FILE );
+		Com_Printf( _("Couldn't write %s.\n"), CONSOLE_HISTORY_FILE );
 		return;
 	}
 
 	if( FS_Write( consoleSaveBuffer, consoleSaveBufferSize, f ) < consoleSaveBufferSize )
-		Com_Printf( "Couldn't write %s.\n", CONSOLE_HISTORY_FILE );
+		Com_Printf( _("Couldn't write %s.\n"), CONSOLE_HISTORY_FILE );
 
 	FS_FCloseFile( f );
 }

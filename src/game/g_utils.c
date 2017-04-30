@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // g_utils.c -- misc utility functions for game module
 
 #include "g_local.h"
@@ -226,7 +222,7 @@ gentity_t *G_PickTarget( char *targetname )
     return NULL;
   }
 
-  return choice[ rand( ) / ( RAND_MAX / num_choices + 1 ) ];
+  return choice[ rand( ) % num_choices ];
 }
 
 
@@ -774,21 +770,15 @@ Test a list of entities for the closest to a particular point
 gentity_t *G_ClosestEnt( vec3_t origin, gentity_t **entities, int numEntities )
 {
   int       i;
-  float     nd, d;
-  gentity_t *closestEnt;
+  float     nd, d = 1000000.0f;
+  gentity_t *closestEnt = NULL;
 
-  if( numEntities <= 0 )
-    return NULL;
-
-  closestEnt = entities[ 0 ];
-  d = DistanceSquared( origin, closestEnt->s.origin );
-
-  for( i = 1; i < numEntities; i++ )
+  for( i = 0; i < numEntities; i++ )
   {
     gentity_t *ent = entities[ i ];
 
     nd = DistanceSquared( origin, ent->s.origin );
-    if( nd < d )
+    if( i == 0 || nd < d )
     {
       d = nd;
       closestEnt = ent;
@@ -919,7 +909,7 @@ static const char *addr6parse( const char *str, addr_t *addr )
       }
       if( !str[ i ] )
         break;
-      if( str[ i ] != ':' || before + after == 8 )
+      if( str[ i ] != ':' || i == 8 )
         break;
       if( str[ i + 1 ] == ':' )
       {
@@ -960,13 +950,11 @@ qboolean G_AddressParse( const char *str, addr_t *addr )
     p = addr6parse( str, addr );
     max = 128;
   }
-  else if( strchr( str, '.' ) )
+  else
   {
     p = addr4parse( str, addr );
     max = 32;
   }
-  else
-    return qfalse;
   Q_strncpyz( addr->str, str, sizeof( addr->str ) );
   if( !p )
     return qfalse;

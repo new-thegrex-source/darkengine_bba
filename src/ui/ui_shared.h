@@ -326,8 +326,8 @@ itemDef_t;
 typedef struct
 {
   Window window;
-  const char  *dynFont;             // dynFont
   const char  *font;                // font
+  const char  *dynFont;             // dynFont
   qboolean fullScreen;              // covers entire screen
   int itemCount;                    // number of items;
   int fontIndex;                    //
@@ -432,7 +432,7 @@ typedef struct
   void ( *setOverstrikeMode )( qboolean b );
   qboolean ( *getOverstrikeMode )( void );
   void ( *startLocalSound )( sfxHandle_t sfx, int channelNum );
-  qboolean ( *ownerDrawHandleKey )( int ownerDraw, int key );
+  qboolean ( *ownerDrawHandleKey )( int ownerDraw, int key, int state );
   int ( *feederCount )( int feederID );
   const char *( *feederItemText )( int feederID, int index, int column, qhandle_t *handle );
   qhandle_t ( *feederItemImage )( int feederID, int index );
@@ -462,8 +462,6 @@ typedef struct
   int        frameTime;
   float      cursorx;
   float      cursory;
-  float      smallFontScale;
-  float      bigFontScale;
   qboolean  debug;
 
   cachedAssets_t Assets;
@@ -477,6 +475,8 @@ typedef struct
 }
 displayContextDef_t;
 
+void UIS_Shutdown( void );
+
 const char *String_Alloc( const char *p );
 void String_Init( void );
 void String_Report( void );
@@ -486,9 +486,9 @@ void Menu_Init( menuDef_t *menu );
 void Item_Init( itemDef_t *item );
 void Menu_PostParse( menuDef_t *menu );
 menuDef_t *Menu_GetFocused( void );
-void Menu_HandleKey( menuDef_t *menu, int key, qboolean down );
+void Menu_HandleKey( menuDef_t *menu, int key, int state );
 void Menu_HandleMouseMove( menuDef_t *menu, float x, float y );
-void Menu_ScrollFeeder( menuDef_t *menu, int feeder, qboolean down );
+void Menu_ScrollFeeder( menuDef_t *menu, int feeder, int state );
 qboolean Float_Parse( char **p, float *f );
 qboolean Color_Parse( char **p, vec4_t *c );
 qboolean Int_Parse( char **p, int *i );
@@ -519,7 +519,7 @@ int Display_CursorType( int x, int y );
 qboolean Display_KeyBindPending( void );
 menuDef_t *Menus_FindByName( const char *p );
 void Menus_CloseByName( const char *p );
-void Display_HandleKey( int key, qboolean down, int x, int y );
+void Display_HandleKey( int key, int state, int x, int y );
 void LerpColor( vec4_t a, vec4_t b, vec4_t c, float t );
 void Menus_CloseAll( void );
 void Menu_Update( menuDef_t *menu );
@@ -542,6 +542,8 @@ void Controls_SetDefaults( void );
 
 void trap_R_SetClipRegion( const float *region );
 
+glyphInfo_t *UI_Glyph( fontInfo_t *font, face_t *face, const char *str );
+
 //for cg_draw.c
 void Item_Text_Wrapped_Paint( itemDef_t *item );
 const char *Item_Text_Wrap( const char *text, float scale, float width );
@@ -551,8 +553,8 @@ void UI_DrawTextBlock( rectDef_t *rect, float text_x, float text_y, vec4_t color
 void UI_Text_Paint( float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style );
 void UI_Text_Paint_Limit( float *maxX, float x, float y, float scale,
                           vec4_t color, const char* text, float adjust, int limit );
-float UI_Text_Width( const char *text, float scale );
-float UI_Text_Height( const char *text, float scale );
+float UI_Text_Width( const char *text, float scale, int limit );
+float UI_Text_Height( const char *text, float scale, int limit );
 float UI_Text_EmWidth( float scale );
 float UI_Text_EmHeight( float scale );
 qboolean UI_Text_IsEmoticon( const char *s, qboolean *escaped, int *length, qhandle_t *h, int *width );

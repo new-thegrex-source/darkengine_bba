@@ -101,8 +101,8 @@ cg_t        cg;
 cgs_t       cgs;
 centity_t   cg_entities[ MAX_GENTITIES ];
 
-weaponInfo_t    cg_weapons[ 40 ];
-upgradeInfo_t   cg_upgrades[ 40 ];
+weaponInfo_t    cg_weapons[ 32 ];
+upgradeInfo_t   cg_upgrades[ 32 ];
 
 buildableInfo_t cg_buildables[ BA_NUM_BUILDABLES ];
 
@@ -145,7 +145,6 @@ vmCvar_t  cg_tracerLength;
 vmCvar_t  cg_thirdPerson;
 vmCvar_t  cg_thirdPersonAngle;
 vmCvar_t  cg_thirdPersonShoulderViewMode;
-vmCvar_t  cg_staticDeathCam;
 vmCvar_t  cg_thirdPersonPitchFollow;
 vmCvar_t  cg_thirdPersonRange;
 vmCvar_t  cg_stereoSeparation;
@@ -157,14 +156,12 @@ vmCvar_t  cg_paused;
 vmCvar_t  cg_blood;
 vmCvar_t  cg_teamChatsOnly;
 vmCvar_t  cg_drawTeamOverlay;
-vmCvar_t  cg_teamOverlaySortMode;
 vmCvar_t  cg_teamOverlayMaxPlayers;
 vmCvar_t  cg_teamOverlayUserinfo;
 vmCvar_t  cg_noPrintDuplicate;
 vmCvar_t  cg_noVoiceChats;
 vmCvar_t  cg_noVoiceText;
 vmCvar_t  cg_hudFiles;
-vmCvar_t  cg_hudFilesEnable;
 vmCvar_t  cg_smoothClients;
 vmCvar_t  pmove_fixed;
 vmCvar_t  pmove_msec;
@@ -190,8 +187,6 @@ vmCvar_t  cg_disableBuildDialogs;
 vmCvar_t  cg_disableCommandDialogs;
 vmCvar_t  cg_disableScannerPlane;
 vmCvar_t  cg_tutorial;
-vmCvar_t  cg_bleedSelfWounds;
-vmCvar_t  cg_bleedSelfHeadShots;
 
 vmCvar_t  cg_painBlendUpRate;
 vmCvar_t  cg_painBlendDownRate;
@@ -224,25 +219,7 @@ vmCvar_t  cg_emoticons;
 
 vmCvar_t  cg_chatTeamPrefix;
 
-vmCvar_t  cg_drawBubble;
-vmCvar_t  cg_BubbleZoom;
-vmCvar_t  cg_EDGEFPSFIX;
-
-vmCvar_t  cg_viewQuake;
-vmCvar_t  cg_viewQuakeLambda;
-vmCvar_t  cg_viewQuakeLimit;
-
-vmCvar_t  cg_damageIndicatorSize;
-vmCvar_t  cg_damageIndicatorAlpha;
-
-vmCvar_t  cg_healthBarSize;
-vmCvar_t  cg_healthBarAlpha;
-
-vmCvar_t  cg_hitSounds;
-vmCvar_t  cg_hitStats;
-
-vmCvar_t  cg_brighten;
-vmCvar_t  cg_brightenWraith;
+vmCvar_t  cg_translateCenterPrint;
 
 typedef struct
 {
@@ -297,10 +274,8 @@ static cvarTable_t cvarTable[ ] =
   { &cg_thirdPersonAngle, "cg_thirdPersonAngle", "0", CVAR_CHEAT },
   { &cg_thirdPersonPitchFollow, "cg_thirdPersonPitchFollow", "0", 0 },
   { &cg_thirdPersonShoulderViewMode, "cg_thirdPersonShoulderViewMode", "1", CVAR_ARCHIVE },
-  { &cg_staticDeathCam, "cg_staticDeathCam", "0", CVAR_ARCHIVE },
   { &cg_stats, "cg_stats", "0", 0 },
   { &cg_drawTeamOverlay, "cg_drawTeamOverlay", "1", CVAR_ARCHIVE },
-  { &cg_teamOverlaySortMode, "cg_teamOverlaySortMode", "1", CVAR_ARCHIVE },
   { &cg_teamOverlayMaxPlayers, "cg_teamOverlayMaxPlayers", "8", CVAR_ARCHIVE },
   { &cg_teamOverlayUserinfo, "teamoverlay", "1", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_teamChatsOnly, "cg_teamChatsOnly", "0", CVAR_ARCHIVE },
@@ -316,11 +291,6 @@ static cvarTable_t cvarTable[ ] =
   { &cg_stickySpec, "cg_stickySpec", "1", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_sprintToggle, "cg_sprintToggle", "0", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_unlagged, "cg_unlagged", "1", CVAR_ARCHIVE|CVAR_USERINFO },
-  
-
-  { &cg_drawBubble, "cg_drawBubble", "0", CVAR_ARCHIVE|CVAR_USERINFO },
-  { &cg_BubbleZoom, "cg_BubbleZoom", "0", CVAR_ARCHIVE|CVAR_USERINFO },
-  
   { NULL, "cg_flySpeed", "600", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_depthSortParticles, "cg_depthSortParticles", "1", CVAR_ARCHIVE },
   { &cg_bounceParticles, "cg_bounceParticles", "0", CVAR_ARCHIVE },
@@ -335,10 +305,7 @@ static cvarTable_t cvarTable[ ] =
   { &cg_disableCommandDialogs, "cg_disableCommandDialogs", "0", CVAR_ARCHIVE },
   { &cg_disableScannerPlane, "cg_disableScannerPlane", "0", CVAR_ARCHIVE },
   { &cg_tutorial, "cg_tutorial", "1", CVAR_ARCHIVE },
-  { &cg_bleedSelfWounds, "cg_bleedSelfWounds", "1", CVAR_ARCHIVE },
-  { &cg_bleedSelfHeadShots, "cg_bleedSelfHeadShots", "1", CVAR_ARCHIVE },
   { &cg_hudFiles, "cg_hudFiles", "ui/hud.txt", CVAR_ARCHIVE},
-  { &cg_hudFilesEnable, "cg_hudFilesEnable", "0", CVAR_ARCHIVE},
   { NULL, "cg_alienConfig", "", CVAR_ARCHIVE },
   { NULL, "cg_humanConfig", "", CVAR_ARCHIVE },
   { NULL, "cg_spectatorConfig", "", CVAR_ARCHIVE },
@@ -385,25 +352,9 @@ static cvarTable_t cvarTable[ ] =
 
   { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE},
 
-//  { &cg_chatTeamPrefix, "cg_chatTeamPrefix", "1", CVAR_ARCHIVE}
   { &cg_chatTeamPrefix, "cg_chatTeamPrefix", "1", CVAR_ARCHIVE},
-  { &cg_EDGEFPSFIX, "cg_EDGEFPSFIX", "0", CVAR_ARCHIVE|CVAR_USERINFO },
 
-  { &cg_viewQuake, "cg_viewQuake", "1", CVAR_ARCHIVE },
-  { &cg_viewQuakeLambda, "cg_viewQuakeLambda", "-10", CVAR_ARCHIVE },
-  { &cg_viewQuakeLimit, "cg_viewQuakeLimit", "5", CVAR_ARCHIVE },
-
-  { &cg_damageIndicatorSize, "cg_damageIndicatorSize", "400", CVAR_ARCHIVE },
-  { &cg_damageIndicatorAlpha, "cg_damageIndicatorAlpha", "0.8", CVAR_ARCHIVE },
-
-  { &cg_healthBarSize, "cg_healthBarSize", "2000", CVAR_ARCHIVE },
-  { &cg_healthBarAlpha, "cg_healthBarAlpha", "0.5", CVAR_ARCHIVE },
-  
-  { &cg_hitSounds, "cg_hitSounds", "1", CVAR_ARCHIVE },
-  { &cg_hitStats, "cg_hitStats", "0", CVAR_ARCHIVE },
-
-  { &cg_brighten, "cg_brighten", "0", CVAR_ARCHIVE },
-  { &cg_brightenWraith, "cg_brightenWraith", "4", CVAR_ARCHIVE }
+  { &cg_translateCenterPrint, "cg_translateCenterPrint", "0", CVAR_ARCHIVE}
 };
 
 static int   cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -461,8 +412,7 @@ static void CG_SetUIVars( void )
         BG_Upgrade( i )->purchasable )
       strcat( carriageCvar, va( "U%d ", i ) );
   }
-
-  strcat( carriageCvar, va( "G%d $", cg.snap->ps.stats[ STAT_GRENADES ] ) );
+  strcat( carriageCvar, "$" );
 
   trap_Cvar_Set( "ui_carriage", carriageCvar );
 
@@ -660,26 +610,14 @@ static void CG_RegisterSounds( void )
   int         i;
   char        name[ MAX_QPATH ];
   const char  *soundName;
-  const char  *hit_sounds[ 5 ] =
-  {
-    "sound/feedback/hit_enemy.wav",
-    "sound/feedback/hit_splash.wav",
-    "sound/feedback/hit_building.wav",
-    "sound/feedback/hit_building_splash.wav",
-    "sound/feedback/hit_friendly.wav",
-  };
-  
-  
+
   cgs.media.alienStageTransition  = trap_S_RegisterSound( "sound/announcements/overmindevolved.wav", qtrue );
   cgs.media.humanStageTransition  = trap_S_RegisterSound( "sound/announcements/reinforcement.wav", qtrue );
 
-  cgs.media.iniVote  = trap_S_RegisterSound( "sound/ye/votebing.wav", qtrue );
-  
   cgs.media.alienOvermindAttack   = trap_S_RegisterSound( "sound/announcements/overmindattack.wav", qtrue );
   cgs.media.alienOvermindDying    = trap_S_RegisterSound( "sound/announcements/overminddying.wav", qtrue );
   cgs.media.alienOvermindSpawns   = trap_S_RegisterSound( "sound/announcements/overmindspawns.wav", qtrue );
-  cgs.media.humanbaseunderatt   = trap_S_RegisterSound( "sound/ye/humanbaseunderatt.wav", qtrue );
-  
+
   cgs.media.alienL1Grab           = trap_S_RegisterSound( "sound/player/level1/grab.wav", qtrue );
   cgs.media.alienL4ChargePrepare  = trap_S_RegisterSound( "sound/player/level4/charge_prepare.wav", qtrue );
   cgs.media.alienL4ChargeStart    = trap_S_RegisterSound( "sound/player/level4/charge_start.wav", qtrue );
@@ -693,8 +631,6 @@ static void CG_RegisterSounds( void )
   cgs.media.alienTalkSound        = trap_S_RegisterSound( "sound/misc/alien_talk.wav", qfalse );
   cgs.media.humanTalkSound        = trap_S_RegisterSound( "sound/misc/human_talk.wav", qfalse );
   cgs.media.landSound             = trap_S_RegisterSound( "sound/player/land1.wav", qfalse );
-
-  cgs.media.hummelSound           = trap_S_RegisterSound( "sound/player/hummel.wav", qfalse );
 
   cgs.media.watrInSound           = trap_S_RegisterSound( "sound/player/watr_in.wav", qfalse );
   cgs.media.watrOutSound          = trap_S_RegisterSound( "sound/player/watr_out.wav", qfalse );
@@ -735,9 +671,7 @@ static void CG_RegisterSounds( void )
   cgs.media.jetpackAscendSound      = trap_S_RegisterSound( "sound/upgrades/jetpack/hi.wav", qfalse );
 
   cgs.media.medkitUseSound          = trap_S_RegisterSound( "sound/upgrades/medkit/medkit.wav", qfalse );
-  
-  cgs.media.forcefieldSound          = trap_S_RegisterSound( "sound/buildables/light/emp.wav", qfalse );
-  
+
   cgs.media.alienEvolveSound        = trap_S_RegisterSound( "sound/player/alienevolve.wav", qfalse );
 
   cgs.media.alienBuildableExplosion = trap_S_RegisterSound( "sound/buildables/alien/explosion.wav", qfalse );
@@ -754,11 +688,6 @@ static void CG_RegisterSounds( void )
   cgs.media.hardBounceSound1        = trap_S_RegisterSound( "sound/misc/hard_bounce1.wav", qfalse );
   cgs.media.hardBounceSound2        = trap_S_RegisterSound( "sound/misc/hard_bounce2.wav", qfalse );
 
-  cgs.media.airpounce               = trap_S_RegisterSound( "models/weapons/level5/airpounce.wav", qfalse );
-  
-  cgs.media.acidBombBounceSound1    = trap_S_RegisterSound( "sound/misc/abomb_bounce1.wav", qfalse );
-  cgs.media.acidBombBounceSound2    = trap_S_RegisterSound( "sound/misc/abomb_bounce2.wav", qfalse );
-
   cgs.media.repeaterUseSound        = trap_S_RegisterSound( "sound/buildables/repeater/use.wav", qfalse );
 
   cgs.media.buildableRepairSound    = trap_S_RegisterSound( "sound/buildables/human/repair.wav", qfalse );
@@ -766,21 +695,6 @@ static void CG_RegisterSounds( void )
 
   cgs.media.lCannonWarningSound     = trap_S_RegisterSound( "models/weapons/lcannon/warning.wav", qfalse );
   cgs.media.lCannonWarningSound2    = trap_S_RegisterSound( "models/weapons/lcannon/warning2.wav", qfalse );
-  
-  cgs.media.FlamerWarningSound     = trap_S_RegisterSound( "models/weapons/flamer/warning.wav", qfalse );
-  cgs.media.FlamerWarningSound2    = trap_S_RegisterSound( "models/weapons/flamer/warning2.wav", qfalse );
-
-  for( i = 0; i < 5; i++ )
-    cgs.media.hitSounds[ i ]        = trap_S_RegisterSound( hit_sounds[ i ], qfalse );
-
-  cgs.media.rocketlPrimeSound       = trap_S_RegisterSound( "models/weapons/rocketl/prime.wav", qfalse );
-
-  cgs.media.warpEnterSound          = trap_S_RegisterSound( "sound/player/level1/warp1.wav", qfalse );
-  cgs.media.warpExitSound           = trap_S_RegisterSound( "sound/player/level1/warp2.wav", qfalse );
-  cgs.media.warpingSound            = trap_S_RegisterSound( "sound/player/level1/warping.wav", qfalse );
-
-  cgs.media.grenadePrimeSound       = trap_S_RegisterSound( "sound/weapons/grenade/prime.wav", qfalse );
-  cgs.media.grenadeTickSound        = trap_S_RegisterSound( "sound/weapons/grenade/tick.wav", qfalse );
 }
 
 
@@ -811,21 +725,6 @@ static void CG_RegisterGraphics( void )
     "gfx/2d/numbers/nine_32b",
     "gfx/2d/numbers/minus_32b",
   };
-  static char *sb_nums_alt[ 12 ] =
-  {
-    "gfx/2d/numbers_alt/0",
-    "gfx/2d/numbers_alt/1",
-    "gfx/2d/numbers_alt/2",
-    "gfx/2d/numbers_alt/3",
-    "gfx/2d/numbers_alt/4",
-    "gfx/2d/numbers_alt/5",
-    "gfx/2d/numbers_alt/6",
-    "gfx/2d/numbers_alt/7",
-    "gfx/2d/numbers_alt/8",
-    "gfx/2d/numbers_alt/9",
-    "gfx/2d/numbers_alt/minus",
-    "gfx/2d/numbers_alt/slash",
-  };
   static char *buildWeaponTimerPieShaders[ 8 ] =
   {
     "ui/assets/neutral/1_5pie",
@@ -848,9 +747,6 @@ static void CG_RegisterGraphics( void )
   for( i = 0; i < 11; i++ )
     cgs.media.numberShaders[ i ] = trap_R_RegisterShader( sb_nums[ i ] );
 
-  for( i = 0; i < 12; i++ )
-    cgs.media.numberShadersAlt[ i ] = trap_R_RegisterShader( sb_nums_alt[ i ] );
-
   cgs.media.viewBloodShader           = trap_R_RegisterShader( "gfx/damage/fullscreen_painblend" );
 
   cgs.media.connectionShader          = trap_R_RegisterShader( "gfx/2d/net" );
@@ -858,25 +754,29 @@ static void CG_RegisterGraphics( void )
   cgs.media.creepShader               = trap_R_RegisterShader( "creep" );
 
   cgs.media.scannerBlipShader         = trap_R_RegisterShader( "gfx/2d/blip" );
-  cgs.media.scannerBlipShaderPlayer   = trap_R_RegisterShader( "gfx/2d/blipPlayer" );
-  cgs.media.scannerBlipShaderHealing   = trap_R_RegisterShader( "gfx/2d/blipHealing" );
   cgs.media.scannerLineShader         = trap_R_RegisterShader( "gfx/2d/stalk" );
 
-  cgs.media.teamOverlayShader         = trap_R_RegisterShader( "ui/assets/teamoverlay" );
-  
+  cgs.media.teamOverlayShader         = trap_R_RegisterShader( "gfx/2d/teamoverlay" );
+
   cgs.media.tracerShader              = trap_R_RegisterShader( "gfx/misc/tracer" );
 
   cgs.media.backTileShader            = trap_R_RegisterShader( "console" );
 
-  // cloak shaders
-  cgs.media.invisibleShader           = trap_R_RegisterShader( "gfx/invisible" );
-  cgs.media.invisibleShaderTeam       = trap_R_RegisterShader( "gfx/invisible_team" );
-  cgs.media.invisibleFadeShader       = trap_R_RegisterShader( "gfx/invisible_fade" );
 
   // building shaders
   cgs.media.greenBuildShader          = trap_R_RegisterShader("gfx/misc/greenbuild" );
   cgs.media.redBuildShader            = trap_R_RegisterShader("gfx/misc/redbuild" );
   cgs.media.humanSpawningShader       = trap_R_RegisterShader("models/buildables/telenode/rep_cyl" );
+
+  // Domination shaders
+  cgs.media.noneDominationShader      = trap_R_RegisterShader("gfx/misc/dp_none" );
+  cgs.media.alienDominationShader     = trap_R_RegisterShader("gfx/misc/dp_alien" );
+  cgs.media.humanDominationShader     = trap_R_RegisterShader("gfx/misc/dp_human" );
+  cgs.media.dominationBarShader       = trap_R_RegisterShader("gfx/misc/dp_bar" );
+  cgs.media.dominationBarAShader      = trap_R_RegisterShader("gfx/misc/dp_bar_a" );
+  cgs.media.dominationBarHShader      = trap_R_RegisterShader("gfx/misc/dp_bar_h" );
+  for( i = 0; i < BA_DPOINT_LAST - BA_DPOINT_FIRST + 1; i++ )
+    cgs.media.dominationIcon[ i ] = trap_R_RegisterShader( va( "gfx/misc/dp_icon_%c", 'a' + i ) );
 
   for( i = 0; i < 8; i++ )
     cgs.media.buildWeaponTimerPie[ i ] = trap_R_RegisterShader( buildWeaponTimerPieShaders[ i ] );
@@ -889,13 +789,8 @@ static void CG_RegisterGraphics( void )
   cgs.media.healthCrossPoisoned       = trap_R_RegisterShader( "ui/assets/neutral/cross_poison.tga" );
   
   cgs.media.upgradeClassIconShader    = trap_R_RegisterShader( "icons/icona_upgrade.tga" );
-
-  cgs.media.alienBuildPoolBar         = trap_R_RegisterShader( "ui/assets/alien/build_pool_bar.tga" );
-  cgs.media.humanBuildPoolBar         = trap_R_RegisterShader( "ui/assets/human/build_pool_bar.tga" );
-  cgs.media.alienNoBPFlash            = trap_R_RegisterShader( "ui/assets/alien/nobp_flash.tga" );
-  cgs.media.humanNoBPFlash            = trap_R_RegisterShader( "ui/assets/human/nobp_flash.tga" );
-
-  cgs.media.lightningBeam             = trap_R_RegisterShader( "gfx/lightning/beam" );
+  
+  cgs.media.balloonShader             = trap_R_RegisterShader( "gfx/sprites/chatballoon" );
 
   cgs.media.disconnectPS              = CG_RegisterParticleSystem( "disconnectPS" );
 
@@ -908,20 +803,14 @@ static void CG_RegisterGraphics( void )
   cgs.media.wakeMarkShader            = trap_R_RegisterShader( "gfx/marks/wake" );
 
   cgs.media.poisonCloudPS             = CG_RegisterParticleSystem( "firstPersonPoisonCloudPS" );
-  cgs.media.fireCloudPS             = CG_RegisterParticleSystem( "fireCloudPS" );
   cgs.media.poisonCloudedPS           = CG_RegisterParticleSystem( "poisonCloudedPS" );
   cgs.media.alienEvolvePS             = CG_RegisterParticleSystem( "alienEvolvePS" );
-  cgs.media.airpounceblast            = CG_RegisterParticleSystem( "airpounceblast" );
   cgs.media.alienAcidTubePS           = CG_RegisterParticleSystem( "alienAcidTubePS" );
-  cgs.media.alienSlimePS           = CG_RegisterParticleSystem( "alienSlimePS" );
 
-  cgs.media.forcefieldPS           = CG_RegisterParticleSystem( "forcefieldPS" );
- 
   cgs.media.jetPackDescendPS          = CG_RegisterParticleSystem( "jetPackDescendPS" );
   cgs.media.jetPackHoverPS            = CG_RegisterParticleSystem( "jetPackHoverPS" );
   cgs.media.jetPackAscendPS           = CG_RegisterParticleSystem( "jetPackAscendPS" );
 
-  cgs.media.organicbulbPS = CG_RegisterParticleSystem( "organicbulbPS" );
   cgs.media.humanBuildableDamagedPS   = CG_RegisterParticleSystem( "humanBuildableDamagedPS" );
   cgs.media.alienBuildableDamagedPS   = CG_RegisterParticleSystem( "alienBuildableDamagedPS" );
   cgs.media.humanBuildableDestroyedPS = CG_RegisterParticleSystem( "humanBuildableDestroyedPS" );
@@ -933,30 +822,9 @@ static void CG_RegisterGraphics( void )
   cgs.media.alienBleedPS              = CG_RegisterParticleSystem( "alienBleedPS" );
   cgs.media.humanBleedPS              = CG_RegisterParticleSystem( "humanBleedPS" );
 
-  cgs.media.alienSpiteful_AbcessDestroyedPS = CG_RegisterParticleSystem( "alienSpiteful_AbcessDestroyedPS" );
-
-
-  cgs.media.alienWoundsBleedPS        = CG_RegisterParticleSystem( "alienWoundBleedPS" );
-  cgs.media.humanWoundsBleedPS        = CG_RegisterParticleSystem( "humanWoundBleedPS" );
-  cgs.media.headShotPS                = CG_RegisterParticleSystem( "headShotPS" );
-
-  cgs.media.lightningImpactPS         = CG_RegisterParticleSystem( "models/weapons/lightning/impactPS" );
-
-  cgs.media.warpEnterPS               = CG_RegisterParticleSystem( "gfx/level1/warpEnterPS" );
-  cgs.media.warpExitPS                = CG_RegisterParticleSystem( "gfx/level1/warpExitPS" );
-  cgs.media.warpOverlay               = trap_R_RegisterShader( "gfx/level1/warpOverlay" );
-  cgs.media.warpOverlayBlocked        = trap_R_RegisterShader( "gfx/level1/warpOverlayBlocked" );
-  cgs.media.warpingShader             = trap_R_RegisterShader( "gfx/level1/warping" );
-  cgs.media.warpingEnvironmentShader  = trap_R_RegisterShader( "gfx/level1/warpingEnvironment" );
-  cgs.media.warpParticle              = trap_R_RegisterShader( "gfx/level1/warpParticle1" );
-
-  for( i = 0; i < NUM_BRIGHTEN_SHADERS; i++ )
-  {
-    cgs.media.brightenShaders[ i ] = trap_R_RegisterShader( va( "gfx/brighten%d", i ) );
-  }
-
   CG_BuildableStatusParse( "ui/assets/human/buildstat.cfg", &cgs.humanBuildStat );
   CG_BuildableStatusParse( "ui/assets/alien/buildstat.cfg", &cgs.alienBuildStat );
+  CG_BuildableStatusParse( "ui/assets/domination/buildstat.cfg", &cgs.domBuildStat );
  
   // register the inline models
   cgs.numInlineModels = trap_CM_NumInlineModels( );
@@ -1103,7 +971,7 @@ CG_ConfigString
 const char *CG_ConfigString( int index )
 {
   if( index < 0 || index >= MAX_CONFIGSTRINGS )
-    CG_Error( "CG_ConfigString: bad index: %i", index );
+    CG_Error( _("CG_ConfigString: bad index: %i"), index );
 
   return cgs.gameState.stringData + cgs.gameState.stringOffsets[ index ];
 }
@@ -1165,13 +1033,13 @@ char *CG_GetMenuBuffer( const char *filename )
 
   if( !f )
   {
-    trap_Print( va( S_COLOR_RED "menu file not found: %s, using default\n", filename ) );
+    trap_Print( va( _(S_COLOR_RED "menu file not found: %s, using default\n"), filename ) );
     return NULL;
   }
 
   if( len >= MAX_MENUFILE )
   {
-    trap_Print( va( S_COLOR_RED "menu file too large: %s is %i, max allowed is %i",
+    trap_Print( va( _(S_COLOR_RED "menu file too large: %s is %i, max allowed is %i"),
                     filename, len, MAX_MENUFILE ) );
     trap_FS_FCloseFile( f );
     return NULL;
@@ -1238,9 +1106,8 @@ qboolean CG_Asset_Parse( int handle )
       cgDC.registerFont( tempStr, pointSize, &cgDC.Assets.bigFont );
       continue;
     }
-	
-	//dyFont
-	
+
+    // dynFont
     if( Q_stricmp( token.string, "dynFont" ) == 0 )
     {
       int pointSize;
@@ -1251,7 +1118,7 @@ qboolean CG_Asset_Parse( int handle )
       cgDC.loadFace( tempStr, pointSize, tempStr, &cgDC.Assets.dynFont );
       continue;
     }
-	
+
     // smallDynFont
     if( Q_stricmp( token.string, "smallDynFont" ) == 0 )
     {
@@ -1407,12 +1274,12 @@ void CG_ParseMenu( const char *menuFile )
       break;
 
     //if ( Q_stricmp( token, "{" ) ) {
-    //  Com_Printf( "Missing { in menu file\n" );
+    //  Com_Printf( _("Missing { in menu file\n") );
     //  break;
     //}
 
     //if ( menuCount == MAX_MENUS ) {
-    //  Com_Printf( "Too many menus!\n" );
+    //  Com_Printf( _("Too many menus!\n") );
     //  break;
     //}
 
@@ -1478,16 +1345,16 @@ void CG_LoadMenus( const char *menuFile )
 
   if( !f )
   {
-    trap_Error( va( S_COLOR_YELLOW "menu file not found: %s, using default\n", menuFile ) );
+    trap_Error( va( _(S_COLOR_YELLOW "menu file not found: %s, using default\n"), menuFile ) );
     len = trap_FS_FOpenFile( "ui/hud.txt", &f, FS_READ );
 
     if( !f )
-      trap_Error( va( S_COLOR_RED "default menu file not found: ui/hud.txt, unable to continue!\n" ) );
+      trap_Error( va( _(S_COLOR_RED "default menu file not found: ui/hud.txt, unable to continue!\n") ) );
   }
 
   if( len >= MAX_MENUDEFFILE )
   {
-    trap_Error( va( S_COLOR_RED "menu file too large: %s is %i, max allowed is %i",
+    trap_Error( va( _(S_COLOR_RED "menu file too large: %s is %i, max allowed is %i"),
                 menuFile, len, MAX_MENUDEFFILE ) );
     trap_FS_FCloseFile( f );
     return;
@@ -1522,12 +1389,12 @@ void CG_LoadMenus( const char *menuFile )
     }
   }
 
-  Com_Printf( "UI menu load time = %d milli seconds\n", trap_Milliseconds( ) - start );
+  Com_Printf( _("UI menu load time = %d milli seconds\n"), trap_Milliseconds( ) - start );
 }
 
 
 
-static qboolean CG_OwnerDrawHandleKey( int ownerDraw, int key )
+static qboolean CG_OwnerDrawHandleKey( int ownerDraw, int key, int state )
 {
   return qfalse;
 }
@@ -1617,7 +1484,7 @@ static clientInfo_t * CG_InfoFromScoreIndex( int index, int team, int *scoreInde
   return &cgs.clientinfo[ cg.scores[ index ].client ];
 }
 
-qboolean CG_ClientIsReady( int clientNum )
+static qboolean CG_ClientIsReady( int clientNum )
 {
   clientList_t ready;
 
@@ -1646,14 +1513,9 @@ static const char *CG_FeederItemText( int feederID, int index, int column, qhand
 
   if( cg.intermissionStarted && CG_ClientIsReady( sp->client ) )
     showIcons = qfalse;
-  else if( cg.snap->ps.pm_type == PM_SPECTATOR ||
-           cg.snap->ps.pm_type == PM_NOCLIP ||
-           cg.snap->ps.pm_flags & PMF_FOLLOW ||
-           team == cg.snap->ps.stats[ STAT_TEAM ] ||
-           cg.intermissionStarted )
-  {
+  else if( cg.snap->ps.pm_type == PM_SPECTATOR || cg.snap->ps.pm_flags & PMF_FOLLOW ||
+    team == cg.snap->ps.stats[ STAT_TEAM ] || cg.intermissionStarted )
     showIcons = qtrue;
-  }
 
   if( info && info->infoValid )
   {
@@ -1676,6 +1538,8 @@ static const char *CG_FeederItemText( int feederID, int index, int column, qhand
           {
             switch( sp->weapon )
             {
+              case WP_ABUILD2:
+              case WP_ALEVEL1_UPG:
               case WP_ALEVEL2_UPG:
               case WP_ALEVEL3_UPG:
                 *handle = cgs.media.upgradeClassIconShader;
@@ -1690,11 +1554,11 @@ static const char *CG_FeederItemText( int feederID, int index, int column, qhand
 
       case 2:
         if( cg.intermissionStarted && CG_ClientIsReady( sp->client ) )
-          return "Ready";
+          return _("Ready");
         break;
 
       case 3:
-        return va( S_COLOR_WHITE "%s", info->name );
+        return info->name;
         break;
 
       case 4:
@@ -1760,7 +1624,7 @@ static int CG_OwnerDrawWidth( int ownerDraw, float scale )
   switch( ownerDraw )
   {
     case CG_KILLER:
-      return UI_Text_Width( CG_GetKillerText( ), scale );
+      return UI_Text_Width( CG_GetKillerText( ), scale, 0 );
       break;
   }
 
@@ -1808,9 +1672,6 @@ void CG_LoadHudMenu( void )
                        ( 480.0f * cgs.glconfig.vidWidth ) );
   cgDC.xscale = cgs.glconfig.vidWidth / 640.0f;
   cgDC.yscale = cgs.glconfig.vidHeight / 480.0f;
-
-  cgDC.smallFontScale = CG_Cvar_Get( "ui_smallFont" );
-  cgDC.bigFontScale = CG_Cvar_Get( "ui_bigFont" );
 
   cgDC.registerShaderNoMip  = &trap_R_RegisterShaderNoMip;
   cgDC.setColor             = &trap_R_SetColor;
@@ -1871,7 +1732,7 @@ void CG_LoadHudMenu( void )
   trap_Cvar_VariableStringBuffer( "cg_hudFiles", buff, sizeof( buff ) );
   hudSet = buff;
 
-  if( !cg_hudFilesEnable.integer || hudSet[ 0 ] == '\0' )
+  if( hudSet[ 0 ] == '\0' )
     hudSet = "ui/hud.txt";
 
   CG_LoadMenus( hudSet );
@@ -1980,7 +1841,7 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
   s = CG_ConfigString( CS_GAME_VERSION );
 
   if( strcmp( s, GAME_VERSION ) )
-    CG_Error( "Client/Server game mismatch: %s/%s", GAME_VERSION, s );
+    CG_Error( _("Client/Server game mismatch: %s/%s"), GAME_VERSION, s );
 
   s = CG_ConfigString( CS_LEVEL_START_TIME );
   cgs.levelStartTime = atoi( s );
@@ -2043,9 +1904,6 @@ Called before every level change or subsystem restart
 */
 void CG_Shutdown( void )
 {
-  // some mods may need to do cleanup work here,
-  // like closing files or archiving session data
-  
   FreeFace( &cgDC.Assets.dynFont );
 
   UIS_Shutdown( );
@@ -2079,7 +1937,7 @@ static char *CG_VoIPString( void )
                          "%s%d", ( slen > 0 ) ? "," : "", i );
       if( slen + nlen + 1 >= sizeof( voipString ) )
       {
-        CG_Printf( S_COLOR_YELLOW "WARNING: voipString overflowed\n" );
+        CG_Printf( _(S_COLOR_YELLOW "WARNING: voipString overflowed\n") );
         break;
       }
 
@@ -2221,3 +2079,37 @@ void FreeCachedGlyphs( face_t *face )
   if( engineState & 0x02 )
     trap_R_FreeCachedGlyphs( face );
 }
+
+void Gettext( char *buffer, const char *msgid, int bufferLength )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( !( engineState & 0x02 ) )
+    strncpy( buffer, msgid, bufferLength );
+  else
+    trap_Gettext( buffer, msgid, bufferLength );
+}
+
+char *gettext ( const char *msgid )
+{
+  static char string[8][32000];
+  static int  index = 0;
+  char        *buf = string[index++ & 7];
+
+  Gettext( buf, msgid, sizeof( *string ) );
+
+  return buf;
+}
+

@@ -70,7 +70,7 @@ CG_FreeMarkPoly
 void CG_FreeMarkPoly( markPoly_t *le )
 {
   if( !le->prevMark )
-    CG_Error( "CG_FreeLocalEntity: not active" );
+    CG_Error( _("CG_FreeLocalEntity: not active") );
 
   // remove from the doubly linked active list
   le->prevMark->nextMark = le->nextMark;
@@ -116,6 +116,8 @@ markPoly_t *CG_AllocMark( void )
   return le;
 }
 
+
+
 /*
 =================
 CG_ImpactMark
@@ -127,9 +129,8 @@ temporary marks will not be stored or randomly oriented, but immediately
 passed to the renderer.
 =================
 */
-#define MAX_MARK_FRAGMENTS  700
-#define MAX_MARK_POINTS   400
-#define MAX_VERTS_ON_POLY2 64
+#define MAX_MARK_FRAGMENTS  128
+#define MAX_MARK_POINTS   384
 
 void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
                     float orientation, float red, float green, float blue, float alpha,
@@ -145,24 +146,24 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
   vec3_t          markPoints[ MAX_MARK_POINTS ];
   vec3_t          projection;
 
-  
   if( !cg_addMarks.integer )
     return;
 
   if( radius <= 0 )
-    CG_Error( "CG_ImpactMark called with <= 0 radius" );
+    CG_Error( _("CG_ImpactMark called with <= 0 radius") );
+
+  //if ( markTotal >= MAX_MARK_POLYS ) {
+  //  return;
+  //}
 
   // create the texture axis
   VectorNormalize2( dir, axis[ 0 ] );
   PerpendicularVector( axis[ 1 ], axis[ 0 ] );
   RotatePointAroundVector( axis[ 2 ], axis[ 0 ], axis[ 1 ], orientation );
   CrossProduct( axis[ 0 ], axis[ 2 ], axis[ 1 ] );
+
   texCoordScale = 0.5 * 1.0 / radius;
 
-//
-        /* make rotated polygon axis */
-
-//
   // create the full polygon
   for( i = 0; i < 3; i++ )
   {
@@ -170,9 +171,9 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
     originalPoints[ 1 ][ i ] = origin[ i ] + radius * axis[ 1 ][ i ] - radius * axis[ 2 ][ i ];
     originalPoints[ 2 ][ i ] = origin[ i ] + radius * axis[ 1 ][ i ] + radius * axis[ 2 ][ i ];
     originalPoints[ 3 ][ i ] = origin[ i ] - radius * axis[ 1 ][ i ] + radius * axis[ 2 ][ i ];
-  
   }
-   // get the fragments
+
+  // get the fragments
   VectorScale( dir, -20, projection );
   numFragments = trap_CM_MarkFragments( 4, (void *)originalPoints,
           projection, MAX_MARK_POINTS, markPoints[ 0 ],
@@ -186,13 +187,13 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
   for( i = 0, mf = markFragments; i < numFragments; i++, mf++ )
   {
     polyVert_t  *v;
-    polyVert_t  verts[ MAX_VERTS_ON_POLY2 ];
+    polyVert_t  verts[ MAX_VERTS_ON_POLY ];
     markPoly_t  *mark;
 
     // we have an upper limit on the complexity of polygons
     // that we store persistantly
-    if( mf->numPoints > MAX_VERTS_ON_POLY2 )
-      mf->numPoints = MAX_VERTS_ON_POLY2;
+    if( mf->numPoints > MAX_VERTS_ON_POLY )
+      mf->numPoints = MAX_VERTS_ON_POLY;
 
     for( j = 0, v = verts; j < mf->numPoints; j++, v++ )
     {
@@ -234,8 +235,8 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 CG_AddMarks
 ===============
 */
-#define MARK_TOTAL_TIME   8000
-#define MARK_FADE_TIME     500
+#define MARK_TOTAL_TIME   10000
+#define MARK_FADE_TIME    1000
 
 void CG_AddMarks( void )
 {
@@ -281,6 +282,7 @@ void CG_AddMarks( void )
         }
       }
     }
+
     trap_R_AddPolyToScene( mp->markShader, mp->poly.numVerts, mp->verts );
   }
 }

@@ -128,65 +128,6 @@ char *Sys_ConsoleInput(void)
 	return CON_Input( );
 }
 
-#ifdef DEDICATED
-#	define PID_FILENAME PRODUCT_NAME "_server.pid"
-#else
-#	define PID_FILENAME PRODUCT_NAME ".pid"
-#endif
-
-/*
-=================
-Sys_PIDFileName
-=================
-*/
-static char *Sys_PIDFileName( void )
-{
-	return va( "%s/%s", Sys_TempPath( ), PID_FILENAME );
-}
-
-/*
-=================
-Sys_WritePIDFile
-
-Return qtrue if there is an existing stale PID file
-=================
-*/
-qboolean Sys_WritePIDFile( void )
-{
-	char      *pidFile = Sys_PIDFileName( );
-	FILE      *f;
-	qboolean  stale = qfalse;
-
-	// First, check if the pid file is already there
-	if( ( f = fopen( pidFile, "r" ) ) != NULL )
-	{
-		char  pidBuffer[ 64 ] = { 0 };
-		int   pid;
-
-		pid = fread( pidBuffer, sizeof( char ), sizeof( pidBuffer ) - 1, f );
-		fclose( f );
-
-		if(pid > 0)
-		{
-			pid = atoi( pidBuffer );
-			if( !Sys_PIDIsRunning( pid ) )
-				stale = qtrue;
-		}
-		else
-			stale = qtrue;
-	}
-
-	if( ( f = fopen( pidFile, "w" ) ) != NULL )
-	{
-		fprintf( f, "%d", Sys_PID( ) );
-		fclose( f );
-	}
-	else
-		Com_Printf( S_COLOR_YELLOW "Couldn't write %s.\n", pidFile );
-
-	return stale;
-}
-
 /*
 =================
 Sys_Exit
@@ -194,7 +135,7 @@ Sys_Exit
 Single exit point (regular exit or in case of error)
 =================
 */
-static void Sys_Exit( int exitCode )
+void Sys_Exit( int ex )
 {
 	CON_Shutdown( );
 
@@ -202,15 +143,13 @@ static void Sys_Exit( int exitCode )
 	SDL_Quit( );
 #endif
 
-	if( exitCode < 2 )
-	{
-		// Normal exit
-		remove( Sys_PIDFileName( ) );
-	}
-
-	Sys_PlatformExit( );
-
-	exit( exitCode );
+#ifdef NDEBUG
+	exit( ex );
+#else
+	// Cause a backtrace on error exits
+	assert( ex == 0 );
+	exit( ex );
+#endif
 }
 
 /*
@@ -220,6 +159,7 @@ Sys_Quit
 */
 void Sys_Quit( void )
 {
+	CL_Shutdown( );
 	Sys_Exit( 0 );
 }
 
@@ -256,6 +196,7 @@ void Sys_Init(void)
 	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
 	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
 	Cvar_Set( "username", Sys_GetCurrentUser( ) );
+	Sys_InitGettext( );
 }
 
 /*
@@ -301,8 +242,8 @@ void Sys_AnsiColorPrint( const char *msg )
 			}
 			else
 			{
-				// Print the color code (reset first to clear potential inverse (black))
-				Com_sprintf( buffer, sizeof( buffer ), "\033[0m\033[%dm",
+				// Print the color code
+				Com_sprintf( buffer, sizeof( buffer ), "\033[%dm",
 						q3ToAnsi[ ColorIndex( *( msg + 1 ) ) ] );
 				fputs( buffer, stderr );
 				msg += 2;
@@ -348,14 +289,15 @@ void Sys_Error( const char *error, ... )
 	va_list argptr;
 	char    string[1024];
 
+	CL_Shutdown ();
+
 	va_start (argptr,error);
 	Q_vsnprintf (string, sizeof(string), error, argptr);
 	va_end (argptr);
 
-	CL_Shutdown( string );
 	Sys_ErrorDialog( string );
 
-	Sys_Exit( 3 );
+	Sys_Exit( 1 );
 }
 
 /*
@@ -372,7 +314,7 @@ void Sys_Warn( char *warning, ... )
 	Q_vsnprintf (string, sizeof(string), warning, argptr);
 	va_end (argptr);
 
-	CON_Print( va( "Warning: %s", string ) );
+	CON_Print( va( _("Warning: %s"), string ) );
 }
 
 /*
@@ -401,11 +343,39 @@ void Sys_UnloadDll( void *dllHandle )
 {
 	if( !dllHandle )
 	{
-		Com_Printf("Sys_UnloadDll(NULL)\n");
+		Com_Printf(_("Sys_UnloadDll(NULL)\n"));
 		return;
 	}
 
 	Sys_UnloadLibrary(dllHandle);
+}
+
+/*
+=================
+Sys_TryLibraryLoad
+=================
+*/
+static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname, char* fqpath )
+{
+	void* libHandle;
+	char* fn;
+
+	*fqpath = 0;
+
+	fn = FS_BuildOSPath( base, gamedir, fname );
+	Com_Printf( _("Sys_LoadDll(%s)... \n"), fn );
+
+	libHandle = Sys_LoadLibrary(fn);
+
+	if(!libHandle) {
+		Com_Printf( _("Sys_LoadDll(%s) failed:\n\"%s\"\n"), fn, Sys_LibraryError() );
+		return NULL;
+	}
+
+	Com_Printf ( _("Sys_LoadDll(%s): succeeded ...\n"), fn );
+	Q_strncpyz ( fqpath , fn , MAX_QPATH ) ;
+
+	return libHandle;
 }
 
 /*
@@ -417,31 +387,33 @@ Used to load a development dll instead of a virtual machine
 #2 look in fs_basepath
 =================
 */
-void *Sys_LoadDll( const char *name,
+void *Sys_LoadDll( const char *name, char *fqpath ,
 	intptr_t (**entryPoint)(int, ...),
 	intptr_t (*systemcalls)(intptr_t, ...) )
 {
 	void  *libHandle;
 	void  (*dllEntry)( intptr_t (*syscallptr)(intptr_t, ...) );
 	char  fname[MAX_OSPATH];
-	char  *netpath;
+	char  *basepath;
+	char  *homepath;
+	char  *gamedir;
 
 	assert( name );
 
-	Com_sprintf(fname, sizeof(fname), "%s" ARCH_STRING DLL_EXT, name);
+	Q_snprintf (fname, sizeof(fname), "%s" ARCH_STRING DLL_EXT, name);
 
-	netpath = FS_FindDll(fname);
+	// TODO: use fs_searchpaths from files.c
+	basepath = Cvar_VariableString( "fs_basepath" );
+	homepath = Cvar_VariableString( "fs_homepath" );
+	gamedir = Cvar_VariableString( "fs_game" );
 
-	if(!netpath) {
-		Com_Printf( "Sys_LoadDll(%s) could not find it\n", fname );
-		return NULL;
-	}
+	libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
 
-	Com_Printf( "Loading DLL file: %s\n", netpath);
-	libHandle = Sys_LoadLibrary(netpath);
+	if(!libHandle && basepath)
+		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
 
 	if(!libHandle) {
-		Com_Printf( "Sys_LoadDll(%s) failed:\n\"%s\"\n", netpath, Sys_LibraryError() );
+		Com_Printf ( _("Sys_LoadDll(%s) failed to load library\n"), name );
 		return NULL;
 	}
 
@@ -450,13 +422,13 @@ void *Sys_LoadDll( const char *name,
 
 	if ( !*entryPoint || !dllEntry )
 	{
-		Com_Printf ( "Sys_LoadDll(%s) failed to find vmMain function:\n\"%s\" !\n", name, Sys_LibraryError( ) );
+		Com_Printf ( _("Sys_LoadDll(%s) failed to find vmMain function:\n\"%s\" !\n"), name, Sys_LibraryError( ) );
 		Sys_UnloadLibrary(libHandle);
 
 		return NULL;
 	}
 
-	Com_Printf ( "Sys_LoadDll(%s) found vmMain function at %p\n", name, *entryPoint );
+	Com_Printf ( _("Sys_LoadDll(%s) found vmMain function at %p\n"), name, *entryPoint );
 	dllEntry( systemcalls );
 
 	return libHandle;
@@ -480,7 +452,7 @@ void Sys_ParseArgs( int argc, char **argv )
 #else
 			fprintf( stdout, Q3_VERSION " client (%s)\n", date );
 #endif
-			Sys_Exit( 0 );
+			Sys_Exit(0);
 		}
 	}
 }
@@ -504,22 +476,20 @@ void Sys_SigHandler( int signal )
 
 	if( signalcaught )
 	{
-		fprintf( stderr, "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n",
+		fprintf( stderr, _("DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n"),
 			signal );
 	}
 	else
 	{
 		signalcaught = qtrue;
+		fprintf( stderr, _("Received signal %d, exiting...\n"), signal );
 #ifndef DEDICATED
-		CL_Shutdown( va( "Received signal %d", signal ) );
+		CL_Shutdown();
 #endif
-		SV_Shutdown( va( "Received signal %d", signal ) );
+		SV_Shutdown( _("Signal caught") );
 	}
 
-	if( signal == SIGTERM || signal == SIGINT )
-		Sys_Exit( 1 );
-	else
-		Sys_Exit( 2 );
+	Sys_Exit( 0 ); // Exit with 0 to avoid recursive signals
 }
 
 /*
@@ -551,10 +521,7 @@ int main( int argc, char **argv )
 	if( SDL_VERSIONNUM( ver->major, ver->minor, ver->patch ) <
 			SDL_VERSIONNUM( MINSDL_MAJOR, MINSDL_MINOR, MINSDL_PATCH ) )
 	{
-		Sys_Dialog( DT_ERROR, va( "SDL version " MINSDL_VERSION " or greater is required, "
-			"but only version %d.%d.%d was found. You may be able to obtain a more recent copy "
-			"from http://www.libsdl.org/.", ver->major, ver->minor, ver->patch ), "SDL Library Too Old" );
-
+		Sys_Print( _("SDL version " MINSDL_VERSION " or greater required\n") );
 		Sys_Exit( 1 );
 	}
 #endif
@@ -596,6 +563,13 @@ int main( int argc, char **argv )
 
 	while( 1 )
 	{
+#ifndef DEDICATED
+		int appState = SDL_GetAppState( );
+
+		Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );
+		Cvar_SetValue( "com_minimized", !( appState & SDL_APPACTIVE ) );
+#endif
+
 		IN_Frame( );
 		Com_Frame( );
 	}

@@ -22,20 +22,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#define _ISOC99_SOURCE
-
-#include "vm_local.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
-#include <inttypes.h>
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long u64;
 
 static char* out;
 static unsigned compiledOfs;
@@ -84,7 +79,7 @@ static void emit1(unsigned char v)
 		if(fout)
 			writecnt = fwrite(&v, 1, 1, fout);
 			
-		debug("%02hx ", v);
+		debug("%02hhx ", v);
 	}
 	else
 	{
@@ -243,15 +238,9 @@ static void hash_add_label(const char* label, unsigned address)
 {
 	struct hashentry* h;
 	unsigned i = hashkey(label, -1U);
-	int labellen;
-	
-	i %= ARRAY_LEN(labelhash);
-	h = Z_Malloc(sizeof(struct hashentry));
-	
-	labellen = strlen(label) + 1;
-	h->label = Z_Malloc(labellen);
-	memcpy(h->label, label, labellen);
-	
+	i %= sizeof(labelhash)/sizeof(labelhash[0]);
+	h = malloc(sizeof(struct hashentry));
+	h->label = strdup(label);
 	h->address = address;
 	h->next = labelhash[i];
 	labelhash[i] = h;
@@ -261,7 +250,7 @@ static unsigned lookup_label(const char* label)
 {
 	struct hashentry* h;
 	unsigned i = hashkey(label, -1U);
-	i %= ARRAY_LEN(labelhash);
+	i %= sizeof(labelhash)/sizeof(labelhash[0]);
 	for(h = labelhash[i]; h; h = h->next )
 	{
 		if(!strcmp(h->label, label))
@@ -277,15 +266,15 @@ static void labelhash_free(void)
 	struct hashentry* h;
 	unsigned i;
 	unsigned z = 0, min = -1U, max = 0, t = 0;
-	for ( i = 0; i < ARRAY_LEN(labelhash); ++i)
+	for ( i = 0; i < sizeof(labelhash)/sizeof(labelhash[0]); ++i)
 	{
 		unsigned n = 0;
 		h = labelhash[i];
 		while(h)
 		{
 			struct hashentry* next = h->next;
-			Z_Free(h->label);
-			Z_Free(h);
+			free(h->label);
+			free(h);
 			h = next;
 			++n;
 		}
@@ -295,7 +284,7 @@ static void labelhash_free(void)
 		min = MIN(min, n);
 		max = MAX(max, n);
 	}
-	printf("total %u, hsize %"PRIu64", zero %u, min %u, max %u\n", t, ARRAY_LEN(labelhash), z, min, max);
+	printf("total %u, hsize %lu, zero %u, min %u, max %u\n", t, sizeof(labelhash)/sizeof(labelhash[0]), z, min, max);
 	memset(labelhash, 0, sizeof(labelhash));
 }
 
@@ -321,7 +310,7 @@ static const char* argtype2str(argtype_t t)
 
 static inline int iss8(u64 v)
 {
-	return (llabs(v) <= 0x80); //llabs instead of labs required for __WIN64
+	return (labs(v) <= 0x80);
 }
 
 static inline int isu8(u64 v)
@@ -331,7 +320,7 @@ static inline int isu8(u64 v)
 
 static inline int iss16(u64 v)
 {
-	return (llabs(v) <= 0x8000);
+	return (labs(v) <= 0x8000);
 }
 
 static inline int isu16(u64 v)
@@ -341,7 +330,7 @@ static inline int isu16(u64 v)
 
 static inline int iss32(u64 v)
 {
-	return (llabs(v) <= 0x80000000);
+	return (labs(v) <= 0x80000000);
 }
 
 static inline int isu32(u64 v)
@@ -351,7 +340,7 @@ static inline int isu32(u64 v)
 
 static void emit_opsingle(const char* mnemonic, arg_t arg1, arg_t arg2, void* data)
 {
-	u8 op = (u8)((uint64_t) data);
+	u8 op = (u8)((unsigned long) data);
 
 	if(arg1.type != T_NONE || arg2.type != T_NONE)
 		CRAP_INVALID_ARGS;
@@ -514,7 +503,7 @@ static void maybe_emit_displacement(arg_t* arg)
 /* one byte operator with register added to operator */
 static void emit_opreg(const char* mnemonic, arg_t arg1, arg_t arg2, void* data)
 {
-	u8 op = (u8)((uint64_t) data);
+	u8 op = (u8)((unsigned long) data);
 
 	if(arg1.type != T_REGISTER || arg2.type != T_NONE)
 		CRAP_INVALID_ARGS;
@@ -767,7 +756,7 @@ static void emit_condjump(const char* mnemonic, arg_t arg1, arg_t arg2, void* da
 {
 	unsigned off;
 	int disp;
-	unsigned char opcode = (unsigned char)(((uint64_t)data)&0xFF);
+	unsigned char opcode = (unsigned char)(((unsigned long)data)&0xFF);
 
 	if(arg1.type != T_LABEL || arg2.type != T_NONE)
 		crap("%s: argument must be label", mnemonic);
@@ -1017,7 +1006,7 @@ static op_t* getop(const char* n)
 #else
 	unsigned m, t, b;
 	int r;
-	t = ARRAY_LEN(ops)-1;
+	t = sizeof(ops)/sizeof(ops[0])-1;
 	b = 0;
 
 	while(b <= t)
@@ -1164,7 +1153,7 @@ static unsigned char nexttok(const char** str, char* label, u64* val)
 	else if(*s >= '0' && *s <= '9')
 	{
 		char* endptr = NULL;
-		u64 v = strtoull(s, &endptr, 0);
+		u64 v = strtol(s, &endptr, 0);
 		if(endptr && (endptr-s == 0))
 			crap("invalid integer %s", s);
 		if(val) *val = v;
@@ -1285,7 +1274,7 @@ tok_memory:
 			}
 			break;
 		default:
-			crap("invalid token %hu in %s", *(unsigned char*)s, *str);
+			crap("invalid token %hhu in %s", *(unsigned char*)s, *str);
 			break;
 	}
 
@@ -1308,7 +1297,7 @@ void assembler_init(int pass)
 	if(!ops_sorted)
 	{
 		ops_sorted = 1;
-		qsort(ops, ARRAY_LEN(ops)-1, sizeof(ops[0]), opsort);
+		qsort(ops, sizeof(ops)/sizeof(ops[0])-1, sizeof(ops[0]), opsort);
 	}
 }
 

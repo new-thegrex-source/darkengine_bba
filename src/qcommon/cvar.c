@@ -364,18 +364,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 				flags &= ~CVAR_VM_CREATED;
 		}
 		
-		// Make sure servers cannot mark engine-added variables as SERVER_CREATED
-		if(var->flags & CVAR_SERVER_CREATED)
-		{
-			if(!(flags & CVAR_SERVER_CREATED))
-				var->flags &= ~CVAR_SERVER_CREATED;
-		}
-		else
-		{
-			if(flags & CVAR_SERVER_CREATED)
-				flags &= ~CVAR_SERVER_CREATED;
-		}
-		
 		var->flags |= flags;
 
 		// only allow one non-empty reset string without a warning
@@ -625,24 +613,88 @@ void Cvar_Set( const char *var_name, const char *value) {
 
 /*
 ============
-Cvar_SetSafe
+Cvar_SetIFlag
+
+Sets the cvar by the name that begins with a backslash to "1".  This creates a
+cvar that can be set by the engine but not by the sure, and can be read by
+interpreted modules.
 ============
 */
-void Cvar_SetSafe( const char *var_name, const char *value )
+void Cvar_SetIFlag( const char *var_name )
 {
-	int flags = Cvar_Flags( var_name );
+	cvar_t *var;
+	long hash;
+	int index;
 
-	if( flags != CVAR_NONEXISTENT && flags & CVAR_PROTECTED )
+	if ( !var_name ) {
+		Com_Error( ERR_FATAL, "Cvar_SetIFlag: NULL parameter" );
+	}
+
+  if ( *var_name != '\\' ) {
+		Com_Error( ERR_FATAL, "Cvar_SetIFlag: var_name must begin with a '\\'" );
+  }
+
+  /*
+  if ( Cvar_FindVar( var_name ) ) {
+		Com_Error( ERR_FATAL, "Cvar_SetIFlag: %s already exists.", var_name );
+  }
+  */
+
+	if ( !Cvar_ValidateString( var_name + 1 ) ) {
+		Com_Printf("invalid cvar name string: %s\n", var_name );
+		var_name = "BADNAME";
+	}
+
+	// find a free cvar
+	for(index = 0; index < MAX_CVARS; index++)
 	{
-		if( value )
-			Com_Error( ERR_DROP, "Restricted source tried to set "
-				"\"%s\" to \"%s\"\n", var_name, value );
-		else
-			Com_Error( ERR_DROP, "Restricted source tried to "
-				"modify \"%s\"\n", var_name );
+		if(!cvar_indexes[index].name)
+			break;
+	}
+
+	if(index >= MAX_CVARS)
+	{
+		if(!com_errorEntered)
+			Com_Error(ERR_FATAL, "Error: Too many cvars, cannot create a new one!");
+
 		return;
 	}
-	Cvar_Set( var_name, value );
+	
+	var = &cvar_indexes[index];
+
+	if(index >= cvar_numIndexes)
+		cvar_numIndexes = index + 1;
+		
+	var->name = CopyString (var_name);
+	var->string = CopyString ("1");
+	var->modified = qtrue;
+	var->modificationCount = 1;
+	var->value = atof (var->string);
+	var->integer = atoi(var->string);
+	var->resetString = CopyString( "1" );
+	var->validate = qfalse;
+
+	// link the variable in
+	var->next = cvar_vars;
+	if(cvar_vars)
+		cvar_vars->prev = var;
+
+	var->prev = NULL;
+	cvar_vars = var;
+
+	var->flags = CVAR_INIT;
+	// note what types of cvars have been modified (userinfo, archive, serverinfo, systeminfo)
+	cvar_modifiedFlags |= var->flags;
+
+	hash = generateHashValue(var_name);
+	var->hashIndex = hash;
+
+	var->hashNext = hashTable[hash];
+	if(hashTable[hash])
+		hashTable[hash]->hashPrev = var;
+
+	var->hashPrev = NULL;
+	hashTable[hash] = var;
 }
 
 /*
@@ -670,21 +722,6 @@ void Cvar_SetValue( const char *var_name, float value) {
 	Cvar_Set (var_name, val);
 }
 
-/*
-============
-Cvar_SetValueSafe
-============
-*/
-void Cvar_SetValueSafe( const char *var_name, float value )
-{
-	char val[32];
-
-	if( Q_isintegral( value ) )
-		Com_sprintf( val, sizeof(val), "%i", (int)value );
-	else
-		Com_sprintf( val, sizeof(val), "%f", value );
-	Cvar_SetSafe( var_name, val );
-}
 
 /*
 ============
@@ -1260,9 +1297,9 @@ void	Cvar_Update( vmCvar_t *vmCvar ) {
 	}
 	vmCvar->modificationCount = cv->modificationCount;
 	if ( strlen(cv->string)+1 > MAX_CVAR_VALUE_STRING ) 
-	  Com_Error( ERR_DROP, "Cvar_Update: src %s length %u exceeds MAX_CVAR_VALUE_STRING",
+	  Com_Error( ERR_DROP, "Cvar_Update: src %s length %zd exceeds MAX_CVAR_VALUE_STRING",
 		     cv->string, 
-		     (unsigned int) strlen(cv->string));
+		     strlen(cv->string));
 	Q_strncpyz( vmCvar->string, cv->string,  MAX_CVAR_VALUE_STRING ); 
 
 	vmCvar->value = cv->value;

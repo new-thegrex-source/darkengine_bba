@@ -20,18 +20,13 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // bg_pmove.c -- both games player movement code
 // takes a playerstate and a usercmd as input and returns a modifed playerstate
 
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 #include "bg_local.h"
-
 
 pmove_t     *pm;
 pml_t       pml;
@@ -50,8 +45,6 @@ float pm_flyaccelerate = 4.0f;
 float pm_friction = 6.0f;
 float pm_waterfriction = 1.0f;
 float pm_flightfriction = 6.0f;
-float pm_hummelfriction = 2.5f;
-float pm_hummelwalkfriction = 8.0f;
 float pm_spectatorfriction = 5.0f;
 
 int   c_pmove = 0;
@@ -255,6 +248,7 @@ void PM_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce )
 /*
 ==================
 PM_Friction
+
 Handles both ground friction and water friction
 ==================
 */
@@ -263,7 +257,7 @@ static void PM_Friction( void )
   vec3_t  vec;
   float   *vel;
   float   speed, newspeed, control;
-  float   drop, modifier;
+  float   drop;
 
   vel = pm->ps->velocity;
 
@@ -312,23 +306,6 @@ static void PM_Friction( void )
   if( pm->ps->pm_type == PM_SPECTATOR )
     drop += speed * pm_spectatorfriction * pml.frametime;
 
-  //smooth airpounce 
-  /* TODO: This causes speed up when using primary attack if using torso
-  if( pm->ps->pm_type == PM_HUMMEL && pm->ps->torsoTimer > 0 )
-  {
-    pm->ps->torsoTimer -= pml.msec;
-    if( pm->ps->torsoTimer < 0 )
-    {
-      pm->ps->torsoTimer = 0;
-    }
-  }
-  */
-  if( pm->ps->pm_type == PM_HUMMEL /*&& pm->ps->torsoTimer <= 0*/ )
-  {
-    modifier = ( pm->cmd.buttons & BUTTON_WALKING ) ? pm_hummelwalkfriction : pm_hummelfriction;
-    drop += speed * modifier * pml.frametime;
-  }
-
   // scale the velocity
   newspeed = speed - drop;
   if( newspeed < 0 )
@@ -340,6 +317,7 @@ static void PM_Friction( void )
   vel[ 1 ] = vel[ 1 ] * newspeed;
   vel[ 2 ] = vel[ 2 ] * newspeed;
 }
+
 
 /*
 ==============
@@ -402,7 +380,6 @@ static float PM_CmdScale( usercmd_t *cmd )
   float       total;
   float       scale;
   float       modifier = 1.0f;
-
   
   if( pm->ps->stats[ STAT_TEAM ] == TEAM_HUMANS && pm->ps->pm_type == PM_NORMAL )
   {
@@ -465,6 +442,14 @@ static float PM_CmdScale( usercmd_t *cmd )
       else
         modifier *= CREEP_MODIFIER;
     }
+    if( pm->ps->eFlags & EF_POISONCLOUDED )
+    {
+      if( BG_InventoryContainsUpgrade( UP_LIGHTARMOUR, pm->ps->stats ) ||
+          BG_InventoryContainsUpgrade( UP_BATTLESUIT, pm->ps->stats ) )
+        modifier *= PCLOUD_ARMOUR_MODIFIER;
+      else
+        modifier *= PCLOUD_MODIFIER;
+    }
   }
 
   if( pm->ps->weapon == WP_ALEVEL4 && pm->ps->pm_flags & PMF_CHARGE )
@@ -472,37 +457,26 @@ static float PM_CmdScale( usercmd_t *cmd )
                          ( LEVEL4_TRAMPLE_SPEED - 1.0f ) /
                          LEVEL4_TRAMPLE_DURATION );
 
-  // Stop player if grabbed by something
-  if( pm->ps->pm_type == PM_GRABBED ) {
-    modifier = 0.0f;
-  } else {
-    // Attack related slow-downs
-    if( cmd->buttons & BUTTON_ATTACK2 ) {
-      //slow player if charging up for a pounce
-      if( pm->ps->weapon == WP_ALEVEL3 || pm->ps->weapon == WP_ALEVEL3_UPG )
-	modifier *= LEVEL3_POUNCE_SPEED_MOD;
-      else if( pm->ps->weapon == WP_ALEVEL5 )
-	modifier *= LEVEL5_POUNCE_SPEED_MOD;
+  //slow player if charging up for a pounce
+  if( ( pm->ps->weapon == WP_ALEVEL3 || pm->ps->weapon == WP_ALEVEL3_UPG ) &&
+      cmd->buttons & BUTTON_ATTACK2 )
+    modifier *= LEVEL3_POUNCE_SPEED_MOD;
 
-      //slow player if using 2nd rifle mode
-      else if( pm->ps->weapon == WP_MACHINEGUN && pm->ps->weaponstate != WEAPON_RELOADING )
-	modifier *= RIFLE_2NDMOD;
-    }
-    //slow the player if slow locked
-    if( pm->ps->stats[ STAT_STATE ] & SS_SLOWLOCKED )
-      modifier *= ABUILDER_BLOB_SPEED_MOD;
-  }
+  //slow the player if slow locked
+  if( pm->ps->stats[ STAT_STATE ] & SS_SLOWLOCKED )
+    modifier *= ABUILDER_BLOB_SPEED_MOD;
+
+  if( pm->ps->pm_type == PM_GRABBED )
+    modifier = 0.0f;
 
   if( pm->ps->pm_type != PM_SPECTATOR && pm->ps->pm_type != PM_NOCLIP )
   {
     if( BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude == 0.0f )
       cmd->upmove = 0;
 
-    /* Commented out as the following seems to cause swimming up/down issues for aliens
     //prevent speed distortions for non ducking classes
     if( !( pm->ps->pm_flags & PMF_DUCKED ) && pm->ps->pm_type != PM_JETPACK && cmd->upmove < 0 )
       cmd->upmove = 0;
-    */
   }
 
   max = abs( cmd->forwardmove );
@@ -573,15 +547,6 @@ PM_CheckCharge
 */
 static void PM_CheckCharge( void )
 {
-  /*
-  // Reset hummel pounce payload when walking
-  if (pm->ps->weapon == WP_ALEVEL5)
-  {
-    pm->ps->stats[ STAT_STATE ] &= ~SS_CHARGING;
-    pm->pmext->pouncePayload = 0;
-  }
-  */
-
   if( pm->ps->weapon != WP_ALEVEL4 )
     return;
 
@@ -600,25 +565,6 @@ static void PM_CheckCharge( void )
 
 /*
 =============
-PM_CheckWaterPounce
-=============
-*/
-static void PM_CheckWaterPounce( void )
-{
-  if( pm->ps->weapon != WP_ALEVEL3 &&
-      pm->ps->weapon != WP_ALEVEL3_UPG )
-    return;
-
-  // We were pouncing, but we've landed into water
-  if( ( pm->waterlevel > 1 ) && ( pm->ps->pm_flags & PMF_CHARGE ) )
-  {
-    pm->ps->pm_flags &= ~PMF_CHARGE;
-    pm->ps->weaponTime += LEVEL3_POUNCE_REPEAT;
-  }
-}
-
-/*
-=============
 PM_CheckPounce
 =============
 */
@@ -627,7 +573,7 @@ static qboolean PM_CheckPounce( void )
   int jumpMagnitude;
 
   if( pm->ps->weapon != WP_ALEVEL3 &&
-      pm->ps->weapon != WP_ALEVEL3_UPG)
+      pm->ps->weapon != WP_ALEVEL3_UPG )
     return qfalse;
 
   // We were pouncing, but we've landed
@@ -640,12 +586,12 @@ static qboolean PM_CheckPounce( void )
   }
 
   // We're building up for a pounce
-  if( pm->cmd.buttons & BUTTON_ATTACK2)
+  if( pm->cmd.buttons & BUTTON_ATTACK2 )
   {
     pm->ps->pm_flags &= ~PMF_CHARGE;
     return qfalse;
   }
-  
+
   // Can't start a pounce
   if( ( pm->ps->pm_flags & PMF_CHARGE ) ||
       pm->ps->stats[ STAT_MISC ] < LEVEL3_POUNCE_TIME_MIN ||
@@ -663,19 +609,11 @@ static qboolean PM_CheckPounce( void )
   else
     jumpMagnitude = pm->ps->stats[ STAT_MISC ] *
                     LEVEL3_POUNCE_JUMP_MAG_UPG / LEVEL3_POUNCE_TIME_UPG;
-   if( ( pm->cmd.rightmove != 0 ) && ( pm->cmd.forwardmove < 0 ) ) // a dodging pounce-like jump
-  {
-    vec3_t up = { 0.0f, 0.0f, 1.0f }, tmp;
-    jumpMagnitude *= 0.8;
-    RotatePointAroundVector( tmp, up, pml.forward, ( pm->cmd.rightmove > 0 ) ? -90.0f : +90.0f );
-    VectorMA( pm->ps->velocity, jumpMagnitude, tmp, pm->ps->velocity );
-    pm->ps->pm_flags &= ~PMF_CHARGE; // jump only - no pounce
-  } else // a standard pounce
-    VectorMA( pm->ps->velocity, jumpMagnitude, pml.forward, pm->ps->velocity ); 
+  VectorMA( pm->ps->velocity, jumpMagnitude, pml.forward, pm->ps->velocity );
   PM_AddEvent( EV_JUMP );
 
   // Play jumping animation
-  if( pm->cmd.forwardmove >= 1 )
+  if( pm->cmd.forwardmove >= 0 )
   {
     if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
       PM_ForceLegsAnim( LEGS_JUMP );
@@ -697,78 +635,6 @@ static qboolean PM_CheckPounce( void )
   pm->pmext->pouncePayload = pm->ps->stats[ STAT_MISC ];
   pm->ps->stats[ STAT_MISC ] = 0;
 
-  return qtrue;
-}
-
-/*
-=============
-PM_CheckAirPounce
-For Hummel only
-=============
-*/
-static qboolean PM_CheckAirPounce( void )
-{
-  int jumpMagnitude;
-  
-  if( pm->ps->weapon != WP_ALEVEL5 )
-    return qfalse;
-
-  // We were pouncing, but we've landed
-  if( pm->ps->groundEntityNum != ENTITYNUM_NONE && 
-      ( pm->ps->pm_flags & PMF_CHARGE ) )
-  {
-    pm->ps->pm_flags &= ~PMF_CHARGE;
-    pm->ps->weaponTime += LEVEL5_POUNCE_REPEAT;
-    return qfalse;
-  }
-
-  // We're building up for a pounce
-  if( pm->cmd.buttons & BUTTON_ATTACK2)
-  {
-    pm->ps->pm_flags &= ~PMF_CHARGE;
-    return qfalse;
-  }
-  
-  // Can't start a pounce
-  if( pm->ps->weapon == WP_ALEVEL5 )
-  {
-    if( pm->ps->stats[ STAT_MISC ] < LEVEL5_POUNCE_TIME_MIN)
-      return qfalse;
-  }
-
-  // Give the player forward velocity and simulate a jump
-  pml.groundPlane = qfalse;
-  pml.walking = qfalse;
-  pm->ps->pm_flags |= PMF_CHARGE;
-  
-  
-  if( pm->ps->weapon == WP_ALEVEL5 )
-    jumpMagnitude = pm->ps->stats[ STAT_MISC ] * LEVEL5_POUNCE_JUMP_MAG / LEVEL5_POUNCE_TIME;
-  else jumpMagnitude = 0;
-
-  VectorMA( pm->ps->velocity, jumpMagnitude, pml.forward, pm->ps->velocity ); 
-  PM_AddEvent( EV_AIRPOUNCE );
-
-  // Play jumping animation
-  if( pm->cmd.forwardmove >= 1 )
-  {
-    if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
-      PM_ForceLegsAnim( LEGS_JUMP );
-    else
-      PM_ForceLegsAnim( NSPA_JUMP );
-      pm->ps->pm_flags &= ~PMF_BACKWARDS_JUMP;
-  }
-  else
-  {
-    if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
-      PM_ForceLegsAnim( NSPA_ATTACK1 );
-    else
-	  PM_ForceLegsAnim( NSPA_ATTACK1 );
-      pm->ps->pm_flags |= PMF_BACKWARDS_JUMP;
-  }
-  
-  pm->pmext->pouncePayload = pm->ps->stats[ STAT_MISC ];
-  pm->ps->stats[ STAT_MISC ] = 0;
   return qtrue;
 }
 
@@ -1053,6 +919,111 @@ static qboolean PM_CheckWaterJump( void )
   return qtrue;
 }
 
+
+/*
+==================
+PM_CheckDodge
+
+Checks the dodge key and starts a human dodge or sprint
+==================
+*/
+static qboolean PM_CheckDodge( void )
+{
+  vec3_t right, forward, velocity = { 0.0f, 0.0f, 0.0f };
+  float jump, sideModifier;
+  int i;
+  
+  if( pm->ps->stats[ STAT_TEAM ] != TEAM_HUMANS )
+    return qfalse;
+
+  // Landed a dodge
+  if( ( pm->ps->pm_flags & PMF_CHARGE ) &&
+      pm->ps->groundEntityNum != ENTITYNUM_NONE )
+  {
+    pm->ps->pm_flags = ( pm->ps->pm_flags & ~PMF_CHARGE ) | PMF_TIME_LAND;
+    pm->ps->pm_time = HUMAN_DODGE_TIMEOUT;
+  }
+
+  // Reasons why we can't start a dodge or sprint
+  if( pm->ps->pm_type != PM_NORMAL || pm->ps->stats[ STAT_STAMINA ] < STAMINA_SLOW_LEVEL + STAMINA_DODGE_TAKE ||
+      ( pm->ps->pm_flags & PMF_DUCKED ) )
+    return qfalse;
+
+  // Can't dodge forward
+  if( pm->cmd.forwardmove > 0 )
+    return qfalse;
+
+  // Reasons why we can't start a dodge only
+  if( pm->ps->pm_flags & ( PMF_TIME_LAND | PMF_CHARGE ) ||
+      pm->ps->groundEntityNum == ENTITYNUM_NONE ||
+      !( pm->cmd.buttons & BUTTON_DODGE ) )
+    return qfalse;
+
+  // Dodge direction specified with movement keys
+  if( ( !pm->cmd.rightmove && !pm->cmd.forwardmove ) || pm->cmd.upmove )
+    return qfalse;
+
+  AngleVectors( pm->ps->viewangles, NULL, right, NULL );
+  forward[ 0 ] = -right[ 1 ];
+  forward[ 1 ] = right[ 0 ];
+  forward[ 2 ] = 0.0f;
+
+  // Dodge magnitude is based on the jump magnitude scaled by the modifiers
+  jump = BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude;
+  if( pm->cmd.rightmove && pm->cmd.forwardmove )
+    jump *= ( 0.5f * M_SQRT2 );
+  
+  // Weaken dodge if slowed
+  if( ( pm->ps->stats[ STAT_STATE ] & SS_SLOWLOCKED )  ||
+      ( pm->ps->stats[ STAT_STATE ] & SS_CREEPSLOWED ) ||
+      ( pm->ps->eFlags & EF_POISONCLOUDED ) )
+    sideModifier = HUMAN_DODGE_SLOWED_MODIFIER;
+  else
+    sideModifier = HUMAN_DODGE_SIDE_MODIFIER;
+
+  // The dodge sets minimum velocity
+  if( pm->cmd.rightmove )
+  {
+    if( pm->cmd.rightmove < 0 )
+      VectorNegate( right, right );
+    VectorMA( velocity, jump * sideModifier, right, velocity );
+  }
+
+  if( pm->cmd.forwardmove )
+  {
+    if( pm->cmd.forwardmove < 0 )
+      VectorNegate( forward, forward );
+    VectorMA( velocity, jump * sideModifier, forward, velocity );
+  }
+
+  velocity[ 2 ] = jump * HUMAN_DODGE_UP_MODIFIER;
+
+  // Make sure client has minimum velocity
+  for( i = 0; i < 3; i++ )
+  {
+    if( ( velocity[ i ] < 0.0f &&
+          pm->ps->velocity[ i ] > velocity[ i ] ) ||
+        ( velocity[ i ] > 0.0f &&
+          pm->ps->velocity[ i ] < velocity[ i ] ) )
+      pm->ps->velocity[ i ] = velocity[ i ];
+  }
+
+  // Jumped away
+  pml.groundPlane = qfalse;
+  pml.walking = qfalse;
+  pm->ps->groundEntityNum = ENTITYNUM_NONE;
+  pm->ps->pm_flags |= PMF_CHARGE;
+  pm->ps->stats[ STAT_STAMINA ] -= STAMINA_DODGE_TAKE;
+  pm->ps->legsAnim = ( ( pm->ps->legsAnim & ANIM_TOGGLEBIT ) ^
+                       ANIM_TOGGLEBIT ) | LEGS_JUMP;
+  PM_AddEvent( EV_JUMP );
+
+  return qtrue;
+}
+
+//============================================================================
+
+
 /*
 ===================
 PM_WaterJumpMove
@@ -1078,6 +1049,7 @@ static void PM_WaterJumpMove( void )
 /*
 ===================
 PM_WaterMove
+
 ===================
 */
 static void PM_WaterMove( void )
@@ -1089,14 +1061,12 @@ static void PM_WaterMove( void )
   float scale;
   float vel;
 
-  PM_CheckWaterPounce( );
-
   if( PM_CheckWaterJump( ) )
   {
     PM_WaterJumpMove();
     return;
   }
-     
+#if 0
   // jump = head for surface
   if ( pm->cmd.upmove >= 10 ) {
     if (pm->ps->velocity[2] > -300) {
@@ -1109,7 +1079,7 @@ static void PM_WaterMove( void )
       }
     }
   }
-      
+#endif
   PM_Friction( );
 
   scale = PM_CmdScale( &pm->cmd );
@@ -1129,13 +1099,7 @@ static void PM_WaterMove( void )
 
     wishvel[ 2 ] += scale * pm->cmd.upmove;
   }
-  if( pm->cmd.upmove > 0.0f )
-    wishvel[ 2 ] = JETPACK_FLOAT_SPEED;
-  else if( pm->cmd.upmove < 0.0f )
-    wishvel[ 2 ] = -JETPACK_SINK_SPEED;
-  else
-    wishvel[ 2 ] = 0.0f;
-	
+
   VectorCopy( wishvel, wishdir );
   wishspeed = VectorNormalize( wishdir );
 
@@ -1202,61 +1166,9 @@ static void PM_JetPackMove( void )
   else
     PM_ContinueLegsAnim( NSPA_LAND );
 }
-/*
-===================
-PM_HUMMELFLY
-Only with Hummel
-===================
-*/
-static void PM_HUMMELFLY( void )
-{
-  int     i;
-  vec3_t  wishvel;
-  float   wishspeed;
-  vec3_t  wishdir;
-  float   scale;
-  
-  if( PM_CheckAirPounce( ) )
-  {
-    pm->ps->torsoTimer = 1200;
-    return;
-  }
-  
 
-  PM_Friction( );
 
-  scale = PM_CmdScale( &pm->cmd );
-  //
-  // user intentions
-  //
-  
-  if( !scale )
-  {
-    wishvel[ 1 ] = 0;
-    wishvel[ 2 ] = 0;
-    wishvel[ 3 ] = 0;
-  }
-  else
-  {
-    for( i = 0; i < 3; i++ )
-      wishvel[ i ] = scale * pml.forward[ i ] * pm->cmd.forwardmove + scale * pml.right[ i ] * pm->cmd.rightmove;
-    wishvel[ 2 ] += scale * pm->cmd.upmove;
-  }
 
-  VectorCopy( wishvel, wishdir );
-  wishspeed = VectorNormalize( wishdir ) ;
-  wishspeed *= scale ;
-
-  PM_Accelerate( wishdir, wishspeed, BG_Class( pm->ps->stats[ STAT_CLASS ] )->airAcceleration  );
-  PM_StepSlideMove( qfalse, qfalse );
-  
-  if( pm->ps->weapon == WP_ALEVEL5 /*&& pm->cmd.buttons &  BUTTON_WALKING*/ ) {
-    PM_ContinueLegsAnim( NSPA_SWIM );
-  } else if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
-    PM_ContinueLegsAnim( LEGS_LAND );
-  else
-    PM_ContinueLegsAnim( NSPA_LAND );
-}
 
 /*
 ===================
@@ -1267,9 +1179,11 @@ Only with the flight powerup
 */
 static void PM_FlyMove( void )
 {
-  // int     i;
-  vec3_t  wishvel,wishdir;
-  float   wishspeed,scale;
+  int     i;
+  vec3_t  wishvel;
+  float   wishspeed;
+  vec3_t  wishdir;
+  float   scale;
 
   // normal slowdown
   PM_Friction( );
@@ -1280,12 +1194,15 @@ static void PM_FlyMove( void )
   //
   if( !scale )
   {
-    VectorSet(wishvel,0.f,0.f,0.f);
+    wishvel[ 0 ] = 0;
+    wishvel[ 1 ] = 0;
+    wishvel[ 2 ] = 0;
   }
   else
   {
-    VectorScale(pml.forward,scale*pm->cmd.forwardmove,wishvel);
-    VectorMA(wishvel,scale*pm->cmd.rightmove,pml.right,wishvel);
+    for( i = 0; i < 3; i++ )
+      wishvel[ i ] = scale * pml.forward[ i ] * pm->cmd.forwardmove + scale * pml.right[ i ] * pm->cmd.rightmove;
+
     wishvel[ 2 ] += scale * pm->cmd.upmove;
   }
 
@@ -1499,9 +1416,10 @@ static void PM_WalkMove( void )
       PM_WaterMove( );
     else
       PM_AirMove( );
+
     return;
   }
-  
+
   //charging
   PM_CheckCharge( );
 
@@ -1589,6 +1507,7 @@ static void PM_WalkMove( void )
 
 }
 
+
 /*
 ===================
 PM_LadderMove
@@ -1663,7 +1582,7 @@ static void PM_CheckLadder( void )
 
   VectorMA( pm->ps->origin, 1.0f, forward, end );
 
-  pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, end, pm->ps->clientNum, pm->tracemask );
+  pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, end, pm->ps->clientNum, MASK_PLAYERSOLID );
 
   if( ( trace.fraction < 1.0f ) && ( trace.surfaceFlags & SURF_LADDER ) )
     pml.ladder = qtrue;
@@ -1762,6 +1681,7 @@ static void PM_NoclipMove( void )
   VectorMA( pm->ps->origin, pml.frametime, pm->ps->velocity, pm->ps->origin );
 }
 
+//============================================================================
 
 /*
 ================
@@ -1998,13 +1918,12 @@ PM_GroundClimbTrace
 */
 static void PM_GroundClimbTrace( void )
 {
-  vec3_t      surfNormal, movedir, lookdir, point;
-  vec3_t      refNormal = { 0.0f, 0.0f, 1.0f };
-  vec3_t      ceilingNormal = { 0.0f, 0.0f, -1.0f };
-  vec3_t      toAngles, surfAngles;
-  trace_t     trace;
-  int         i;
-  const float eps = 0.000001f;
+  vec3_t    surfNormal, movedir, lookdir, point;
+  vec3_t    refNormal = { 0.0f, 0.0f, 1.0f };
+  vec3_t    ceilingNormal = { 0.0f, 0.0f, -1.0f };
+  vec3_t    toAngles, surfAngles;
+  trace_t   trace;
+  int       i;
 
   //used for delta correction
   vec3_t    traceCROSSsurf, traceCROSSref, surfCROSSref;
@@ -2052,13 +1971,9 @@ static void PM_GroundClimbTrace( void )
 
       case 1:
         //trace straight down anto "ground" surface
-        //mask out CONTENTS_BODY to not hit other players and avoid the camera flipping out when
-        // wallwalkers touch
         VectorMA( pm->ps->origin, -0.25f, surfNormal, point );
-   //     pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask & ~CONTENTS_BODY );
-          pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask /*& ~CONTENTS_BODY*/ );
-  
-      break;
+        pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask );
+        break;
 
       case 2:
         if( pml.groundPlane != qfalse && PM_PredictStepMove( ) )
@@ -2092,12 +2007,9 @@ static void PM_GroundClimbTrace( void )
     }
 
     //if we hit something
-
-    //if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) && 
-    //    !( trace.entityNum != ENTITYNUM_WORLD && i != 4 ) )
-    
-    if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) && ( trace.entityNum >= MAX_CLIENTS && i != 4) )
-    {//if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) && !( trace.entityNum != ENTITYNUM_WORLD && i != 4 ) )  
+    if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) && 
+        !( trace.entityNum != ENTITYNUM_WORLD && i != 4 ) )
+    {
       if( i == 2 || i == 3 )
       {
         if( i == 2 )
@@ -2139,11 +2051,11 @@ static void PM_GroundClimbTrace( void )
 
       //if the trace result and old surface normal are different then we must have transided to a new
       //surface... do some stuff...
-      if( !VectorCompareEpsilon( trace.plane.normal, surfNormal, eps ) )
+      if( !VectorCompare( trace.plane.normal, surfNormal ) )
       {
         //if the trace result or the old vector is not the floor or ceiling correct the YAW angle
-        if( !VectorCompareEpsilon( trace.plane.normal, refNormal, eps ) && !VectorCompareEpsilon( surfNormal, refNormal, eps ) &&
-            !VectorCompareEpsilon( trace.plane.normal, ceilingNormal, eps ) && !VectorCompareEpsilon( surfNormal, ceilingNormal, eps ) )
+        if( !VectorCompare( trace.plane.normal, refNormal ) && !VectorCompare( surfNormal, refNormal ) &&
+            !VectorCompare( trace.plane.normal, ceilingNormal ) && !VectorCompare( surfNormal, ceilingNormal ) )
         {
           //behold the evil mindfuck from hell
           //it has fucked mind like nothing has fucked mind before
@@ -2181,7 +2093,7 @@ static void PM_GroundClimbTrace( void )
 
         //check whether point is on one side of the plane, if so invert the correction angle
         if( ( abc[ 0 ] * point[ 0 ] + abc[ 1 ] * point[ 1 ] + abc[ 2 ] * point[ 2 ] - d ) > 0 )
-           traceANGsurf = -traceANGsurf;
+          traceANGsurf = -traceANGsurf;
 
         //find the . product of the lookdir and traceCROSSsurf
         if( ( ldDOTtCs = DotProduct( lookdir, traceCROSSsurf ) ) < 0.0f )
@@ -2201,7 +2113,7 @@ static void PM_GroundClimbTrace( void )
 
         //transition from wall to ceiling
         //normal for subsequent viewangle rotations
-        if( VectorCompareEpsilon( trace.plane.normal, ceilingNormal, eps ) )
+        if( VectorCompare( trace.plane.normal, ceilingNormal ) )
         {
           CrossProduct( surfNormal, trace.plane.normal, pm->ps->grapplePoint );
           VectorNormalize( pm->ps->grapplePoint );
@@ -2210,7 +2122,7 @@ static void PM_GroundClimbTrace( void )
 
         //transition from ceiling to wall
         //we need to do some different angle correction here cos GPISROTVEC
-        if( VectorCompareEpsilon( surfNormal, ceilingNormal, eps ) )
+        if( VectorCompare( surfNormal, ceilingNormal ) )
         {
           vectoangles( trace.plane.normal, toAngles );
           vectoangles( pm->ps->grapplePoint, surfAngles );
@@ -2225,7 +2137,7 @@ static void PM_GroundClimbTrace( void )
       pm->ps->eFlags |= EF_WALLCLIMB;
 
       //if we're not stuck to the ceiling then set grapplePoint to be a surface normal
-      if( !VectorCompareEpsilon( trace.plane.normal, ceilingNormal, eps ) )
+      if( !VectorCompare( trace.plane.normal, ceilingNormal ) )
       {
         //so we know what surface we're stuck to
         VectorCopy( trace.plane.normal, pm->ps->grapplePoint );
@@ -2272,7 +2184,7 @@ static void PM_GroundClimbTrace( void )
   }
 
   pml.groundPlane = qtrue;
-  pml.walking = BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_FLYING ) ? qfalse : qtrue;
+  pml.walking = qtrue;
 
   // hitting solid ground will end a waterjump
   if( pm->ps->pm_flags & PMF_TIME_WATERJUMP )
@@ -2447,7 +2359,7 @@ static void PM_GroundTrace( void )
   }
 
   pml.groundPlane = qtrue;
-  pml.walking = BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_FLYING ) ? qfalse : qtrue;
+  pml.walking = qtrue;
 
   // hitting solid ground will end a waterjump
   if( pm->ps->pm_flags & PMF_TIME_WATERJUMP )
@@ -2861,12 +2773,6 @@ static void PM_BeginWeaponChange( int weapon )
   if( pm->ps->weaponstate == WEAPON_DROPPING )
     return;
 
-  // prevent storing a primed rocket launcher or grenade
-  if( ( pm->ps->weapon == WP_ROCKET_LAUNCHER || 
-        pm->ps->weapon == WP_GRENADE ) &&
-      pm->ps->stats[ STAT_MISC ] > 0 )
-    return;
-
   // cancel a reload
   pm->ps->pm_flags &= ~PMF_WEAPON_RELOAD;
   if( pm->ps->weaponstate == WEAPON_RELOADING )
@@ -2933,17 +2839,9 @@ static void PM_TorsoAnimation( void )
     if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
     {
       if( pm->ps->weapon == WP_BLASTER )
-      {
         PM_ContinueTorsoAnim( TORSO_STAND2 );
-      }
-      else if( pm->ps->weapon == WP_GRENADE )
-      {
-        PM_ContinueTorsoAnim( TORSO_STAND3 );
-      }
       else
-      {
         PM_ContinueTorsoAnim( TORSO_STAND );
-      }
     }
 
     PM_ContinueWeaponAnim( WANIM_IDLE );
@@ -2964,7 +2862,6 @@ static void PM_Weapon( void )
   qboolean      attack1 = pm->cmd.buttons & BUTTON_ATTACK;
   qboolean      attack2 = pm->cmd.buttons & BUTTON_ATTACK2;
   qboolean      attack3 = pm->cmd.buttons & BUTTON_USE_HOLDABLE;
-  int           minAmmo;
 
   // Ignore weapons in some cases
   if( pm->ps->persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
@@ -2977,38 +2874,26 @@ static void PM_Weapon( void )
     return;
   }
 
-  // Charging for or canceling a pounce/drill attack
-  if( pm->ps->weapon == WP_ALEVEL3 || pm->ps->weapon == WP_ALEVEL3_UPG ||
-      pm->ps->weapon == WP_ALEVEL5 )
+  // Charging for a pounce or canceling a pounce
+  if( pm->ps->weapon == WP_ALEVEL3 || pm->ps->weapon == WP_ALEVEL3_UPG )
   {
     int max;
     
-    switch(pm->ps->weapon) {
-    case WP_ALEVEL3:
-      max = LEVEL3_POUNCE_TIME;
-      break;
-    case WP_ALEVEL3_UPG:
-      max = LEVEL3_POUNCE_TIME_UPG;
-      break;
-    case WP_ALEVEL5:
-      max = LEVEL5_POUNCE_TIME;
-      break;
-    }
-    
-    if( attack2 )
+    max = pm->ps->weapon == WP_ALEVEL3 ? LEVEL3_POUNCE_TIME :
+                                         LEVEL3_POUNCE_TIME_UPG;
+    if( pm->cmd.buttons & BUTTON_ATTACK2 )
       pm->ps->stats[ STAT_MISC ] += pml.msec;
     else
       pm->ps->stats[ STAT_MISC ] -= pml.msec;
 
     if( pm->ps->stats[ STAT_MISC ] > max )
       pm->ps->stats[ STAT_MISC ] = max;
-    else if( pm->ps->stats[ STAT_MISC ] <= 0 ) {
+    else if( pm->ps->stats[ STAT_MISC ] < 0 )
       pm->ps->stats[ STAT_MISC ] = 0;
-    }
   }
 
   // Trample charge mechanics
-  else if( pm->ps->weapon == WP_ALEVEL4 )
+  if( pm->ps->weapon == WP_ALEVEL4 )
   {
     // Charging up
     if( !( pm->ps->stats[ STAT_STATE ] & SS_CHARGING ) )
@@ -3080,7 +2965,6 @@ static void PM_Weapon( void )
   // Charging up a Lucifer Cannon
   pm->ps->eFlags &= ~EF_WARN_CHARGE;
   if( pm->ps->weapon == WP_LUCIFER_CANNON )
-
   {
     // Charging up
     if( !pm->ps->weaponTime && pm->ps->weaponstate != WEAPON_NEEDS_RESET &&
@@ -3100,47 +2984,14 @@ static void PM_Weapon( void )
       pm->ps->eFlags |= EF_WARN_CHARGE;
   }
 
-  if( pm->ps->weapon == WP_ROCKET_LAUNCHER )
-  {
-    if( ( ( !pm->ps->weaponTime && ( pm->cmd.buttons & BUTTON_ATTACK ) )
-      || pm->ps->stats[ STAT_MISC ] > 0 ) && pm->ps->ammo )
-    {
-      if( pm->ps->stats[ STAT_MISC ] == 0 )
-        PM_AddEvent( EV_ROCKETL_PRIME );
-
-      pm->ps->stats[ STAT_MISC ] += pml.msec;
-      pm->ps->eFlags |= EF_WARN_CHARGE;
-    }
-  }
-
-  if( pm->ps->weapon == WP_GRENADE )
-  {
-    if( !pm->ps->weaponTime &&
-        pm->ps->stats[ STAT_GRENADES ] > 0 &&
-        ( ( pm->cmd.buttons & BUTTON_ATTACK ) ||
-          pm->ps->stats[ STAT_MISC ] > 0 ) )
-    {
-      int old_time;
-
-      old_time = pm->ps->stats[ STAT_MISC ];
-
-      if( old_time == 0 )
-      {
-        PM_AddEvent( EV_GRENADE_PRIME );
-      }
-
-      pm->ps->stats[ STAT_MISC ] += pml.msec;
-
-      if( pm->ps->stats[ STAT_MISC ] < GRENADE_FUSE_TIME &&
-          old_time / 1000 < pm->ps->stats[ STAT_MISC ] / 1000 )
-      {
-        PM_AddEvent( EV_GRENADE_TICK );
-      }
-    }
-  }
-
   // don't allow attack until all buttons are up
   if( pm->ps->pm_flags & PMF_RESPAWNED )
+    return;
+
+  // no bite during pounce
+  if( ( pm->ps->weapon == WP_ALEVEL3 || pm->ps->weapon == WP_ALEVEL3_UPG )
+      && ( pm->cmd.buttons & BUTTON_ATTACK )
+      && ( pm->ps->pm_flags & PMF_CHARGE ) )
     return;
 
   // pump weapon delays (repeat times etc)
@@ -3163,13 +3014,13 @@ static void PM_Weapon( void )
     {
       if( !( pm->ps->pm_flags & PMF_USE_ITEM_HELD ) )
       {
-        if( pm->cmd.weapon < 32 )
+        if( pm->cmd.weapon <= 32 )
         {
           //if trying to select a weapon, select it
           if( pm->ps->weapon != pm->cmd.weapon )
             PM_BeginWeaponChange( pm->cmd.weapon );
         }
-        else
+        else if( pm->cmd.weapon > 32 )
         {
           //if trying to toggle an upgrade, toggle it
           if( BG_InventoryContainsUpgrade( pm->cmd.weapon - 32, pm->ps->stats ) ) //sanity check
@@ -3230,16 +3081,12 @@ static void PM_Weapon( void )
     return;
   }
 
-  if ( pm->ps->weapon == WP_LAS_GUN && attack2 )
-    minAmmo = 20;
-  else minAmmo = 1;
-
   // check for out of ammo
-  if( ( pm->ps->weapon != WP_GRENADE && pm->ps->ammo < minAmmo &&
-        !pm->ps->clips && !BG_Weapon( pm->ps->weapon )->infiniteAmmo ) ||
-      ( pm->ps->weapon == WP_GRENADE && pm->ps->stats[ STAT_GRENADES ] <= 0 ) )
+  if( !pm->ps->ammo && !pm->ps->clips && !BG_Weapon( pm->ps->weapon )->infiniteAmmo )
   {
-    if( attack1 || ( BG_Weapon( pm->ps->weapon )->hasAltMode && attack2 ) || ( BG_Weapon( pm->ps->weapon )->hasThirdMode && attack3 ) )
+    if( attack1 ||
+        ( BG_Weapon( pm->ps->weapon )->hasAltMode && attack2 ) ||
+        ( BG_Weapon( pm->ps->weapon )->hasThirdMode && attack3 ) )
     {
       PM_AddEvent( EV_NOAMMO );
       pm->ps->weaponTime += 500;
@@ -3293,7 +3140,6 @@ static void PM_Weapon( void )
 
     case WP_ALEVEL3:
     case WP_ALEVEL3_UPG:
-    case WP_ALEVEL5:
       //pouncing has primary secondary AND autohit procedures
       // pounce is autohit
       if( !attack1 && !attack2 && !attack3 )
@@ -3330,7 +3176,7 @@ static void PM_Weapon( void )
         pm->ps->weaponstate = WEAPON_NEEDS_RESET;
       }
 
-      if( pm->ps->stats[ STAT_MISC ] > 300 )
+      if( pm->ps->stats[ STAT_MISC ] > LCANNON_CHARGE_TIME_MIN )
       {
         // Fire primary attack
         attack1 = qtrue;
@@ -3353,58 +3199,11 @@ static void PM_Weapon( void )
       }
       break;
 
- 
     case WP_MASS_DRIVER:
-      if( pm->ps->ammo > 6 && attack3 )
-        attack3 = attack2 = qtrue;
-      else
-       attack2 = attack3 = qfalse;
+      attack2 = attack3 = qfalse;
+      // attack2 is handled on the client for zooming (cg_view.c)
 
-      //attack2 is handled on the client for zooming (cg_view.c)
       if( !attack1 )
-      {
-        pm->ps->weaponTime = 0;
-        pm->ps->weaponstate = WEAPON_READY;
-        return;
-      }
-      break;
-
-    case WP_ROCKET_LAUNCHER:
-      if( pm->ps->stats[ STAT_MISC ] > ROCKETL_DELAY )
-      {
-        attack1 = qtrue;
-        pm->ps->stats[ STAT_MISC ] = 0;
-      }
-      else
-      {
-        pm->ps->weaponTime = 0;
-        pm->ps->weaponstate = WEAPON_READY;
-        return;
-      }
-
-    case WP_GRENADE:
-      if( attack1 || pm->ps->stats[ STAT_MISC ] == 0 )
-      {
-        pm->ps->weaponTime = 0;
-
-        if( pm->ps->stats[ STAT_MISC ] < GRENADE_FUSE_TIME )
-        {
-          pm->ps->weaponstate = WEAPON_READY;
-          return;
-        }
-      }
-
-      if( pm->ps->stats[ STAT_MISC ] > GRENADE_TIME_MIN )
-      {
-        attack1 = qtrue;
-      }
-      else if( pm->ps->stats[ STAT_MISC ] > 0 )
-      {
-        pm->ps->weaponTime = 0;
-        pm->ps->weaponstate = WEAPON_READY;
-        return;
-      }
-      else
       {
         pm->ps->weaponTime = 0;
         pm->ps->weaponstate = WEAPON_READY;
@@ -3427,35 +3226,13 @@ static void PM_Weapon( void )
   {
     if( BG_Weapon( pm->ps->weapon )->hasThirdMode )
     {
-      if( pm->ps->weapon == WP_MASS_DRIVER )
-      {
-        attack3 = qtrue;
-      }
-	  
-      if( pm->ps->weapon == WP_ALEVEL5 && !pm->ps->ammo )
-      {
-        pm->ps->weaponTime += 400;
-        return;
-      }
-	  
-      if( pm->ps->weapon == WP_ALEVEL4 && !pm->ps->ammo )
-      {
-        pm->ps->weaponTime += 200;
-        return;
-      }
-	  
+      //hacky special case for slowblob
       if( pm->ps->weapon == WP_ALEVEL3_UPG && !pm->ps->ammo )
       {
         pm->ps->weaponTime += 200;
         return;
       }
-	  
-      if( pm->ps->weapon == WP_ALEVEL2_UPG && !pm->ps->ammo )
-      {
-        pm->ps->weaponTime += 200;
-        return;
-      }
-	  
+
       pm->ps->generic1 = WPM_TERTIARY;
       PM_AddEvent( EV_FIRE_WEAPON3 );
       addTime = BG_Weapon( pm->ps->weapon )->repeatRate3;
@@ -3470,15 +3247,12 @@ static void PM_Weapon( void )
   }
   else if( attack2 )
   {
-  
     if( BG_Weapon( pm->ps->weapon )->hasAltMode )
     {
-  
       pm->ps->generic1 = WPM_SECONDARY;
       PM_AddEvent( EV_FIRE_WEAPON2 );
       addTime = BG_Weapon( pm->ps->weapon )->repeatRate2;
     }
-
     else
     {
       pm->ps->weaponTime = 0;
@@ -3486,7 +3260,6 @@ static void PM_Weapon( void )
       pm->ps->generic1 = WPM_NOTFIRING;
       return;
     }
-
   }
   else if( attack1 )
   {
@@ -3505,13 +3278,7 @@ static void PM_Weapon( void )
         PM_AddEvent( EV_FIRE_WEAPON );
         addTime = BG_Weapon( pm->ps->weapon )->repeatRate1;
         break;
-      	
-      case WP_ALEVEL5:
-        pm->ps->generic1 = WPM_SECONDARY;
-        PM_AddEvent( EV_FIRE_WEAPON2 );
-        addTime = BG_Weapon( pm->ps->weapon )->repeatRate2;
-        break;
-		
+
       case WP_ALEVEL3:
       case WP_ALEVEL3_UPG:
         pm->ps->generic1 = WPM_SECONDARY;
@@ -3529,9 +3296,12 @@ static void PM_Weapon( void )
     //FIXME: this should be an option in the client weapon.cfg
     switch( pm->ps->weapon )
     {
-      case WP_GRENADE:
-        PM_StartTorsoAnim( TORSO_ATTACK3 );
-        PM_StartWeaponAnim( WANIM_ATTACK1 );
+      case WP_FLAMER:
+        if( pm->ps->weaponstate == WEAPON_READY )
+        {
+          PM_StartTorsoAnim( TORSO_ATTACK );
+          PM_StartWeaponAnim( WANIM_ATTACK1 );
+        }
         break;
 
       case WP_BLASTER:
@@ -3553,10 +3323,11 @@ static void PM_Weapon( void )
     //       weapon.cfg
     switch( pm->ps->weapon )
     {
+      case WP_ALEVEL1_UPG:
       case WP_ALEVEL1:
         if( attack1 )
         {
-          num /= RAND_MAX / 6 + 1;
+          num %= 6;
           PM_ForceLegsAnim( NSPA_ATTACK1 );
           PM_StartWeaponAnim( WANIM_ATTACK1 + num );
         }
@@ -3571,14 +3342,14 @@ static void PM_Weapon( void )
       case WP_ALEVEL2:
         if( attack1 )
         {
-          num /= RAND_MAX / 6 + 1;
+          num %= 6;
           PM_ForceLegsAnim( NSPA_ATTACK1 );
           PM_StartWeaponAnim( WANIM_ATTACK1 + num );
         }
         break;
 
       case WP_ALEVEL4:
-        num /= RAND_MAX / 3 + 1;
+        num %= 3;
         PM_ForceLegsAnim( NSPA_ATTACK1 + num );
         PM_StartWeaponAnim( WANIM_ATTACK1 + num );
         break;
@@ -3610,45 +3381,14 @@ static void PM_Weapon( void )
 
   // take an ammo away if not infinite
   if( !BG_Weapon( pm->ps->weapon )->infiniteAmmo ||
-      ( pm->ps->weapon == WP_ALEVEL3_UPG && attack3 ) ||
-      ( pm->ps->weapon == WP_ALEVEL2_UPG && attack3 ) || 
-      ( pm->ps->weapon == WP_ALEVEL4 && attack3 )|| 
-      ( pm->ps->weapon == WP_ALEVEL5 && attack3 ))
+      ( pm->ps->weapon == WP_ALEVEL3_UPG && attack3 ) )
   {
-    switch( pm->ps->weapon )
-    {
-      case WP_LUCIFER_CANNON:
-        if( attack1 && !attack2 )
-        {
-          pm->ps->ammo -=
-            ( pm->ps->stats[ STAT_MISC ] * LCANNON_CHARGE_AMMO +
-            LCANNON_CHARGE_TIME_MAX - 1 ) / LCANNON_CHARGE_TIME_MAX;
-        }
-        else
-        {
-          pm->ps->ammo--;
-        }
-        break;
-
-      case WP_LAS_GUN:
-        if( attack2 )
-        {
-          pm->ps->ammo -= 25;
-        }
-        else
-        {
-          pm->ps->ammo--;
-        }
-        break;
-
-      case WP_GRENADE:
-        pm->ps->stats[ STAT_GRENADES ]--;
-        break;
-
-      default:
-        pm->ps->ammo--;
-        break;
-    }
+    // Special case for lcannon
+    if( pm->ps->weapon == WP_LUCIFER_CANNON && attack1 && !attack2 )
+      pm->ps->ammo -= ( pm->ps->stats[ STAT_MISC ] * LCANNON_CHARGE_AMMO +
+                LCANNON_CHARGE_TIME_MAX - 1 ) / LCANNON_CHARGE_TIME_MAX;
+    else
+      pm->ps->ammo--;
 
     // Stay on the safe side
     if( pm->ps->ammo < 0 )
@@ -3784,8 +3524,6 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
   if( ps->pm_type != PM_SPECTATOR && ps->stats[ STAT_HEALTH ] <= 0 )
     return;   // no view changes at all
 
-
-
   // circularly clamp the angles with deltas
   for( i = 0; i < 3; i++ )
   {
@@ -3877,141 +3615,6 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
   }
 }
 
-/*
-================
-PM_ForceFields
-================
-*/
-
-void PM_ForceFields( void )
-{
-  int i;
-  float dt = pml.msec * 0.001f;
-  forceField_t *ff;
-  vec3_t total = { 0 };
-
-  if( pm->ps->eFlags & EF_WARPING )
-  {
-    return;
-  }
-
-  for( i = 0; i < pm->numForceFields; i++ )
-  {
-    vec3_t delta;
-    float distance, force;
-    trace_t tr;
-
-    ff = pm->forceFields + i;
-
-    VectorSubtract( ff->origin, pm->ps->origin, delta );
-    distance = VectorNormalize( delta );
-
-    if( distance > ff->range )
-      continue;
-
-    pm->trace( &tr, pm->ps->origin, NULL, NULL, ff->origin, pm->ps->clientNum, MASK_SOLID );
-
-    if( tr.fraction < 1.0f )
-      continue;
-
-    force = ff->force / distance * ( 1.0f - distance / ff->range );
-
-    VectorMA( total, force, delta, total );
-  }
-
-  VectorMA( pm->ps->velocity, dt, total, pm->ps->velocity );
-}
-
-/*
-================
-PM_WraithMechanics
-================
-*/
-
-void PM_WraithMechanics( void )
-{
-  qboolean target, force_exit;
-
-  pm->pmext->warpExitBlocked = qfalse;
-  pm->pmext->warpExitedBlocked = qfalse;
-
-  target = !!( pm->cmd.buttons & BUTTON_ATTACK2 );
-  force_exit = qfalse;
-
-  if( pm->ps->stats[ STAT_MISC ] < 0 )
-  {
-    /*if( target && pm->ps->weaponTime <= 0 )
-    {
-      PM_AddEvent( EV_NOAMMO );
-      pm->ps->weaponTime += 500;
-    }*/
-    
-    target = qfalse;
-    force_exit = qtrue;
-  }
-
-  if( ( !force_exit && pm->ps->weaponTime ) ||
-      !!( pm->ps->eFlags & EF_WARPING ) == target )
-  {
-    goto done;
-  }
-
-  if( target )
-  {
-    if( pm->ps->stats[ STAT_MISC ] < LEVEL1_WARP_MIN_TIME )
-    {
-      /*if( pm->ps->weaponTime <= 0 )
-      {
-        PM_AddEvent( EV_NOAMMO );
-        pm->ps->weaponTime += 500;
-      }*/
-      goto done;
-    }
-
-    pm->ps->eFlags |= EF_WARPING;
-    PM_AddEvent( EV_WARP_ENTER );
-    pm->ps->weaponTime += LEVEL1_WARP_MIN_TIME;
-  }
-  else
-  {
-    trace_t tr;
-    vec3_t mins, maxs;
-
-    BG_ClassBoundingBox( PCL_ALIEN_LEVEL1, mins, maxs, NULL, NULL, NULL );
-
-    pm->trace( &tr, pm->ps->origin, mins, maxs, pm->ps->origin, pm->ps->clientNum, MASK_PLAYERSOLID );
-
-    if( tr.startsolid )
-    {
-      if( force_exit )
-      {
-        pm->pmext->warpExitedBlocked = qtrue;
-      }
-      else
-      {
-        pm->pmext->warpExitBlocked = qtrue;
-        goto done;
-      }
-    }
-
-    pm->ps->eFlags &= ~EF_WARPING;
-    PM_AddEvent( EV_WARP_EXIT );
-    pm->ps->weaponTime += LEVEL1_WARP_REPEAT;
-  }
-
-done:
-
-  if( pm->ps->eFlags & EF_WARPING )
-  {
-    pm->tracemask = MASK_DEADSOLID;
-    pm->ps->stats[ STAT_MISC ] -= pml.msec;
-    pm->cmd.buttons &= ~BUTTON_ATTACK;
-  }
-  else
-  {
-    pm->tracemask = MASK_PLAYERSOLID;
-  }
-}
 
 /*
 ================
@@ -4127,11 +3730,6 @@ void PmoveSingle( pmove_t *pmove )
     pm->cmd.upmove = 0;
   }
 
-  if( pm->ps->weapon == WP_ALEVEL1 )
-  {
-    PM_WraithMechanics( );
-  }
-
   if( pm->ps->pm_type == PM_SPECTATOR )
   {
     // update the viewangles
@@ -4141,7 +3739,7 @@ void PmoveSingle( pmove_t *pmove )
     PM_DropTimers( );
     return;
   }
-  
+
   if( pm->ps->pm_type == PM_NOCLIP )
   {
     PM_UpdateViewAngles( pm->ps, &pm->cmd );
@@ -4177,13 +3775,10 @@ void PmoveSingle( pmove_t *pmove )
     PM_DeadMove( );
 
   PM_DropTimers( );
-
-  PM_ForceFields( );
+  PM_CheckDodge( );
 
   if( pm->ps->pm_type == PM_JETPACK )
     PM_JetPackMove( );
-  else if( pm->ps->pm_type == PM_HUMMEL )
-    PM_HUMMELFLY( );
   else if( pm->ps->pm_flags & PMF_TIME_WATERJUMP )
     PM_WaterJumpMove( );
   else if( pm->waterlevel > 1 )

@@ -19,11 +19,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 void G_namelog_cleanup( void )
@@ -55,21 +51,15 @@ void G_namelog_connect( gclient_t *client )
     n = BG_Alloc( sizeof( namelog_t ) );
     strcpy( n->guid, client->pers.guid );
     if( p )
-    {
       p->next = n;
-      n->id = p->id + 1;
-    }
     else
-    {
       level.namelogs = n;
-      n->id = MAX_CLIENTS;
-    }
   }
   client->pers.namelog = n;
   n->slot = client - level.clients;
   n->banned = qfalse;
 
-  newname = n->name[ n->nameOffset ];
+  newname = n->name[ n->nameChanges % MAX_NAMELOG_NAMES ];
   // If they're muted, copy in their last known name - this will stop people
   // reconnecting to get around the name change protection.
   if( n->muted && G_admin_name_check( &g_entities[ n->slot ],
@@ -105,18 +95,18 @@ void G_namelog_update_score( gclient_t *client )
 
 void G_namelog_update_name( gclient_t *client )
 {
+  int       i;
   char      n1[ MAX_NAME_LENGTH ], n2[ MAX_NAME_LENGTH ];
   namelog_t *n = client->pers.namelog;
 
-  if( n->name[ n->nameOffset ][ 0 ] )
+  G_SanitiseString( client->pers.netname, n1, sizeof( n1 ) );
+  for( i = 0; i < MAX_NAMELOG_NAMES && n->name[ i ][ 0 ]; i++ )
   {
-    G_SanitiseString( client->pers.netname, n1, sizeof( n1 ) );
-    G_SanitiseString( n->name[ n->nameOffset ],
-      n2, sizeof( n2 ) );
-    if( strcmp( n1, n2 ) != 0 )
-      n->nameOffset = ( n->nameOffset + 1 ) % MAX_NAMELOG_NAMES;
+    G_SanitiseString( n->name[ i ], n2, sizeof( n2 ) );
+    if( !strcmp( n1, n2 ) )
+      return;
   }
-  strcpy( n->name[ n->nameOffset ], client->pers.netname );
+  strcpy( n->name[ n->nameChanges % MAX_NAMELOG_NAMES ], client->pers.netname );
 }
 
 void G_namelog_restore( gclient_t *client )

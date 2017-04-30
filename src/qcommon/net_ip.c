@@ -51,7 +51,6 @@ typedef unsigned short sa_family_t;
 #	define EADDRNOTAVAIL	WSAEADDRNOTAVAIL
 #	define EAFNOSUPPORT		WSAEAFNOSUPPORT
 #	define ECONNRESET			WSAECONNRESET
-typedef u_long	ioctlarg_t;
 #	define socketError		WSAGetLastError( )
 
 static WSADATA	winsockdata;
@@ -87,7 +86,6 @@ typedef int SOCKET;
 #	define SOCKET_ERROR			-1
 #	define closesocket			close
 #	define ioctlsocket			ioctl
-typedef int	ioctlarg_t;
 #	define socketError			errno
 
 #endif
@@ -109,8 +107,6 @@ static cvar_t	*net_port;
 static cvar_t	*net_port6;
 static cvar_t	*net_mcast6addr;
 static cvar_t	*net_mcast6iface;
-
-static cvar_t	*net_dropsim;
 
 static struct sockaddr	socksRelayAddr;
 
@@ -206,7 +202,7 @@ char *NET_ErrorString( void ) {
 		default: return "NO ERROR";
 	}
 #else
-	return strerror(socketError);
+	return strerror (errno);
 #endif
 }
 
@@ -314,11 +310,11 @@ static qboolean Sys_StringToSockaddr(const char *s, struct sockaddr *sadr, int s
 
 		if(search)
 		{
-			if(search->ai_addrlen > sadr_len)
-				search->ai_addrlen = sadr_len;
+			if(res->ai_addrlen > sadr_len)
+				res->ai_addrlen = sadr_len;
 				
-			memcpy(sadr, search->ai_addr, search->ai_addrlen);
-			freeaddrinfo(search);
+			memcpy(sadr, res->ai_addr, res->ai_addrlen);
+			freeaddrinfo(res);
 			
 			return qtrue;
 		}
@@ -525,17 +521,16 @@ qboolean	NET_IsLocalAddress( netadr_t adr ) {
 
 /*
 ==================
-NET_GetPacket
+Sys_GetPacket
 
-Receive one packet
+Never called by the game logic, just the system event queing
 ==================
 */
 #ifdef _DEBUG
 int	recvfromCount;
 #endif
 
-qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
-{
+qboolean Sys_GetPacket( netadr_t *net_from, msg_t *net_message ) {
 	int 	ret;
 	struct sockaddr_storage from;
 	socklen_t	fromlen;
@@ -545,7 +540,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 	recvfromCount++;		// performance check
 #endif
 	
-	if(ip_socket != INVALID_SOCKET && FD_ISSET(ip_socket, fdr))
+	if(ip_socket != INVALID_SOCKET)
 	{
 		fromlen = sizeof(from);
 		ret = recvfrom( ip_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen );
@@ -579,7 +574,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 				net_message->readcount = 0;
 			}
 		
-			if( ret >= net_message->maxsize ) {
+			if( ret == net_message->maxsize ) {
 				Com_Printf( "Oversize packet from %s\n", NET_AdrToString (*net_from) );
 				return qfalse;
 			}
@@ -589,7 +584,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 		}
 	}
 	
-	if(ip6_socket != INVALID_SOCKET && FD_ISSET(ip6_socket, fdr))
+	if(ip6_socket != INVALID_SOCKET)
 	{
 		fromlen = sizeof(from);
 		ret = recvfrom(ip6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
@@ -606,7 +601,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 			SockadrToNetadr((struct sockaddr *) &from, net_from);
 			net_message->readcount = 0;
 		
-			if(ret >= net_message->maxsize)
+			if(ret == net_message->maxsize)
 			{
 				Com_Printf( "Oversize packet from %s\n", NET_AdrToString (*net_from) );
 				return qfalse;
@@ -617,7 +612,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 		}
 	}
 
-	if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket && FD_ISSET(multicast6_socket, fdr))
+	if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket)
 	{
 		fromlen = sizeof(from);
 		ret = recvfrom(multicast6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
@@ -634,7 +629,7 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 			SockadrToNetadr((struct sockaddr *) &from, net_from);
 			net_message->readcount = 0;
 		
-			if(ret >= net_message->maxsize)
+			if(ret == net_message->maxsize)
 			{
 				Com_Printf( "Oversize packet from %s\n", NET_AdrToString (*net_from) );
 				return qfalse;
@@ -830,7 +825,7 @@ NET_IPSocket
 int NET_IPSocket( char *net_interface, int port, int *err ) {
 	SOCKET				newsocket;
 	struct sockaddr_in	address;
-	ioctlarg_t			_true = 1;
+	u_long				_true = 1;
 	int					i = 1;
 
 	*err = 0;
@@ -858,6 +853,9 @@ int NET_IPSocket( char *net_interface, int port, int *err ) {
 	// make it broadcast capable
 	if( setsockopt( newsocket, SOL_SOCKET, SO_BROADCAST, (char *) &i, sizeof(i) ) == SOCKET_ERROR ) {
 		Com_Printf( "WARNING: NET_IPSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString() );
+
+		// it is not that bad if this one fails.
+//		return newsocket;
 	}
 
 	if( !net_interface || !net_interface[0]) {
@@ -898,7 +896,7 @@ NET_IP6Socket
 int NET_IP6Socket( char *net_interface, int port, struct sockaddr_in6 *bindto, int *err ) {
 	SOCKET				newsocket;
 	struct sockaddr_in6	address;
-	ioctlarg_t			_true = 1;
+	u_long				_true = 1;
 
 	*err = 0;
 
@@ -1037,28 +1035,28 @@ void NET_JoinMulticast6(void)
 	if(curgroup.ipv6mr_interface)
 	{
 		if (setsockopt(multicast6_socket, IPPROTO_IPV6, IPV6_MULTICAST_IF,
-					(char *) &curgroup.ipv6mr_interface, sizeof(curgroup.ipv6mr_interface)) < 0)
+			       (char *) &curgroup.ipv6mr_interface, sizeof(curgroup.ipv6mr_interface)) < 0)
 		{
-			Com_Printf("NET_JoinMulticast6: Couldn't set scope on multicast socket: %s\n", NET_ErrorString());
+        	        Com_Printf("NET_JoinMulticast6: Couldn't set scope on multicast socket: %s\n", NET_ErrorString());
 
-			if(multicast6_socket != ip6_socket)
-			{
-				closesocket(multicast6_socket);
-				multicast6_socket = INVALID_SOCKET;
-				return;
+        	        if(multicast6_socket != ip6_socket)
+        	        {
+        	        	closesocket(multicast6_socket);
+        	        	multicast6_socket = INVALID_SOCKET;
+        	        	return;
 			}
 		}
-	}
+        }
 
-	if (setsockopt(multicast6_socket, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *) &curgroup, sizeof(curgroup)))
-	{
-		Com_Printf("NET_JoinMulticast6: Couldn't join multicast group: %s\n", NET_ErrorString());
-
-		if(multicast6_socket != ip6_socket)
-		{
-			closesocket(multicast6_socket);
-			multicast6_socket = INVALID_SOCKET;
-			return;
+        if (setsockopt(multicast6_socket, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *) &curgroup, sizeof(curgroup)))
+        {
+        	Com_Printf("NET_JoinMulticast6: Couldn't join multicast group: %s\n", NET_ErrorString());
+        	
+       	        if(multicast6_socket != ip6_socket)
+       	        {
+       	        	closesocket(multicast6_socket);
+       	        	multicast6_socket = INVALID_SOCKET;
+       	        	return;
 		}
 	}
 }
@@ -1255,10 +1253,10 @@ void NET_OpenSocks( int port ) {
 
 /*
 =====================
-NET_AddLocalAddress
+NET_GetLocalAddress
 =====================
 */
-static void NET_AddLocalAddress(char *ifname, struct sockaddr *addr, struct sockaddr *netmask)
+void NET_AddLocalAddress(char *ifname, struct sockaddr *addr, struct sockaddr *netmask)
 {
 	int addrlen;
 	sa_family_t family;
@@ -1296,7 +1294,7 @@ static void NET_AddLocalAddress(char *ifname, struct sockaddr *addr, struct sock
 }
 
 #if defined(__linux__) || defined(MACOSX) || defined(__BSD__)
-static void NET_GetLocalAddress(void)
+void NET_GetLocalAddress(void)
 {
 	struct ifaddrs *ifap, *search;
 
@@ -1317,10 +1315,10 @@ static void NET_GetLocalAddress(void)
 	}
 }
 #else
-static void NET_GetLocalAddress( void ) {
+void NET_GetLocalAddress( void ) {
 	char				hostname[256];
-	struct addrinfo	hint;
-	struct addrinfo	*res = NULL;
+	struct addrinfo		hint;
+	struct addrinfo 	*res = NULL;
 
 	if(gethostname( hostname, 256 ) == SOCKET_ERROR)
 		return;
@@ -1336,7 +1334,7 @@ static void NET_GetLocalAddress( void ) {
 	{
 		struct sockaddr_in mask4;
 		struct sockaddr_in6 mask6;
-		struct addrinfo *search;
+		struct addrinfo 	*search;
 	
 		/* On operating systems where it's more difficult to find out the configured interfaces, we'll just assume a
 		 * netmask with all bits set. */
@@ -1478,30 +1476,28 @@ static qboolean NET_GetCvars( void ) {
 #else
 	net_mcast6iface = Cvar_Get( "net_mcast6iface", "", CVAR_LATCH | CVAR_ARCHIVE );
 #endif
-	modified += net_mcast6iface->modified;
+	modified += net_mcast6iface->modified; 
 	net_mcast6iface->modified = qfalse;
 
 	net_socksEnabled = Cvar_Get( "net_socksEnabled", "0", CVAR_LATCH | CVAR_ARCHIVE );
-	modified += net_socksEnabled->modified;
+	modified += net_socksEnabled->modified; 
 	net_socksEnabled->modified = qfalse;
 
 	net_socksServer = Cvar_Get( "net_socksServer", "", CVAR_LATCH | CVAR_ARCHIVE );
-	modified += net_socksServer->modified;
+	modified += net_socksServer->modified; 
 	net_socksServer->modified = qfalse;
 
 	net_socksPort = Cvar_Get( "net_socksPort", "1080", CVAR_LATCH | CVAR_ARCHIVE );
-	modified += net_socksPort->modified;
+	modified += net_socksPort->modified; 
 	net_socksPort->modified = qfalse;
 
 	net_socksUsername = Cvar_Get( "net_socksUsername", "", CVAR_LATCH | CVAR_ARCHIVE );
-	modified += net_socksUsername->modified;
+	modified += net_socksUsername->modified; 
 	net_socksUsername->modified = qfalse;
 
 	net_socksPassword = Cvar_Get( "net_socksPassword", "", CVAR_LATCH | CVAR_ARCHIVE );
-	modified += net_socksPassword->modified;
+	modified += net_socksPassword->modified; 
 	net_socksPassword->modified = qfalse;
-
-	net_dropsim = Cvar_Get("net_dropsim", "", CVAR_TEMP);
 
 	return modified ? qtrue : qfalse;
 }
@@ -1631,42 +1627,6 @@ void NET_Shutdown( void ) {
 #endif
 }
 
-/*
-====================
-NET_Event
-
-Called from NET_Sleep which uses select() to determine which sockets have seen action.
-====================
-*/
-
-void NET_Event(fd_set *fdr)
-{
-	byte bufData[MAX_MSGLEN + 1];
-	netadr_t from;
-	msg_t netmsg;
-	
-	while(1)
-	{
-		MSG_Init(&netmsg, bufData, sizeof(bufData));
-
-		if(NET_GetPacket(&from, &netmsg, fdr))
-		{
-			if(net_dropsim->value > 0.0f && net_dropsim->value <= 100.0f)
-			{
-				// com_dropsim->value percent of incoming packets get dropped.
-				if(rand() < (int) (((double) RAND_MAX) / 100.0 * (double) net_dropsim->value))
-					continue;          // drop this packet
-                        }
-
-			if(com_sv_running->integer)
-				Com_RunAndTimeServerPacket(&from, &netmsg);
-			else
-				CL_PacketEvent(from, &netmsg);
-		}
-		else
-			break;
-	}
-}
 
 /*
 ====================
@@ -1675,23 +1635,31 @@ NET_Sleep
 Sleeps msec or until something happens on the network
 ====================
 */
-void NET_Sleep(int msec)
-{
+void NET_Sleep( int msec ) {
 	struct timeval timeout;
-	fd_set fdr;
-	int highestfd = -1, retval;
+	fd_set	fdset;
+	int highestfd = -1;
 
-	FD_ZERO(&fdr);
+	if (!com_dedicated->integer)
+		return; // we're not a server, just run full speed
+
+	if (ip_socket == INVALID_SOCKET && ip6_socket == INVALID_SOCKET)
+		return;
+
+	if (msec < 0 )
+		return;
+
+	FD_ZERO(&fdset);
 
 	if(ip_socket != INVALID_SOCKET)
 	{
-		FD_SET(ip_socket, &fdr);
+		FD_SET(ip_socket, &fdset);
 
 		highestfd = ip_socket;
 	}
 	if(ip6_socket != INVALID_SOCKET)
 	{
-		FD_SET(ip6_socket, &fdr);
+		FD_SET(ip6_socket, &fdset);
 		
 		if(ip6_socket > highestfd)
 			highestfd = ip6_socket;
@@ -1699,23 +1667,9 @@ void NET_Sleep(int msec)
 
 	timeout.tv_sec = msec/1000;
 	timeout.tv_usec = (msec%1000)*1000;
-	
-#ifdef _WIN32
-	if(highestfd < 0)
-	{
-		// windows ain't happy when select is called without valid FDs
-		SleepEx(msec, 0);
-		return;
-	}
-#endif
-
-	retval = select(highestfd + 1, &fdr, NULL, NULL, &timeout);
-	
-	if(retval < 0)
-		Com_Printf("Warning: select() syscall failed: %s\n", NET_ErrorString());
-	else if(retval > 0)
-		NET_Event(&fdr);
+	select(highestfd + 1, &fdset, NULL, NULL, &timeout);
 }
+
 
 /*
 ====================

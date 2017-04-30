@@ -30,11 +30,11 @@ int g_console_field_width = 78;
 
 #define	NUM_CON_TIMES 4
 
-#define		CON_TEXTSIZE	163840
+#define		CON_TEXTSIZE	32768
 typedef struct {
 	qboolean	initialized;
 
-	short  text[CON_TEXTSIZE];
+	char  text[CON_TEXTSIZE];
 	char  tcolor[CON_TEXTSIZE];
 	int		current;		// line where next message will be printed
 	int		x;				// offset in current line for next print
@@ -60,9 +60,6 @@ console_t	con;
 cvar_t		*con_conspeed;
 
 #define	DEFAULT_CONSOLE_WIDTH	78
-
-vec4_t	console_color = {1.0, 7.0, 2.0, 1.0};
-
 
 /*
 ================
@@ -90,7 +87,8 @@ void Con_Clear_f (void) {
 	int		i;
 
 	for ( i = 0 ; i < CON_TEXTSIZE ; i++ ) {
-		con.text[i] = (ColorIndex(COLOR_WHITE)<<8) | ' ';
+    con.text[i] = ' ';
+    con.tcolor[i] = ColorIndex(COLOR_WHITE);
 	}
 
 	Con_Bottom();		// go to end
@@ -106,23 +104,23 @@ Save the console contents out to a file
 */
 void Con_Dump_f (void)
 {
-	int		l, x, i;
-	short	*line;
+	int		l, x;
+	char  *line;
 	fileHandle_t	f;
 	char	buffer[1024];
 
 	if (Cmd_Argc() != 2)
 	{
-		Com_Printf ("usage: condump <filename>\n");
+		Com_Printf (_("usage: condump <filename>\n"));
 		return;
 	}
 
-	Com_Printf ("Dumped console text to %s.\n", Cmd_Argv(1) );
+	Com_Printf (_("Dumped console text to %s.\n"), Cmd_Argv(1) );
 
 	f = FS_FOpenFileWrite( Cmd_Argv( 1 ) );
 	if (!f)
 	{
-		Com_Printf ("ERROR: couldn't open.\n");
+		Com_Printf (_("ERROR: couldn't open.\n"));
 		return;
 	}
 
@@ -131,7 +129,7 @@ void Con_Dump_f (void)
 	{
 		line = con.text + (l%con.totallines)*con.linewidth;
 		for (x=0 ; x<con.linewidth ; x++)
-			if ((line[x] & 0xff) != ' ')
+			if (line[x] != ' ')
 				break;
 		if (x != con.linewidth)
 			break;
@@ -142,8 +140,7 @@ void Con_Dump_f (void)
 	for ( ; l <= con.current ; l++)
 	{
 		line = con.text + (l%con.totallines)*con.linewidth;
-		for(i=0; i<con.linewidth; i++)
-			buffer[i] = line[i] & 0xff;
+    Com_Memcpy( buffer, line, con.linewidth );
 		for (x=con.linewidth-1 ; x>=0 ; x--)
 		{
 			if (buffer[x] == ' ')
@@ -180,8 +177,9 @@ If the line width has changed, reformat the buffer.
 */
 void Con_CheckResize (void)
 {
-	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
-	short	tbuf[CON_TEXTSIZE];
+	int  i, j, width, oldwidth, oldtotallines, numlines, numchars;
+	char tbuf[CON_TEXTSIZE];
+	char cbuf[CON_TEXTSIZE];
 
 	width = (SCREEN_WIDTH / SMALLCHAR_WIDTH) - 2;
 
@@ -194,8 +192,10 @@ void Con_CheckResize (void)
 		con.linewidth = width;
 		con.totallines = CON_TEXTSIZE / con.linewidth;
 		for(i=0; i<CON_TEXTSIZE; i++)
-
-			con.text[i] = (ColorIndex(COLOR_WHITE)<<8) | ' ';
+    {
+      con.text[i] = ' ';
+      con.tcolor[i] = ColorIndex(COLOR_WHITE);
+    }
 	}
 	else
 	{
@@ -213,10 +213,13 @@ void Con_CheckResize (void)
 		if (con.linewidth < numchars)
 			numchars = con.linewidth;
 
-		Com_Memcpy (tbuf, con.text, CON_TEXTSIZE * sizeof(short));
+		Com_Memcpy (tbuf, con.text, CON_TEXTSIZE);
+		Com_Memcpy (cbuf, con.tcolor, CON_TEXTSIZE);
 		for(i=0; i<CON_TEXTSIZE; i++)
-
-			con.text[i] = (ColorIndex(COLOR_WHITE)<<8) | ' ';
+    {
+      con.text[i] = ' ';
+      con.tcolor[i] = ColorIndex(COLOR_WHITE);
+    }
 
 
 		for (i=0 ; i<numlines ; i++)
@@ -225,6 +228,9 @@ void Con_CheckResize (void)
 			{
 				con.text[(con.totallines - 1 - i) * con.linewidth + j] =
 						tbuf[((con.current - i + oldtotallines) %
+							  oldtotallines) * oldwidth + j];
+				con.tcolor[(con.totallines - 1 - i) * con.linewidth + j] =
+						cbuf[((con.current - i + oldtotallines) %
 							  oldtotallines) * oldwidth + j];
 			}
 		}
@@ -241,7 +247,7 @@ Cmd_CompleteTxtName
 */
 void Cmd_CompleteTxtName( char *args, int argNum ) {
 	if( argNum == 2 ) {
-		Field_CompleteFilename( "", "txt", qfalse, qtrue );
+		Field_CompleteFilename( "", "txt", qfalse );
 	}
 }
 
@@ -285,7 +291,10 @@ void Con_Linefeed (qboolean skipnotify)
 		con.display++;
 	con.current++;
 	for(i=0; i<con.linewidth; i++)
-		con.text[(con.current%con.totallines)*con.linewidth+i] = (ColorIndex(COLOR_WHITE)<<8) | ' ';
+  {
+		con.text[(con.current%con.totallines)*con.linewidth+i] = ' ';
+		con.tcolor[(con.current%con.totallines)*con.linewidth+i] = ColorIndex(COLOR_WHITE);
+  }
 }
 
 /*
@@ -298,9 +307,9 @@ If no console is visible, the text will appear at the top of the game window
 ================
 */
 void CL_ConsolePrint( char *txt ) {
-	int		y, l;
-	unsigned char	c;
-	unsigned short	color;
+	int		y;
+	int		c, l;
+	int		color;
 	qboolean skipnotify = qfalse;		// NERVE - SMF
 
 	// TTimo - prefix for text that shows up in console but not in notify
@@ -337,7 +346,7 @@ void CL_ConsolePrint( char *txt ) {
 
 	color = ColorIndex(COLOR_WHITE);
 
-	while ( (c = *((unsigned char *) txt)) != 0 ) {
+	while ( (c = *txt) != 0 ) {
 		if ( Q_IsColorString( txt ) ) {
 			color = ColorIndex( *(txt+1) );
 			txt += 2;
@@ -372,10 +381,13 @@ void CL_ConsolePrint( char *txt ) {
 			break;
 		default:	// display character and advance
 			y = con.current % con.totallines;
-			con.text[y*con.linewidth+con.x] = (color << 8) | c;
+			con.text[y*con.linewidth+con.x] = c;
+			con.tcolor[y*con.linewidth+con.x] = color;
 			con.x++;
-			if(con.x >= con.linewidth)
+			if (con.x >= con.linewidth) {
 				Con_Linefeed(skipnotify);
+				con.x = 0;
+			}
 			break;
 		}
 	}
@@ -595,8 +607,7 @@ Scroll it up or down
 void Con_RunConsole (void) {
 	// decide on the destination height of the console
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-	//	con.finalFrac = MAX(0.10, 0.01 * cl_consoleHeight->integer);  // configured console percentage
-		con.finalFrac = 0.5;
+		con.finalFrac = MAX(0.10, 0.01 * cl_consoleHeight->integer);  // configured console percentage
 	else
 		con.finalFrac = 0;				// none visible
 	

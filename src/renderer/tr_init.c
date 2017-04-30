@@ -152,10 +152,7 @@ cvar_t	*r_saveFontData;
 
 cvar_t	*r_marksOnTriangleMeshes;
 
-cvar_t	*cyrillic;
-
-cvar_t	*r_aviMotionJpegQuality;
-cvar_t	*r_screenshotJpegQuality;
+cvar_t	*r_reuseGlyphShaders;
 
 cvar_t	*r_maxpolys;
 int		max_polys;
@@ -367,62 +364,15 @@ FIXME: the statics don't get a reinit between fs_game changes
 
 /* 
 ================== 
-RB_ReadPixels
-
-Reads an image but takes care of alignment issues for reading RGB images.
-
-Reads a minimum offset for where the RGB data starts in the image from
-integer stored at pointer offset. When the function has returned the actual
-offset was written back to address offset. This address will always have an
-alignment of packAlign to ensure efficient copying.
-
-Stores the length of padding after a line of pixels to address padlen
-
-Return value must be freed with ri.Hunk_FreeTempMemory()
-================== 
-*/  
-
-byte *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *padlen)
-{
-	byte *buffer, *bufstart;
-	int padwidth, linelen;
-	GLint packAlign;
-	
-	qglGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
-	
-	linelen = width * 3;
-	padwidth = PAD(linelen, packAlign);
-	
-	// Allocate a few more bytes so that we can choose an alignment we like
-	buffer = ri.Hunk_AllocateTempMemory(padwidth * height + *offset + packAlign - 1);
-	
-	bufstart = (byte *) PAD((intptr_t) buffer + *offset, packAlign);
-	qglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, bufstart);
-	
-	*offset = bufstart - buffer;
-	*padlen = padwidth - linelen;
-	
-	return buffer;
-}
-
-/* 
-================== 
 RB_TakeScreenshot
 ================== 
 */  
-void RB_TakeScreenshot(int x, int y, int width, int height, char *fileName)
-{
-	byte *allbuf, *buffer;
-	byte *srcptr, *destptr;
-	byte *endline, *endmem;
-	byte temp;
-	
-	int linelen, padlen;
-	size_t offset = 18, memcount;
+void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
+	byte		*buffer;
+	int			i, c, temp;
 		
-	allbuf = RB_ReadPixels(x, y, width, height, &offset, &padlen);
-	buffer = allbuf + offset - 18;
-	
+	buffer = ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*3+18);
+
 	Com_Memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
 	buffer[12] = width & 255;
@@ -431,62 +381,47 @@ void RB_TakeScreenshot(int x, int y, int width, int height, char *fileName)
 	buffer[15] = height >> 8;
 	buffer[16] = 24;	// pixel size
 
-	// swap rgb to bgr and remove padding from line endings
-	linelen = width * 3;
-	
-	srcptr = destptr = allbuf + offset;
-	endmem = srcptr + (linelen + padlen) * height;
-	
-	while(srcptr < endmem)
-	{
-		endline = srcptr + linelen;
+	qglReadPixels( x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 ); 
 
-		while(srcptr < endline)
-		{
-			temp = srcptr[0];
-			*destptr++ = srcptr[2];
-			*destptr++ = srcptr[1];
-			*destptr++ = temp;
-			
-			srcptr += 3;
-		}
-		
-		// Skip the pad
-		srcptr += padlen;
+	// swap rgb to bgr
+	c = 18 + width * height * 3;
+	for (i=18 ; i<c ; i+=3) {
+		temp = buffer[i];
+		buffer[i] = buffer[i+2];
+		buffer[i+2] = temp;
 	}
 
-	memcount = linelen * height;
-
 	// gamma correct
-	if(glConfig.deviceSupportsGamma)
-		R_GammaCorrect(allbuf + offset, memcount);
+	if ( glConfig.deviceSupportsGamma ) {
+		R_GammaCorrect( buffer + 18, glConfig.vidWidth * glConfig.vidHeight * 3 );
+	}
 
-	ri.FS_WriteFile(fileName, buffer, memcount + 18);
+	ri.FS_WriteFile( fileName, buffer, c );
 
-	ri.Hunk_FreeTempMemory(allbuf);
+	ri.Hunk_FreeTempMemory( buffer );
 }
 
 /* 
 ================== 
 RB_TakeScreenshotJPEG
 ================== 
-*/
+*/  
+void RB_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName ) {
+	byte		*buffer;
 
-void RB_TakeScreenshotJPEG(int x, int y, int width, int height, char *fileName)
-{
-	byte *buffer;
-	size_t offset = 0, memcount;
-	int padlen;
+	buffer = ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*4);
 
-	buffer = RB_ReadPixels(x, y, width, height, &offset, &padlen);
-	memcount = (width * 3 + padlen) * height;
+	qglReadPixels( x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer ); 
 
 	// gamma correct
-	if(glConfig.deviceSupportsGamma)
-		R_GammaCorrect(buffer + offset, memcount);
+	if ( glConfig.deviceSupportsGamma ) {
+		R_GammaCorrect( buffer, glConfig.vidWidth * glConfig.vidHeight * 4 );
+	}
 
-	RE_SaveJPG(fileName, r_screenshotJpegQuality->integer, width, height, buffer + offset, padlen);
-	ri.Hunk_FreeTempMemory(buffer);
+	ri.FS_WriteFile( fileName, buffer, 1 );		// create path
+	SaveJPG( fileName, 90, glConfig.vidWidth, glConfig.vidHeight, buffer);
+
+	ri.Hunk_FreeTempMemory( buffer );
 }
 
 /*
@@ -592,10 +527,8 @@ the menu system, sampled down from full screen distorted images
 void R_LevelShot( void ) {
 	char		checkname[MAX_OSPATH];
 	byte		*buffer;
-	byte		*source, *allsource;
+	byte		*source;
 	byte		*src, *dst;
-	size_t			offset = 0;
-	int			padlen;
 	int			x, y;
 	int			r, g, b;
 	float		xScale, yScale;
@@ -603,15 +536,16 @@ void R_LevelShot( void ) {
 
 	Com_sprintf(checkname, sizeof(checkname), "levelshots/%s.tga", tr.world->baseName);
 
-	allsource = RB_ReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, &offset, &padlen);
-	source = allsource + offset;
+	source = ri.Hunk_AllocateTempMemory( glConfig.vidWidth * glConfig.vidHeight * 3 );
 
-	buffer = ri.Hunk_AllocateTempMemory(128 * 128*3 + 18);
+	buffer = ri.Hunk_AllocateTempMemory( 128 * 128*3 + 18);
 	Com_Memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
 	buffer[12] = 128;
 	buffer[14] = 128;
 	buffer[16] = 24;	// pixel size
+
+	qglReadPixels( 0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGB, GL_UNSIGNED_BYTE, source ); 
 
 	// resample from source
 	xScale = glConfig.vidWidth / 512.0f;
@@ -621,8 +555,7 @@ void R_LevelShot( void ) {
 			r = g = b = 0;
 			for ( yy = 0 ; yy < 3 ; yy++ ) {
 				for ( xx = 0 ; xx < 4 ; xx++ ) {
-					src = source + (3 * glConfig.vidWidth + padlen) * (int)((y*3 + yy) * yScale) +
-						3 * (int) ((x*4 + xx) * xScale);
+					src = source + 3 * ( glConfig.vidWidth * (int)( (y*3+yy)*yScale ) + (int)( (x*4+xx)*xScale ) );
 					r += src[0];
 					g += src[1];
 					b += src[2];
@@ -642,8 +575,8 @@ void R_LevelShot( void ) {
 
 	ri.FS_WriteFile( checkname, buffer, 128 * 128*3 + 18 );
 
-	ri.Hunk_FreeTempMemory(buffer);
-	ri.Hunk_FreeTempMemory(allsource);
+	ri.Hunk_FreeTempMemory( buffer );
+	ri.Hunk_FreeTempMemory( source );
 
 	ri.Printf( PRINT_ALL, "Wrote %s\n", checkname );
 }
@@ -776,70 +709,36 @@ RB_TakeVideoFrameCmd
 const void *RB_TakeVideoFrameCmd( const void *data )
 {
 	const videoFrameCommand_t	*cmd;
-	byte				*cBuf;
-	size_t				memcount, linelen;
-	int				padwidth, avipadwidth, padlen, avipadlen;
-	GLint packAlign;
+	int												frameSize;
+	int												i;
 	
 	cmd = (const videoFrameCommand_t *)data;
 	
-	qglGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
-
-	linelen = cmd->width * 3;
-
-	// Alignment stuff for glReadPixels
-	padwidth = PAD(linelen, packAlign);
-	padlen = padwidth - linelen;
-	// AVI line padding
-	avipadwidth = PAD(linelen, AVI_LINE_PADDING);
-	avipadlen = avipadwidth - linelen;
-
-	cBuf = (byte *) PAD((intptr_t) cmd->captureBuffer, packAlign);
-		
-	qglReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
-		GL_UNSIGNED_BYTE, cBuf);
-
-	memcount = padwidth * cmd->height;
+	qglReadPixels( 0, 0, cmd->width, cmd->height, GL_RGBA,
+			GL_UNSIGNED_BYTE, cmd->captureBuffer );
 
 	// gamma correct
-	if(glConfig.deviceSupportsGamma)
-		R_GammaCorrect(cBuf, memcount);
+	if( glConfig.deviceSupportsGamma )
+		R_GammaCorrect( cmd->captureBuffer, cmd->width * cmd->height * 4 );
 
-	if(cmd->motionJpeg)
+	if( cmd->motionJpeg )
 	{
-		memcount = RE_SaveJPGToBuffer(cmd->encodeBuffer, linelen * cmd->height,
-			r_aviMotionJpegQuality->integer,
-			cmd->width, cmd->height, cBuf, padlen);
-		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, memcount);
+		frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 90,
+				cmd->width, cmd->height, cmd->captureBuffer );
+		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 	}
 	else
 	{
-		byte *lineend, *memend;
-		byte *srcptr, *destptr;
-	
-		srcptr = cBuf;
-		destptr = cmd->encodeBuffer;
-		memend = srcptr + memcount;
-		
-		// swap R and B and remove line paddings
-		while(srcptr < memend)
+		frameSize = cmd->width * cmd->height;
+
+		for( i = 0; i < frameSize; i++)    // Pack to 24bpp and swap R and B
 		{
-			lineend = srcptr + linelen;
-			while(srcptr < lineend)
-			{
-				*destptr++ = srcptr[2];
-				*destptr++ = srcptr[1];
-				*destptr++ = srcptr[0];
-				srcptr += 3;
-			}
-			
-			Com_Memset(destptr, '\0', avipadlen);
-			destptr += avipadlen;
-			
-			srcptr += padlen;
+			cmd->encodeBuffer[ i*3 ]     = cmd->captureBuffer[ i*4 + 2 ];
+			cmd->encodeBuffer[ i*3 + 1 ] = cmd->captureBuffer[ i*4 + 1 ];
+			cmd->encodeBuffer[ i*3 + 2 ] = cmd->captureBuffer[ i*4 ];
 		}
-		
-		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, avipadwidth * cmd->height);
+
+		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize * 3 );
 	}
 
 	return (const void *)(cmd + 1);	
@@ -1035,7 +934,6 @@ void R_Register( void )
 	r_stereoEnabled = ri.Cvar_Get( "r_stereoEnabled", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_ignoreFastPath = ri.Cvar_Get( "r_ignoreFastPath", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_greyscale = ri.Cvar_Get("r_greyscale", "0", CVAR_ARCHIVE | CVAR_LATCH);
-	ri.Cvar_CheckRange(r_greyscale, 0, 1, qfalse);
 
 	//
 	// temporary latched variables that can only change over a restart
@@ -1128,11 +1026,6 @@ void R_Register( void )
 
 	r_marksOnTriangleMeshes = ri.Cvar_Get("r_marksOnTriangleMeshes", "0", CVAR_ARCHIVE);
 
-	cyrillic = ri.Cvar_Get( "cyrillic", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	
-	r_aviMotionJpegQuality = ri.Cvar_Get("r_aviMotionJpegQuality", "90", CVAR_ARCHIVE);
-	r_screenshotJpegQuality = ri.Cvar_Get("r_screenshotJpegQuality", "90", CVAR_ARCHIVE);
-
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 
@@ -1167,7 +1060,7 @@ void R_Init( void ) {
 //	Swap_Init();
 
 	if ( (intptr_t)tess.xyz & 15 ) {
-		//Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
+		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
 	}
 	Com_Memset( tess.constantColor255, 255, sizeof( tess.constantColor255 ) );
 
@@ -1244,7 +1137,6 @@ void R_Init( void ) {
 		ri.Printf (PRINT_ALL, "glGetError() = 0x%x\n", err);
 
 	ri.Printf( PRINT_ALL, "----- finished R_Init -----\n" );
-	ri.Printf( PRINT_ALL, "----- ^5Welcome to EDGE! -----\n" );
 }
 
 /*
@@ -1265,18 +1157,16 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	ri.Cmd_RemoveCommand ("gfxinfo");
 	ri.Cmd_RemoveCommand( "modelist" );
 	ri.Cmd_RemoveCommand( "shaderstate" );
-	
-	R_DoneFreeType();
-    R_FreeImages();
 
+
+	R_DoneFreeType();
+  R_FreeImages();
 
 	if ( tr.registered ) {
 		R_SyncRenderThread();
 		R_ShutdownCommandBuffers();
 		R_DeleteTextures();
 	}
-
-	R_DoneFreeType();
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
@@ -1360,8 +1250,8 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	re.FreeFace = RE_FreeFace;
 	re.LoadGlyph = RE_LoadGlyph;
 	re.FreeGlyph = RE_FreeGlyph;
-    re.Glyph = RE_Glyph;
-    re.FreeCachedGlyphs = RE_FreeCachedGlyphs;
+  re.Glyph = RE_Glyph;
+  re.FreeCachedGlyphs = RE_FreeCachedGlyphs;
 	re.RemapShader = R_RemapShader;
 	re.GetEntityToken = R_GetEntityToken;
 	re.inPVS = R_inPVS;

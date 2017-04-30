@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 
@@ -92,9 +88,6 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles )
   player->client->ps.eFlags ^= EF_TELEPORT_BIT;
   G_UnlaggedClear( player );
 
-  // cut all relevant zap beams
-  G_ClearPlayerZapEffects( player );
-
   // set angles
   G_SetClientViewAngle( player, angles );
 
@@ -106,8 +99,6 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles )
 
   if( player->client->sess.spectatorState == SPECTATOR_NOT )
   {
-    player->client->notrackEndTime = level.time + g_teleportSafeTime.integer;
-  
     // kill anything at the destination
     G_KillBox( player );
 

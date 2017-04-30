@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 damageRegion_t  g_damageRegions[ PCL_NUM_CLASSES ][ MAX_DAMAGE_REGIONS ];
@@ -45,26 +41,16 @@ void AddScore( gentity_t *ent, int score )
   if( !ent->client )
     return;
 
+  // make alien and human scores equivalent 
+  if ( ent->client->pers.teamSelection == TEAM_ALIENS )
+  {
+    score = rint( ((float)score) / 2.0f );
+  }
+
   // scale values down to fit the scoreboard better
   score = rint( ((float)score) / 50.0f );
 
-  switch( ent->client->pers.teamSelection ) {
-  case TEAM_ALIENS:
-    // make alien and human scores equivalent 
-    score = rint( ((float)score) / 2.0f );
-    level.alienRewardScore += score;
-    break;
-  case TEAM_HUMANS:
-    level.humanRewardScore += score;
-    break;
-  default:
-    break;
-  }
-
   ent->client->ps.persistant[ PERS_SCORE ] += score;
-
-  G_admin_add_score( ent, score );
- 
   CalculateRanks( );
 }
 
@@ -87,187 +73,59 @@ void LookAtKiller( gentity_t *self, gentity_t *inflictor, gentity_t *attacker )
 // these are just for logging, the client prints its own messages
 char *modNames[ ] =
 {
-#define MOD(a,b) #a
-#include "bg_mod.h"
-#undef MOD
+  "MOD_UNKNOWN",
+  "MOD_SHOTGUN",
+  "MOD_BLASTER",
+  "MOD_PAINSAW",
+  "MOD_MACHINEGUN",
+  "MOD_CHAINGUN",
+  "MOD_PRIFLE",
+  "MOD_MDRIVER",
+  "MOD_LASGUN",
+  "MOD_LCANNON",
+  "MOD_LCANNON_SPLASH",
+  "MOD_FLAMER",
+  "MOD_FLAMER_SPLASH",
+  "MOD_GRENADE",
+  "MOD_WATER",
+  "MOD_SLIME",
+  "MOD_LAVA",
+  "MOD_CRUSH",
+  "MOD_TELEFRAG",
+  "MOD_FALLING",
+  "MOD_SUICIDE",
+  "MOD_TARGET_LASER",
+  "MOD_TRIGGER_HURT",
+
+  "MOD_ABUILDER_CLAW",
+  "MOD_LEVEL0_BITE",
+  "MOD_LEVEL1_CLAW",
+  "MOD_LEVEL1_PCLOUD",
+  "MOD_LEVEL3_CLAW",
+  "MOD_LEVEL3_POUNCE",
+  "MOD_LEVEL3_BOUNCEBALL",
+  "MOD_LEVEL2_CLAW",
+  "MOD_LEVEL2_ZAP",
+  "MOD_LEVEL4_CLAW",
+  "MOD_LEVEL4_TRAMPLE",
+  "MOD_LEVEL4_CRUSH",
+
+  "MOD_SLOWBLOB",
+  "MOD_POISON",
+  "MOD_SWARM",
+
+  "MOD_HSPAWN",
+  "MOD_TESLAGEN",
+  "MOD_MGTURRET",
+  "MOD_REACTOR",
+
+  "MOD_ASPAWN",
+  "MOD_ATUBE",
+  "MOD_OVERMIND",
+  "MOD_DECONSTRUCT",
+  "MOD_REPLACE",
+  "MOD_NOCREEP"
 };
-
- /*
- ==================
-G_CamperRewardBonus
-
-
-Function to compute additional reward bonus for the attacker if this killed
-entity was a player near one of his/her defensive structures.
-Returns a factor for multiplying the reward.
-==================
-*/
-float G_CamperRewardBonus(  gentity_t *self )
-{
-  int       maxCounted = 10;
-  float     bonusMax = 2.0f; // Must positive!
-  float     bonus1 = 1.0f; // Must positive!
-  int       maxDistance = 0;
-
-  float     multiplier = 0.0;
-  float     mod = 1.0;
-
-  vec3_t    temp_v;
-  gentity_t *ent;
-  int       i;
-  int       team = self->client->ps.stats[ STAT_TEAM ];
-
-  int       defences = 0;
-  int       distance = 0;
-  float     value = 0.0f;
-
-
-  // exclude builders:
-  switch( BG_GetPlayerWeapon( &self->client->ps ) ) 
-  { 
-      case WP_ABUILD:
-      case WP_HBUILD:   return 1.0f;
-      default: ;
-  }
-
-  if( team == TEAM_ALIENS ) {
-      bonusMax = g_alienAnticampBonusMax.value;
-      bonus1 = g_alienAnticampBonus1.value;
-      maxDistance = g_alienAnticampRange.integer;
-  } else if( team == TEAM_HUMANS ) {
-      bonusMax = g_humanAnticampBonusMax.value;
-      bonus1 = g_humanAnticampBonus1.value;
-      maxDistance = g_humanAnticampRange.integer;
-  }
-  if( bonusMax <= 0.01f )
-      return 1.0f;
-  // Ensures that the denominator is positive:
-  bonus1 = MAX(bonus1, bonusMax / (maxCounted - 1));
-  // Ensures that the numerator is non-negative:
-  bonus1 = MIN(bonus1, bonusMax);
-  mod = (bonusMax - bonus1) / (bonus1 - bonusMax / maxCounted);
-  multiplier = bonus1 * (1 + mod);
-   
-  // Look for buildables,
-  for( i = MAX_CLIENTS, ent = g_entities + i; i < level.num_entities; i++, ent++ )
-  {
-    if( ( ent->s.eType != ET_BUILDABLE ) ||
-        ( !ent->spawned ) ||
-        ( ent->health <= 0 ) )
-      continue;
-    // and filter the defensive ones in the victim's team:
-    switch (ent->s.modelindex) {
-      case BA_A_SPITEFUL_ABCESS:
-      case BA_A_INFESTATION_SLIME:
-	  case BA_A_HIVE:
-      case BA_A_ACIDTUBE: if (team == TEAM_ALIENS) break; else continue;
-	  case BA_H_MGTURRET2:
-	  case BA_H_SHIELD:
-      case BA_H_TESLAGEN:
-      case BA_H_MGTURRET: if (team == TEAM_HUMANS) break; else continue;
-	  
-      default: continue;
-    }
-      
-    VectorSubtract( self->client->ps.origin, ent->s.origin, temp_v );
-    distance = VectorLength( temp_v );
-    if( distance < maxDistance )
-      if (++defences >= maxCounted)
-        break;
-  }
-
-  if (defences > 0) 
-  {
-      value = 1.0f + multiplier * (defences / (defences + mod));
-      value = MAX(value, 0.0f);
-      // G_LogPrintf( "Anti-camper bonus for killing %s near %d defences: %d%%\n",
-      //         self->client->pers.netname, defences, (int)(value * 100.0f) );
-			 
-
-      return value;
-  } 
-  
-  else
-  return 1.0f;
-} 
-
-float G_RewardScaleFactor( gentity_t *self, gentity_t *target )
-{
-  float targetScore;
-  if( level.humanRewardScore <= 0.0f || level.alienRewardScore <= 0.0f ) return 1.0f;
-  switch( self->client->ps.stats[ STAT_TEAM ] ) {
-  case TEAM_ALIENS:
-    targetScore = level.humanRewardScore/level.alienRewardScore;
-    break;
-  case TEAM_HUMANS:
-    targetScore = level.alienRewardScore/level.humanRewardScore;
-    break;
-  default:
-    return 0.0f;
-  }
-  if ( target->client != NULL ) {
-    if( self->client->ps.persistant[ PERS_SCORE ] > 0 && target->client->ps.persistant[ PERS_SCORE ] > 0)
-      targetScore *= pow(target->client->ps.persistant[ PERS_SCORE ],g_RewardFactorPower.value)/pow(self->client->ps.persistant[ PERS_SCORE ],g_RewardFactorPower.value);
-  }
-  targetScore *= 1.0f-g_ConstantRewardFactor.value;
-  targetScore += g_ConstantRewardFactor.value;
-  if (targetScore < g_MinRewardFactor.value) targetScore = g_MinRewardFactor.value;
-  else if (targetScore > g_MaxRewardFactor.value) targetScore = g_MaxRewardFactor.value;
-  return targetScore;
-}
-
-/* Instantly reward the current attacker */
-float G_InstantRewardAttacker( gentity_t *self, gentity_t *target, float damage )
-{
-  float value;
-  int maxHealth,targetTeam;
-
-  if( damage <= 0.f ) return 0.0f;
-  if( !self->client ) return 0.0f;
-
-  if( target->client != NULL ) {
-    maxHealth = target->client->ps.stats[ STAT_MAX_HEALTH ];
-    targetTeam = target->client->ps.stats[ STAT_TEAM ];
-  } else {
-    maxHealth = BG_Buildable( target->s.modelindex )->health;
-    targetTeam = target->buildableTeam;
-  }
-  if( targetTeam == self->client->ps.stats[ STAT_TEAM ] ) return 0.0f;
-
-  value = damage / maxHealth;
-  if (value > 1.0f) value = 1.0f;
-
-  if( target->client != NULL ) {
-    value *= G_CamperRewardBonus( target );
-    value *= BG_GetValueOfPlayer( &target->client->ps );
-  } else {
-    value *= BG_Buildable( target->s.modelindex )->value;
-    value *= g_BuildingCreditsFactor.value;
-  }
-
-  if( targetTeam == TEAM_ALIENS) {
-    value *= g_InstantRewardMultiplierA.value;
-  } else if( targetTeam == TEAM_HUMANS ) {
-    value *= g_InstantRewardMultiplierH.value;
-  } else value = 0.f;
-
-  value *= G_RewardScaleFactor( self, target );
-
-  if( value > 0.f ) {
-    G_AddCreditToClient( self->client, value, qtrue );
-    if( self->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS ) {
-      trap_Cvar_Set( "g_alienCredits",
-		     va( "%d", (int) (g_alienCredits.integer + value) ) );
-      trap_Cvar_Update( &g_alienCredits );
-    } else {
-      trap_Cvar_Set( "g_humanCredits",
-		     va( "%d", (int) (g_humanCredits.integer + value) ) );
-      trap_Cvar_Update( &g_humanCredits );
-    }
-  }
-
-  return value;
-}
 
 /*
 ==================
@@ -282,8 +140,6 @@ float G_RewardAttackers( gentity_t *self )
   float     value, totalDamage = 0;
   int       team, i, maxHealth = 0;
   int       alienCredits = 0, humanCredits = 0;
-  float     teamFactor;
-  
   gentity_t *player;
 
   // Total up all the damage done by non-teammates
@@ -303,11 +159,8 @@ float G_RewardAttackers( gentity_t *self )
   if( self->client )
   {
     value = BG_GetValueOfPlayer( &self->client->ps );
-    value *= G_CamperRewardBonus( self );
     team = self->client->pers.teamSelection;
     maxHealth = self->client->ps.stats[ STAT_MAX_HEALTH ];
-    //	trap_SendServerCommand( -1, va( "print \"^5You recieved%3i extra evos/credits.\n\"", value ) );
-
   }
   else if( self->s.eType == ET_BUILDABLE )
   {
@@ -326,14 +179,12 @@ float G_RewardAttackers( gentity_t *self )
   else
     return totalDamage;
 
-
   // Give credits and empty the array
   for( i = 0; i < level.maxclients; i++ )
   {
     int stageValue = value * self->credits[ i ] / totalDamage;
-    float killValue = self->credits[ i ] / maxHealth;
     player = g_entities + i;
-	
+
     if( player->client->pers.teamSelection != team )
     {
       if( totalDamage < maxHealth )
@@ -344,29 +195,21 @@ float G_RewardAttackers( gentity_t *self )
 
       AddScore( player, stageValue );
 
-      // killing buildables earns score, but not credits unless g_BuildingCreditsFactor > 0
-      if( self->s.eType == ET_BUILDABLE ) stageValue *= g_BuildingCreditsFactor.value;
-      if( stageValue > 0 ) {
-	// Com_Printf(S_COLOR_YELLOW "Killer: kills = %f deaths = %f percent_of_damage = %f -> factor = %f\n",player->client->pers.kills,player->client->pers.deaths,killValue,G_RewardScaleFactor( player, self, teamFactor) );
-	stageValue *= G_RewardScaleFactor( player, self );
-	player->client->pers.kills += killValue; // NOTE: Building kills will increase this too if g_BuildingCreditsFactor > 0
+      // killing buildables earns score, but not credits
+      if( self->s.eType != ET_BUILDABLE )
+      {
+        G_AddCreditToClient( player->client, stageValue, qtrue );
+
         // add to stage counters
-        if( player->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS ) {
-	  G_AddCreditToClient( player->client, g_KillRewardMultiplierH.value*stageValue, qtrue );
-          alienCredits += g_KillRewardMultiplierH.value*stageValue;
-	} else if( player->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS ) {
-	  G_AddCreditToClient( player->client, g_KillRewardMultiplierA.value*stageValue, qtrue );
-          humanCredits += g_KillRewardMultiplierA.value*stageValue;
-	}
+        if( player->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
+          alienCredits += stageValue;
+        else if( player->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
+          humanCredits += stageValue;
       }
     }
     self->credits[ i ] = 0;
   }
-  // ++self->client->pers.deaths;
 
-  // Com_Printf(S_COLOR_YELLOW "Killed: kills = %f deaths = %d\n",self->client->pers.kills,self->client->pers.deaths);
-  // Com_Printf(S_COLOR_YELLOW "Team: kills = %f deaths = %f\n",level.alienRewardScore,level.humanRewardScore);
-  
   if( alienCredits )
   {
     trap_Cvar_Set( "g_alienCredits",
@@ -384,32 +227,6 @@ float G_RewardAttackers( gentity_t *self )
 }
 
 /*
-
-==================
-
-accidental_kill
-
-Kills that are considered "accidental" and do not result in credit penalty.
-
-==================
-
-*/
-
-qboolean accidental_kill( gentity_t *self, int meansOfDeath )
-
-{
-
-  // Trampling/crushing is only possible when the victim is a granger,
-
-  // and that's considered an accident.
-
-  return meansOfDeath == MOD_LEVEL4_TRAMPLE ||
-
-         meansOfDeath == MOD_LEVEL4_CRUSH;
-
-}
-
-/*
 ==================
 player_die
 ==================
@@ -421,36 +238,16 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   int       killer;
   int       i;
   char      *killerName, *obit;
-  int		killerhealth = attacker->health;
+  float     totalDamage = 0.0f;
 
-
-
-  
   if( self->client->ps.pm_type == PM_DEAD )
     return;
 
   if( level.intermissiontime )
     return;
 
-  if( self->client->ps.weapon == WP_GRENADE &&
-      self->client->ps.stats[ STAT_MISC ] > 0 )
-  {
-    int fuse_left;
-
-    fuse_left = GRENADE_FUSE_TIME - self->client->ps.stats[ STAT_MISC ];
-
-    if( fuse_left < 0 )
-    {
-      fuse_left = 0;
-    }
-
-    launch_grenade( self, self->s.origin, vec3_origin, fuse_left );
-  }
-
   self->client->ps.pm_type = PM_DEAD;
   self->suicideTime = 0;
-
-
 
   if( attacker )
   {
@@ -484,20 +281,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
     BG_DeactivateUpgrade( i, self->client->ps.stats );
 
-	  if( meansOfDeath == MOD_SLAP )
-  {
-    trap_SendServerCommand( -1,
-      va( "print \"%s^7 felt %s^7's authority\n\"",
-      self->client->pers.netname, killerName ) );
-    goto finish_dying;
-  }
-	  
-  // Parent node on player used for tracking the shield projectile
-  if( self->parentNode )
-  {
-    G_FreeEntity(self->parentNode);
-  }
-
   // broadcast the death event to everyone
   ent = G_TempEntity( self->r.currentOrigin, EV_OBITUARY );
   ent->s.eventParm = meansOfDeath;
@@ -512,17 +295,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   {
     attacker->client->lastkilled_client = self->s.number;
 
-   if( killerhealth <= 0)
-   {
-   killerhealth = 0;
-   }
-   
-	if( g_devmapKillerHP.integer ) 
-   {
-     trap_SendServerCommand( self-g_entities, va( "print \"^5Your killer, %s,^5 had %3i HP.\n\"", killerName, killerhealth ) );
-   }
-	
-    if( ( attacker == self || OnSameTeam( self, attacker ) ) && meansOfDeath != MOD_HSPAWN && !accidental_kill( self, meansOfDeath ) )
+    if( ( attacker == self || OnSameTeam( self, attacker ) ) && meansOfDeath != MOD_HSPAWN )
     {
       //punish team kills and suicides
       if( attacker->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
@@ -546,21 +319,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   }
 
   // give credits for killing this player
-  G_RewardAttackers( self );
+  totalDamage = G_RewardAttackers( self );
 
-  
- //Show info about reward
- //	valueb *= G_CamperRewardBonus( self );
-//	valueb = G_CamperRewardBonus( self );
-
-//    trap_SendServerCommand( attacker-g_entities, va( "print \"^5You recieved +%d%% extra evos/credits for attacking.\n\"", (int)((valueb)) ));
-//	trap_SendServerCommand( attacker-g_entities, va( "print \"^5You recieved extra %3i evos/credits for attacking.\n\"" ,valueb ) );
-	
-//	if( valueb > 1300000000  ) 
-//{
-//  trap_SendServerCommand( attacker-g_entities, va( "print \"^5You recieved extra evos/credits for attacking.\n\"" ) );
-//}
-	
   ScoreboardMessage( self );    // show scores
 
   // send updated scores to any clients that are following this one,
@@ -579,7 +339,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
     if( client->sess.spectatorClient == self->s.number )
       ScoreboardMessage( g_entities + i );
   }
-  finish_dying: // from MOD_SLAP
 
   VectorCopy( self->s.origin, self->client->pers.lastDeathLocation );
 
@@ -653,12 +412,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
     }
 
     // use own entityid if killed by non-client to prevent uint8_t overflow
-    {
-      int param = ( killer < MAX_CLIENTS ) ? killer : self - g_entities;
-      if( self->client->damage_headshot )
-        param |= EVENT_HEADSHOT_BIT;
-      G_AddEvent( self, EV_DEATH1 + i, param );
-    }
+    G_AddEvent( self, EV_DEATH1 + i,
+      ( killer < MAX_CLIENTS ) ? killer : self - g_entities );
 
     // globally cycle through the different death animations
     i = ( i + 1 ) % 3;
@@ -967,8 +722,7 @@ static float GetPointDamageModifier( gentity_t *targ, damageRegion_t *regions,
     modifier *= regions[ i ].modifier;
   }
 
-//  if( g_debugDamage.integer )
-if( g_debugDamage.integer )
+  if( g_debugDamage.integer )
     G_Printf( "GetDamageRegionModifier(angle = %f, height = %f): %f\n",
               angle, height, modifier );
 
@@ -991,11 +745,7 @@ static float G_CalcDamageModifier( vec3_t point, gentity_t *targ, gentity_t *att
 
   // Don't need to calculate angles and height for non-locational damage
   if( dflags & DAMAGE_NO_LOCDAMAGE )
-  {
-    const int mod = targ->client->lasthurt_mod;
- 
     return GetNonLocDamageModifier( targ, class );
-	}
   
   // Get the point location relative to the floor under the target
   if( g_unlagged.integer && targ->client && targ->client->unlaggedCalc.used )
@@ -1034,10 +784,6 @@ static float G_CalcDamageModifier( vec3_t point, gentity_t *targ, gentity_t *att
   modifier = GetPointDamageModifier( targ, g_damageRegions[ class ],
                                      g_numDamageRegions[ class ],
                                      hitRotation, hitRatio );
-
-  // For headshots done by an enemy, make a client event
-  if( ( modifier >= 1.2f ) && !OnSameTeam( targ, attacker ) )
-    targ->client->damage_headshot ++;
 
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
   {
@@ -1126,67 +872,6 @@ void G_InitDamageLocations( void )
   }
 }
 
-/*
-============
-G_SpawnDamageIndicator
-
-Computes a damage indicator for a given hit and stores it in the
-player's damage indicator buffer.
-============
-*/
-void G_SpawnDamageIndicator( gentity_t *ent, gentity_t *inflictor,
-  gentity_t *targ, const vec3_t point, int mod, int take, int dflags )
-{
-  g_damageIndicator_t *di;
-
-  if( !ent || !ent->client )
-    return;
-
-  if( ent == targ )
-    return;
-
-  if( !take )
-    return;
-
-  if( ent->client->diBufferCounter >= MAX_BUFFERED_DAMAGE_INDICATORS )
-    return;
-
-  di = ent->client->diBuffer + ent->client->diBufferCounter++;
-  di->value = take;
-
-  di->flags = 0;
-
-  if( targ->s.eType == ET_BUILDABLE )
-    di->flags |= DIF_BUILDABLE;
-
-  if( OnSameTeam( ent, targ ) ||
-    ( targ->s.eType == ET_BUILDABLE &&
-      ent->client->pers.teamSelection == targ->buildableTeam ) )
-    di->flags |= DIF_FRIENDLY;
-
-  if( dflags & DAMAGE_RADIUS )
-    di->flags |= DIF_INDIRECT;
-
-  switch( mod )
-  {
-    case MOD_NOCREEP:
-      di->flags |= DIF_INDIRECT;
-      break;
-
-    case MOD_DECONSTRUCT:
-      return;
-  }
-
-  if( di->flags & DIF_INDIRECT )
-  {
-    VectorAdd( targ->r.absmin, targ->r.absmax, di->origin );
-    VectorScale( di->origin, 0.5f, di->origin );
-  }
-  else if( inflictor->s.eType == ET_MISSILE )
-    VectorCopy( inflictor->r.currentOrigin, di->origin );
-  else
-    VectorCopy( point, di->origin );
-}
 
 /*
 ============
@@ -1224,11 +909,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
          vec3_t dir, vec3_t point, int damage, int dflags, int mod )
 {
   gclient_t *client;
-  // int     damage_orig = damage;
   int     take;
+  int     save;
   int     asave = 0;
   int     knockback;
-  // int client_z, min_z;
+
   // Can't deal damage sometimes
   if( !targ->takedamage || targ->health <= 0 || level.intermissionQueued )
     return;
@@ -1316,8 +1001,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   }
 
   // don't do friendly fire on movement attacks
-  if( ( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL3_POUNCE || 
-	mod == MOD_LEVEL5_POUNCE || mod == MOD_LEVEL4_CRUSH ) &&
+  if( ( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL3_POUNCE ||
+        mod == MOD_LEVEL4_CRUSH ) &&
       targ->s.eType == ET_BUILDABLE && targ->buildableTeam == TEAM_ALIENS )
   {
     return;
@@ -1326,14 +1011,15 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   // check for completely getting out of the damage
   if( !( dflags & DAMAGE_NO_PROTECTION ) )
   {
+
     // if TF_NO_FRIENDLY_FIRE is set, don't do damage to the target
     // if the attacker was on the same team
     if( targ != attacker && OnSameTeam( targ, attacker ) )
     {
- //     // don't do friendly fire on movement attacks
- //     if( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL3_POUNCE ||
- //         mod == MOD_LEVEL4_CRUSH )
- //       return;
+      // don't do friendly fire on movement attacks
+      if( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL3_POUNCE ||
+          mod == MOD_LEVEL4_CRUSH )
+        return;
 
       // if dretchpunt is enabled and this is a dretch, do dretchpunt instead of damage
       if( g_dretchPunt.integer &&
@@ -1354,28 +1040,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
       {
         return;
       }
-	  
-	  // kill grangers instantly when hit by a rant's movement attack
-      if( ( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL4_CRUSH ) &&
-
-          ( targ->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0 ||
-
-            targ->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0_UPG ) )
-
-        damage = 5;
-		
-
-      // don't do friendly fire on movement attacks
-      else if( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL3_POUNCE ||
-	       mod == MOD_LEVEL5_POUNCE || mod == MOD_LEVEL4_CRUSH )
-
-        return;
-	  
     }
 
     if( targ->s.eType == ET_BUILDABLE && attacker->client &&
         mod != MOD_DECONSTRUCT && mod != MOD_SUICIDE &&
-        mod != MOD_REPLACE && mod != MOD_NOCREEP && mod != MOD_NOBP )
+        mod != MOD_REPLACE && mod != MOD_NOCREEP )
     {
       if( targ->buildableTeam == attacker->client->pers.teamSelection &&
         !g_friendlyBuildableFire.integer )
@@ -1384,7 +1053,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
       }
 
       // base is under attack warning if DCC'd
-      if( targ->buildableTeam == TEAM_HUMANS && ( targ->dcc ) &&
+      if( targ->buildableTeam == TEAM_HUMANS && G_FindDCC( targ ) &&
           level.time > level.humanBaseAttackTimer )
       {
         level.humanBaseAttackTimer = level.time + DC_ATTACK_PERIOD;
@@ -1409,6 +1078,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   }
 
   take = damage;
+  save = 0;
 
   // add to the damage inflicted on a player this frame
   // the total will be turned into screen blends and view angle kicks
@@ -1441,6 +1111,20 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
     take = (int)( take * G_CalcDamageModifier( point, targ, attacker,
                                                client->ps.stats[ STAT_CLASS ],
                                                dflags ) + 0.5f );
+
+    //if boosted poison every attack
+    if( attacker->client && attacker->client->ps.stats[ STAT_STATE ] & SS_BOOSTED )
+    {
+      if( targ->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS &&
+          mod != MOD_LEVEL2_ZAP && mod != MOD_POISON &&
+          mod != MOD_LEVEL1_PCLOUD &&
+          targ->client->poisonImmunityTime < level.time )
+      {
+        targ->client->ps.stats[ STAT_STATE ] |= SS_POISONED;
+        targ->client->lastPoisonTime = level.time;
+        targ->client->lastPoisonClient = attacker;
+      }
+    }
   }
 
   if( take < 1 )
@@ -1458,40 +1142,33 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
     targ->health = targ->health - take;
 
     if( targ->client )
-    {
       targ->client->ps.stats[ STAT_HEALTH ] = targ->health;
+
+    targ->lastDamageTime = level.time;
+    targ->nextRegenTime = level.time + ALIEN_REGEN_DAMAGE_TIME;
+
+    // add to the attackers "account" on the target
+    if( attacker->client && attacker != targ )
+      targ->credits[ attacker->client->ps.clientNum ] += take;
+
+    if( targ->health <= 0 )
+    {
+      if( client )
+        targ->flags |= FL_NO_KNOCKBACK;
+
+      if( targ->health < -999 )
+        targ->health = -999;
+
+      targ->enemy = attacker;
+	  if( targ->s.eType == ET_BUILDABLE )
+        G_BuildableDie( targ );
+      targ->die( targ, inflictor, attacker, take, mod );
+      return;
     }
+    else if( targ->pain )
+      targ->pain( targ, attacker, take );
   }
-  
-  targ->lastDamageTime = level.time;
-  targ->nextRegenTime = level.time + ALIEN_REGEN_DAMAGE_TIME;
-
-  // add to the attackers "account" on the target
-  if( attacker->client && attacker != targ ) {
-	G_InstantRewardAttacker(attacker,targ,take);
-	targ->credits[ attacker->client->ps.clientNum ] += take;
-  }
-
-  G_CombatStats_HitMOD( attacker, targ, mod, take );
-
-  G_SpawnDamageIndicator( attacker, inflictor, targ, point, mod, take, dflags );
-
-  if( targ->health <= 0 )
-  {
-    if( client )
-      targ->flags |= FL_NO_KNOCKBACK;
-
-    if( targ->health < -999 )
-      targ->health = -999;
-
-    targ->enemy = attacker;
-    targ->die( targ, inflictor, attacker, take, mod );
-    return;
-  }
-  else if( targ->pain )
-    targ->pain( targ, attacker, take );
 }
-
 
 
 /*
@@ -1590,9 +1267,6 @@ qboolean G_SelectiveRadiusDamage( vec3_t origin, gentity_t *attacker, float dama
     if( !ent->takedamage )
       continue;
 
-    if( ent->s.eFlags & EF_WARPING )
-      continue;
-
     if( ent->flags & FL_NOTARGET )
       continue;
 
@@ -1613,10 +1287,8 @@ qboolean G_SelectiveRadiusDamage( vec3_t origin, gentity_t *attacker, float dama
 
     points = damage * ( 1.0 - dist / radius );
 
-    if( CanDamage( ent, origin ) &&
-        ( ( ent->client && ent->client->ps.stats[ STAT_TEAM ] != team ) ||
-          ( ent->s.eType == ET_BUILDABLE &&
-            BG_Buildable( ent->s.modelindex )->team != team ) ) )
+    if( CanDamage( ent, origin ) && ent->client &&
+        ent->client->ps.stats[ STAT_TEAM ] != team )
     {
       VectorSubtract( ent->r.currentOrigin, origin, dir );
       // push the center of mass higher than the origin so players
@@ -1631,48 +1303,6 @@ qboolean G_SelectiveRadiusDamage( vec3_t origin, gentity_t *attacker, float dama
   return hitClient;
 }
 
-/*
-============
-G_Knockback
-============
-*/
-void G_Knockback( gentity_t *targ, vec3_t dir, int knockback )
-{
-  if( knockback && targ->client )
-  {
-    vec3_t  kvel;
-    float   mass;
-
-    mass = 200;
-
-    // Halve knockback for bsuits
-    if( targ->client &&
-        targ->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS &&
-        BG_InventoryContainsUpgrade( UP_BATTLESUIT, targ->client->ps.stats ) )
-      mass += 400;
-
-    // Halve knockback for crouching players
-    if(targ->client->ps.pm_flags&PMF_DUCKED) knockback /= 2;
-
-    VectorScale( dir, g_knockback.value * (float)knockback / mass, kvel );
-    VectorAdd( targ->client->ps.velocity, kvel, targ->client->ps.velocity );
-
-    // set the timer so that the other client can't cancel
-    // out the movement immediately
-    if( !targ->client->ps.pm_time )
-    {
-      int   t;
-      t = knockback * 2;
-      if( t < 50 )
-        t = 50;
-
-      if( t > 200 )
-        t = 200;
-      targ->client->ps.pm_time = t;
-      targ->client->ps.pm_flags |= PMF_TIME_KNOCKBACK;
-    }
-  }
-}
 
 /*
 ============
@@ -1708,9 +1338,6 @@ qboolean G_RadiusDamage( vec3_t origin, gentity_t *attacker, float damage,
     ent = &g_entities[ entityList[ e ] ];
 
     if( ent == ignore )
-      continue;
-
-    if( ent->s.eFlags & EF_WARPING )
       continue;
 
     if( !ent->takedamage )
@@ -1770,22 +1397,8 @@ void G_LogDestruction( gentity_t *self, gentity_t *actor, int mod )
     case MOD_NOCREEP:
       fate = ( actor->client ) ? BF_UNPOWER : BF_AUTO;
       break;
-    case MOD_NOBP:
-      fate = BF_UNPOWER;
-      break;
     default:
-      if( actor->client )
-      {
-        if( actor->client->pers.teamSelection == 
-            BG_Buildable( self->s.modelindex )->team )
-        {
-          fate = BF_TEAMKILL;
-        }
-        else
-          fate = BF_DESTROY;
-      }
-      else
-        fate = BF_AUTO;
+      fate = ( actor->client ) ? BF_DESTROY : BF_AUTO;
       break;
   }
   G_BuildLogAuto( actor, self, fate );
@@ -1805,8 +1418,7 @@ void G_LogDestruction( gentity_t *self, gentity_t *actor, int mod )
 
   // No-power deaths for humans come after some minutes and it's confusing
   //  when the messages appear attributed to the deconner. Just don't print them.
-  if( ( mod == MOD_NOCREEP && mod == MOD_NOBP ) &&
-      actor->client &&
+  if( mod == MOD_NOCREEP && actor->client && 
       actor->client->pers.teamSelection == TEAM_HUMANS )
     return;
 
@@ -1814,268 +1426,10 @@ void G_LogDestruction( gentity_t *self, gentity_t *actor, int mod )
     BG_Buildable( self->s.modelindex )->team )
   {
     G_TeamCommand( actor->client->ps.stats[ STAT_TEAM ],
-      va( "print \"^3[%s] ^5%s ^5%s ^5by ^7%s\n\"",
-	    mod == MOD_DECONSTRUCT ? "BASE DECONSTRUCT" : "BASE DESTROY",
+      va( "print \"%s ^3%s^7 by %s\n\"",
         BG_Buildable( self->s.modelindex )->humanName,
-	    mod == MOD_DECONSTRUCT ? "deconstructed" : "destroyed",
-         actor->client->pers.netname ) );
+        mod == MOD_DECONSTRUCT ? "DECONSTRUCTED" : "DESTROYED",
+        actor->client->pers.netname ) );
   }
 
 }
-
-const static combatStatsWeapon_t modToCsw[ ] =
-{
-#define MOD(a,b) b
-#include "bg_mod.h"
-#undef MOD
-};
-
-const static char *cswStrings[ ] =
-{
-#define CSW(a,b,c,d) #a
-#include "g_csw.h"
-#undef CSW
-};
-
-const static int cswToMod[ ] =
-{
-#define CSW(a,b,c,d) b
-#include "g_csw.h"
-#undef CSW
-};
-
-/*
-================
-G_CombatStats_Fire
-G_CombatStats_FireMOD
-
-Register a weapon shot
-================
-*/
-void G_CombatStats_Fire( gentity_t *ent, combatStatsWeapon_t weapon, int damage )
-{
-        // combatStats_t *cs;
-
-	if( !ent || !ent->client )
-		return;
-
-	ent->client->pers.combatStats[ weapon ].fired += damage;
-
-	if( g_debugDamage.integer > 3 )
-		Com_Printf( "player %i fired %s, damage: %i\n",
-			(int)(ent - g_entities),
-			cswStrings[ weapon ],
-			damage );
-}
-
-void G_CombatStats_FireMOD( gentity_t *ent, meansOfDeath_t mod, int damage )
-{
-	G_CombatStats_Fire( ent, modToCsw[ mod ], damage );
-}
-
-/*
-================
-G_CombatStats_Hit
-G_CombatStats_HitMOD
-
-Register a weapon hit
-================
-*/
-void G_CombatStats_Hit( gentity_t *ent, gentity_t *hit, combatStatsWeapon_t weapon, int damage )
-{
-	combatStatsDmgType_t type;
-
-	if( !ent || !ent->client || !hit )
-		return;
-
-	if( hit == ent )
-		type = CSD_SELF;
-	else if( hit->s.eType == ET_BUILDABLE )
-	{
-		if( ent->client->pers.teamSelection == hit->buildableTeam )
-			type = CSD_FRIENDLY_BUILDABLE;
-		else
-			type = CSD_ENEMY_BUILDABLE;
-	}
-	else if( hit->client )
-	{
-		if( ent->client->pers.teamSelection ==
-		    hit->client->pers.teamSelection )
-			type = CSD_FRIENDLY;
-		else
-			type = CSD_ENEMY;
-	}
-	else
-		return;
-
-	if( g_debugDamage.integer > 3 )
-		Com_Printf( "player %i hit %s %i with %s, damage: %i\n",
-			(int)(ent - g_entities),
-			( type == CSD_FRIENDLY_BUILDABLE ) ? "a friendly buildable" :
-			( type == CSD_ENEMY_BUILDABLE ) ? "an enemy buildable" :
-			( type == CSD_FRIENDLY ) ? "a friendly player" :
-			( type == CSD_ENEMY ) ? "an enemy player" :
-			"themselves",
-			(int)(hit - g_entities),
-			cswStrings[ weapon ],
-			damage );
-
-	ent->client->pers.combatStats[ weapon ].dealt[ type ] += damage;
-}
-
-void G_CombatStats_HitMOD( gentity_t *ent, gentity_t *hit, meansOfDeath_t mod, int damage )
-{
-	G_CombatStats_Hit( ent, hit, modToCsw[ mod ], damage );
-}
-
-
-/*
-================
-G_CalculateCombatRanks
-================
-*/
-
-typedef struct
-{
-	gentity_t *ent;
-	float value;
-} csrSample_t;
-
-int csrSampleCmp( const csrSample_t *a, const csrSample_t *b )
-{
-	return ( a->value < b->value ) ? 1 : -1;
-}
-
-void G_CalculateCombatRanks( void )
-{
-	gentity_t *ent;
-	combatStatsWeapon_t weapon;
-	combatStats_t *stats;
-	combatRanks_t *ranks;
-	int i, sample_count, rank;
-	csrSample_t samples[ MAX_CLIENTS ];
-	float last;
-
-	// reset all ranks
-	for( ent = g_entities; ent < g_entities + MAX_CLIENTS; ent++ )
-		if( ent->client )
-			memset( &ent->client->pers.combatRanks, 0, sizeof( combatRanks_t ) );
-
-	for( weapon = CSW_UNKNOWN + 1; weapon < CSW_MAX; weapon++ )
-	{
-		for( sample_count = 0, ent = g_entities; ent < g_entities + MAX_CLIENTS; ent++ )
-		{
-			if( !ent->inuse ||
-			    !ent->client ||
-			    ent->client->pers.connected == CON_CONNECTING )
-				continue;
-
-			stats = ent->client->pers.combatStats + weapon;
-			ranks = ent->client->pers.combatRanks + weapon;
-
-			if( !stats->fired )
-				continue;
-
-			ranks->inuse = qtrue;
-			ranks->skill =
-				( stats->dealt[ CSD_ENEMY ] + stats->dealt[ CSD_ENEMY_BUILDABLE ] -
-				  stats->dealt[ CSD_FRIENDLY ] - stats->dealt[ CSD_FRIENDLY_BUILDABLE ] -
-				  stats->dealt[ CSD_SELF ] ) / (float)stats->fired;
-
-			samples[ sample_count ].ent = ent;
-			samples[ sample_count++ ].value = ranks->skill;
-		}
-
-		if( sample_count < 2 )
-			continue;
-
-		qsort( samples, sample_count, sizeof( csrSample_t ), (int(*)(const void*,const void*))csrSampleCmp ); 
-
-		for( i = 0, rank = 0; i < sample_count; i++ )
-		{
-			combatRanks_t *ranks = samples[ i ].ent->client->pers.combatRanks + weapon;
-
-			if( i > 0 && fabs( last - samples[ i ].value ) > 1.0e-5 )
-				rank++;
-
-			ranks->ranked = qtrue;
-			ranks->skill_pc = rank;
-
-			last = samples[ i ].value;
-		}
-
-		for( i = 0; i < sample_count; i++ )
-		{
-			float *skill = &samples[ i ].ent->client->pers.combatRanks[ weapon ].skill_pc;
-			(*skill) = 1.0f - (*skill) / ( (float)rank + 1 );
-		}
-	}
-
-	level.combatRanksTime = level.time;
-}
-
-/*
-================
-G_LogCombatSettings
-
-Log settings of all combat stats weapons
-================
-*/
-void G_LogCombatSettings( void )
-{
-	int i;
-	char buffer[ 4096 ], *p = buffer;
-	static const int cswDamages[ ] =
-	{
-#define CSW(a,b,c,d) (d)
-#include "g_csw.h"
-#undef CSW
-	};
-
-	for( i = CSW_UNKNOWN + 1; i < CSW_MAX; i++ )
-	{
-		Com_sprintf( p, 4096 - ( p - buffer ), " %s %i", modNames[ cswToMod[ i ] ], cswDamages[ i ] );
-		while( *p ) p++;
-	}
-
-	G_LogPrintf( "CombatSettings:%s\n", buffer );
-}
-
-/*
-================
-G_LogCombatStats
-
-Write combat stats of a player to the game log
-================
-*/
-void G_LogCombatStats( gentity_t *ent )
-{
-	int i;
-	char buffer[ 4096 ], *p = buffer;
-
-	for( i = 0; i < CSW_MAX; i++ )
-	{
-		combatStats_t *cs = ent->client->pers.combatStats + i;
-
-		// skip unused weapons
-		if( !cs->fired )
-			continue;
-
-		Com_sprintf(
-			p, 4096 - ( p - buffer ),
-			" %s %i,%i,%i,%i,%i,%i",
-			modNames[ cswToMod[ i ] ],
-			cs->fired,
-			cs->dealt[ CSD_ENEMY ],
-			cs->dealt[ CSD_FRIENDLY ],
-			cs->dealt[ CSD_ENEMY_BUILDABLE ],
-			cs->dealt[ CSD_FRIENDLY_BUILDABLE ],
-			cs->dealt[ CSD_SELF ] );
-
-		while( *p ) p++;
-	}
-
-	if( p != buffer )
-		G_LogPrintf( "CombatStats: %i%s\n", ent - g_entities, buffer );
-}
-

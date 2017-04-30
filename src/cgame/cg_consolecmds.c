@@ -103,7 +103,6 @@ static void CG_scrollScoresUp_f( void )
     Menu_ScrollFeeder( menuScoreboard, FEEDER_ALIENTEAM_LIST, qfalse );
     Menu_ScrollFeeder( menuScoreboard, FEEDER_HUMANTEAM_LIST, qfalse );
   }
-
 }
 
 static void CG_ScoresDown_f( void )
@@ -113,6 +112,7 @@ static void CG_ScoresDown_f( void )
     Menu_SetFeederSelection( menuScoreboard, FEEDER_ALIENTEAM_LIST, 0, NULL );
     Menu_SetFeederSelection( menuScoreboard, FEEDER_HUMANTEAM_LIST, 0, NULL );
   }
+
   if( CG_RequestScores( ) )
   {
     // leave the current scores up if they were already
@@ -177,7 +177,7 @@ void CG_ClientList_f( void )
     count++;
   }
 
-  Com_Printf( "Listed %2d clients\n", count );
+  Com_Printf( _("Listed %2d clients\n"), count );
 }
 
 static void CG_UIMenu_f( void )

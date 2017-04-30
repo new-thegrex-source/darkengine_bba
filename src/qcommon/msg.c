@@ -301,7 +301,7 @@ void MSG_WriteString( msg_t *sb, const char *s ) {
 	if ( !s ) {
 		MSG_WriteData (sb, "", 1);
 	} else {
-		int		l,i;
+		int		l;
 		char	string[MAX_STRING_CHARS];
 
 		l = strlen( s );
@@ -312,13 +312,6 @@ void MSG_WriteString( msg_t *sb, const char *s ) {
 		}
 		Q_strncpyz( string, s, sizeof( string ) );
 
-		// get rid of 0x80+ chars, because old clients don't like them
-		for ( i = 0 ; i < l ; i++ ) {
-			if ( ((byte *)string)[i] > 127 ) {
-				string[i] = '.';
-			}
-		}
-
 		MSG_WriteData (sb, string, l+1);
 	}
 }
@@ -327,7 +320,7 @@ void MSG_WriteBigString( msg_t *sb, const char *s ) {
 	if ( !s ) {
 		MSG_WriteData (sb, "", 1);
 	} else {
-		int		l,i;
+		int		l;
 		char	string[BIG_INFO_STRING];
 
 		l = strlen( s );
@@ -337,13 +330,6 @@ void MSG_WriteBigString( msg_t *sb, const char *s ) {
 			return;
 		}
 		Q_strncpyz( string, s, sizeof( string ) );
-
-		// get rid of 0x80+ chars, because old clients don't like them
-		for ( i = 0 ; i < l ; i++ ) {
-			if ( ((byte *)string)[i] > 127 ) {
-				string[i] = '.';
-			}
-		}
 
 		MSG_WriteData (sb, string, l+1);
 	}
@@ -440,10 +426,6 @@ char *MSG_ReadString( msg_t *msg ) {
 		if ( c == -1 || c == 0 ) {
 			break;
 		}
-		// don't allow higher ascii values
-		if ( c > 127 ) {
-			c = '.';
-		}
 
 		string[l] = c;
 		l++;
@@ -464,10 +446,6 @@ char *MSG_ReadBigString( msg_t *msg ) {
 		if ( c == -1 || c == 0 ) {
 			break;
 		}
-		// don't allow higher ascii values
-		if ( c > 127 ) {
-			c = '.';
-		}
 
 		string[l] = c;
 		l++;
@@ -487,10 +465,6 @@ char *MSG_ReadStringLine( msg_t *msg ) {
 		c = MSG_ReadByte(msg);		// use ReadByte so -1 is out of bounds
 		if (c == -1 || c == 0 || c == '\n') {
 			break;
-		}
-		// don't allow higher ascii values
-		if ( c > 127 ) {
-			c = '.';
 		}
 
 		string[l] = c;
@@ -885,7 +859,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 	float		fullFloat;
 	int			*fromF, *toF;
 
-	numFields = ARRAY_LEN( entityStateFields );
+	numFields = sizeof(entityStateFields)/sizeof(entityStateFields[0]);
 
 	// all fields should be 32 bits to avoid any compiler packing issues
 	// the "number" field is not part of the field list
@@ -1030,12 +1004,8 @@ void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to,
 		return;
 	}
 
-	numFields = ARRAY_LEN( entityStateFields );
+	numFields = sizeof(entityStateFields)/sizeof(entityStateFields[0]);
 	lc = MSG_ReadByte(msg);
-
-	if ( lc > numFields || lc < 0 ) {
-		Com_Error( ERR_DROP, "invalid entityState field count" );
-	}
 
 	// shownet 2/3 will interleave with other printed info, -1 will
 	// just print the delta records`
@@ -1203,7 +1173,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
 	c = msg->cursize;
 
-	numFields = ARRAY_LEN( playerStateFields );
+	numFields = sizeof( playerStateFields ) / sizeof( playerStateFields[0] );
 
 	lc = 0;
 	for ( i = 0, field = playerStateFields ; i < numFields ; i++, field++ ) {
@@ -1353,12 +1323,8 @@ void MSG_ReadDeltaPlayerstate (msg_t *msg, playerState_t *from, playerState_t *t
 		print = 0;
 	}
 
-	numFields = ARRAY_LEN( playerStateFields );
+	numFields = sizeof( playerStateFields ) / sizeof( playerStateFields[0] );
 	lc = MSG_ReadByte(msg);
-
-	if ( lc > numFields || lc < 0 ) {
-		Com_Error( ERR_DROP, "invalid playerState field count" );
-	}
 
 	for ( i = 0, field = playerStateFields ; i < lc ; i++, field++ ) {
 		fromF = (int *)( (byte *)from + field->offset );

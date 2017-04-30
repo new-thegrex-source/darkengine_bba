@@ -2,7 +2,6 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2009 Darklegion Development
-Copyright (C) 2017 New Source
 
 This file is part of Tremulous.
 
@@ -28,24 +27,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME              "Bikini Bottom Arena"
+#define PRODUCT_NAME              "tremulous"
 
 #ifdef _MSC_VER
-# define PRODUCT_VERSION          "CBT0001x01"
+# define PRODUCT_VERSION          "1.1.0"
 #endif
 
-#define CLIENT_WINDOW_TITLE       "BBA " PRODUCT_VERSION
-#define CLIENT_WINDOW_MIN_TITLE   "BBA"
+#define CLIENT_WINDOW_TITLE       "Tremulous " PRODUCT_VERSION
+#define CLIENT_WINDOW_MIN_TITLE   "Tremulous"
 #define Q3_VERSION                 PRODUCT_NAME " " PRODUCT_VERSION
 
 #define GAMENAME_FOR_MASTER       "Tremulous"
-#define HEARTBEAT_FOR_MASTER      GAMENAME_FOR_MASTER
-#define FLATLINE_FOR_MASTER       GAMENAME_FOR_MASTER "dead"
 
 #define MAX_TEAMNAME 32
-#define MAX_MASTER_SERVERS      5 // number of supported master servers
-
-#define DEMOEXT	"dm_"			// standard demo extension
 
 #ifdef _MSC_VER
 
@@ -124,6 +118,16 @@ typedef int intptr_t;
 #include <ctype.h>
 #include <limits.h>
 
+// vsnprintf is ISO/IEC 9899:1999
+// abstracting this to make it portable
+#ifdef _WIN32
+  #define Q_vsnprintf _vsnprintf
+  #define Q_snprintf _snprintf
+#else
+  #define Q_vsnprintf vsnprintf
+  #define Q_snprintf snprintf
+#endif
+
 #ifdef _MSC_VER
   #include <io.h>
 
@@ -135,15 +139,8 @@ typedef int intptr_t;
   typedef unsigned __int32 uint32_t;
   typedef unsigned __int16 uint16_t;
   typedef unsigned __int8 uint8_t;
-
-  // vsnprintf is ISO/IEC 9899:1999
-  // abstracting this to make it portable
-  int Q_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 #else
   #include <stdint.h>
-
-  #define Q_vsnprintf vsnprintf
-  #define Q_snprintf snprintf
 #endif
 
 #endif
@@ -168,13 +165,12 @@ typedef int		sfxHandle_t;
 typedef int		fileHandle_t;
 typedef int		clipHandle_t;
 
-#define PAD(x,y)	(((x)+(y)-1) & ~((y)-1))
-#define PADLEN(x,y)	(PAD((x), (y)) - (x))
+#define PAD(x,y) (((x)+(y)-1) & ~((y)-1))
 
 #ifdef __GNUC__
-#define QALIGN(x) __attribute__((aligned(x)))
+#define ALIGN(x) __attribute__((aligned(x)))
 #else
-#define QALIGN(x)
+#define ALIGN(x)
 #endif
 
 #ifndef NULL
@@ -187,8 +183,6 @@ typedef int		clipHandle_t;
 
 #define	MAX_QINT			0x7fffffff
 #define	MIN_QINT			(-MAX_QINT-1)
-
-#define ARRAY_LEN(x)			(sizeof(x) / sizeof(*(x)))
 
 
 // angle indexes
@@ -219,7 +213,7 @@ typedef int		clipHandle_t;
 #define	MAX_OSPATH			256		// max length of a filesystem pathname
 #endif
 
-#define	MAX_NAME_LENGTH	32		// max length of a client name
+#define	MAX_NAME_LENGTH			32		// max length of a client name
 #define	MAX_HOSTNAME_LENGTH	80		// max length of a host name
 
 #define	MAX_SAY_TEXT	150
@@ -901,7 +895,6 @@ default values.
 
 #define CVAR_SERVER_CREATED	0x0800	// cvar was created by a server the client connected to.
 #define CVAR_VM_CREATED		0x1000	// cvar was created exclusively in one of the VMs.
-#define CVAR_PROTECTED		0x2000	// prevent modifying this var from VMs or the server
 #define CVAR_NONEXISTENT	0xFFFFFFFF	// Cvar doesn't exist.
 
 // nothing outside the Cvar_*() functions should modify these fields!
@@ -1353,8 +1346,6 @@ typedef struct {
   char name[MAX_QPATH];
 } fontInfo_t;
 
-#define Square(x) ((x)*(x))
-
 #define MAX_FACE_GLYPHS 384
 
 typedef struct {
@@ -1364,6 +1355,8 @@ typedef struct {
   char name[MAX_QPATH];
   float glyphScale;
 } face_t;
+
+#define Square(x) ((x)*(x))
 
 // real time
 //=============================================
@@ -1424,8 +1417,8 @@ typedef enum {
 #define MAX_PINGREQUESTS					32
 #define MAX_SERVERSTATUSREQUESTS	16
 
-#define MAX_EMOTICON_NAME_LEN 20
-#define MAX_EMOTICONS 300
+#define MAX_EMOTICON_NAME_LEN 16
+#define MAX_EMOTICONS 64
 
 typedef struct
 {
@@ -1444,8 +1437,5 @@ typedef struct
 #define DLP_SHOW      0x10 // prompt needs to be shown
 #define DLP_PROMPTED  0x20 // prompt has been processed by client
 #define DLP_STALE     0x40 // prompt is not being shown by UI VM
-
-#define LERP( a, b, w ) ( ( a ) * ( 1.0f - ( w ) ) + ( b ) * ( w ) )
-#define LUMA( red, green, blue ) ( 0.2126f * ( red ) + 0.7152f * ( green ) + 0.0722f * ( blue ) )
 
 #endif	// __Q_SHARED_H

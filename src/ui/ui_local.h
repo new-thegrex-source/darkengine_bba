@@ -63,6 +63,8 @@ void UI_DrawConnectScreen( qboolean overlay );
 #define MAX_HELP_INFOPANES 32
 #define MAX_RESOLUTIONS 32
 
+#define _(String) gettext(String)
+
 typedef struct
 {
   const char *mapName;
@@ -270,7 +272,6 @@ typedef struct
 
   int         weapons;
   int         upgrades;
-  int         grenades;
 
   serverStatus_t serverStatus;
 
@@ -400,7 +401,6 @@ void      Glyph(fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *gl
 void      FreeCachedGlyphs(face_t *face);
 void      trap_S_StopBackgroundTrack( void );
 void      trap_S_StartBackgroundTrack( const char *intro, const char *loop );
-void      LoadFace(const char *fileName, int pointSize, const char *name, face_t *face);
 int       trap_CIN_PlayCinematic( const char *arg0, int xpos, int ypos, int width, int height, int bits );
 e_status  trap_CIN_StopCinematic( int handle );
 e_status  trap_CIN_RunCinematic ( int handle );
@@ -410,5 +410,9 @@ int       trap_RealTime( qtime_t *qtime );
 void      trap_R_RemapShader( const char *oldShader, const char *newShader, const char *timeOffset );
 
 void      trap_SetPbClStatus( int status );
+
+void      trap_Gettext ( char *buffer, const char *msgid, int bufferLength );
+void      Gettext ( char *buffer, const char *msgid, int bufferLength );
+char      *gettext ( const char *msgid );
 
 #endif

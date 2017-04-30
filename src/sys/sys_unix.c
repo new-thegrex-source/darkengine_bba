@@ -37,6 +37,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pwd.h>
 #include <libgen.h>
 #include <fcntl.h>
+#include <locale.h>
+#include <libintl.h>
 
 qboolean stdinIsATTY;
 
@@ -56,7 +58,7 @@ char *Sys_DefaultHomePath(void)
 	{
 		if( ( p = getenv( "HOME" ) ) != NULL )
 		{
-			Com_sprintf(homePath, sizeof(homePath), "%s%c", p, PATH_SEP);
+			Q_strncpyz( homePath, p, sizeof( homePath ) );
 #ifdef MACOS_X
 			Q_strcat( homePath, sizeof( homePath ),
 					"/Library/Application Support/Tremulous" );
@@ -69,23 +71,6 @@ char *Sys_DefaultHomePath(void)
 	return homePath;
 }
 
-#ifndef MACOS_X
-/*
-================
-Sys_TempPath
-================
-*/
-const char *Sys_TempPath( void )
-{
-	const char *TMPDIR = getenv( "TMPDIR" );
-
-	if( TMPDIR == NULL || TMPDIR[ 0 ] == '\0' )
-		return "/tmp";
-	else
-		return TMPDIR;
-}
-#endif
-
 /*
 ================
 Sys_Milliseconds
@@ -93,7 +78,8 @@ Sys_Milliseconds
 */
 /* base time in seconds, that's our origin
    timeval:tv_sec is an int:
-   assuming this wraps every 0x7fffffff - ~68 years since the Epoch (1970) - we're safe till 2038 */
+   assuming this wraps every 0x7fffffff - ~68 years since the Epoch (1970) - we're safe till 2038
+   using unsigned long data type to work right with Sys_XTimeToSysTime */
 unsigned long sys_timeBase = 0;
 /* current time in ms, using sys_timeBase as origin
    NOTE: sys_timeBase*1000 + curtime -> ms since the Epoch
@@ -238,36 +224,6 @@ qboolean Sys_Mkdir( const char *path )
 		return errno == EEXIST;
 
 	return qtrue;
-}
-
-/*
-==================
-Sys_Mkfifo
-==================
-*/
-FILE *Sys_Mkfifo( const char *ospath )
-{
-	FILE	*fifo;
-	int	result;
-	int	fn;
-	struct	stat buf;
-
-	// if file already exists AND is a pipefile, remove it
-	if( !stat( ospath, &buf ) && S_ISFIFO( buf.st_mode ) )
-		FS_Remove( ospath );
-
-	result = mkfifo( ospath, 0600 );
-	if( result != 0 )
-		return NULL;
-
-	fifo = fopen( ospath, "w+" );
-	if( fifo )
-	{
-		fn = fileno( fifo );
-		fcntl( fn, F_SETFL, O_NONBLOCK );
-	}
-
-	return fifo;
 }
 
 /*
@@ -475,6 +431,35 @@ void Sys_FreeFileList( char **list )
 	Z_Free( list );
 }
 
+#ifdef MACOS_X
+/*
+=================
+Sys_StripAppBundle
+
+Discovers if passed dir is suffixed with the directory structure of a Mac OS X
+.app bundle. If it is, the .app directory structure is stripped off the end and
+the result is returned. If not, dir is returned untouched.
+=================
+*/
+char *Sys_StripAppBundle( char *dir )
+{
+	static char cwd[MAX_OSPATH];
+
+	Q_strncpyz(cwd, dir, sizeof(cwd));
+	if(strcmp(Sys_Basename(cwd), "MacOS"))
+		return dir;
+	Q_strncpyz(cwd, Sys_Dirname(cwd), sizeof(cwd));
+	if(strcmp(Sys_Basename(cwd), "Contents"))
+		return dir;
+	Q_strncpyz(cwd, Sys_Dirname(cwd), sizeof(cwd));
+	if(!strstr(Sys_Basename(cwd), ".app"))
+		return dir;
+	Q_strncpyz(cwd, Sys_Dirname(cwd), sizeof(cwd));
+	return cwd;
+}
+#endif // MACOS_X
+
+
 /*
 ==================
 Sys_Sleep
@@ -529,201 +514,45 @@ void Sys_ErrorDialog( const char *error )
 	unsigned int size;
 	int f = -1;
 	const char *homepath = Cvar_VariableString( "fs_homepath" );
-	const char *gamedir = Cvar_VariableString( "fs_game" );
+	const char *gamedir = Cvar_VariableString( "fs_gamedir" );
 	const char *fileName = "crashlog.txt";
 	char *ospath = FS_BuildOSPath( homepath, gamedir, fileName );
 
 	Sys_Print( va( "%s\n", error ) );
 
-#ifndef DEDICATED
-	Sys_Dialog( DT_ERROR, va( "%s. See \"%s\" for details.", error, ospath ), "Error" );
+#if defined(MACOS_X) && !DEDICATED
+	/* This function has to be in a separate file, compiled as Objective-C. */
+	extern void Cocoa_MsgBox( const char *text );
+	if (!com_dedicated || !com_dedicated->integer)
+		Cocoa_MsgBox(error);
 #endif
 
-	// Make sure the write path for the crashlog exists...
+	/* make sure the write path for the crashlog exists... */
 	if( FS_CreatePath( ospath ) ) {
-		Com_Printf( "ERROR: couldn't create path '%s' for crash log.\n", ospath );
+		Com_Printf( _("ERROR: couldn't create path '%s' for crash log.\n"), ospath );
 		return;
 	}
 
-	// We might be crashing because we maxed out the Quake MAX_FILE_HANDLES,
-	// which will come through here, so we don't want to recurse forever by
-	// calling FS_FOpenFileWrite()...use the Unix system APIs instead.
-	f = open( ospath, O_CREAT | O_TRUNC | O_WRONLY, 0640 );
+	/* we might be crashing because we maxed out the Quake MAX_FILE_HANDLES,
+	   which will come through here, so we don't want to recurse forever by
+	   calling FS_FOpenFileWrite()...use the Unix system APIs instead. */
+	f = open(ospath, O_CREAT | O_TRUNC | O_WRONLY, 0640);
 	if( f == -1 )
 	{
-		Com_Printf( "ERROR: couldn't open %s\n", fileName );
+		Com_Printf( _("ERROR: couldn't open %s\n"), fileName );
 		return;
 	}
 
-	// We're crashing, so we don't care much if write() or close() fails.
+	/* We're crashing, so we don't care much if write() or close() fails. */
 	while( ( size = CON_LogRead( buffer, sizeof( buffer ) ) ) > 0 ) {
-		if( write( f, buffer, size ) != size ) {
-			Com_Printf( "ERROR: couldn't fully write to %s\n", fileName );
+		if (write( f, buffer, size ) != size) {
+			Com_Printf( _("ERROR: couldn't fully write to %s\n"), fileName );
 			break;
 		}
 	}
 
-	close( f );
+	close(f);
 }
-
-#ifndef MACOS_X
-/*
-==============
-Sys_ZenityCommand
-==============
-*/
-static int Sys_ZenityCommand( dialogType_t type, const char *message, const char *title )	
-{
-	const char *options = "";
-	char       command[ 1024 ];
-
-	switch( type )
-	{
-		default:
-		case DT_INFO:      options = "--info"; break;
-		case DT_WARNING:   options = "--warning"; break;
-		case DT_ERROR:     options = "--error"; break;
-		case DT_YES_NO:    options = "--question --ok-label=\"Yes\" --cancel-label=\"No\""; break;
-		case DT_OK_CANCEL: options = "--question --ok-label=\"OK\" --cancel-label=\"Cancel\""; break;
-	}
-
-	Com_sprintf( command, sizeof( command ), "zenity %s --text=\"%s\" --title=\"%s\"",
-		options, message, title );
-
-	return system( command );
-}
-
-/*
-==============
-Sys_KdialogCommand
-==============
-*/
-static int Sys_KdialogCommand( dialogType_t type, const char *message, const char *title )
-{
-	const char *options = "";
-	char       command[ 1024 ];
-
-	switch( type )
-	{
-		default:
-		case DT_INFO:      options = "--msgbox"; break;
-		case DT_WARNING:   options = "--sorry"; break;
-		case DT_ERROR:     options = "--error"; break;
-		case DT_YES_NO:    options = "--warningyesno"; break;
-		case DT_OK_CANCEL: options = "--warningcontinuecancel"; break;
-	}
-
-	Com_sprintf( command, sizeof( command ), "kdialog %s \"%s\" --title \"%s\"",
-		options, message, title );
-
-	return system( command );
-}
-
-/*
-==============
-Sys_XmessageCommand
-==============
-*/
-static int Sys_XmessageCommand( dialogType_t type, const char *message, const char *title )
-{
-	const char *options = "";
-	char       command[ 1024 ];
-
-	switch( type )
-	{
-		default:           options = "-buttons OK"; break;
-		case DT_YES_NO:    options = "-buttons Yes:0,No:1"; break;
-		case DT_OK_CANCEL: options = "-buttons OK:0,Cancel:1"; break;
-	}
-
-	Com_sprintf( command, sizeof( command ), "xmessage -center %s \"%s\"",
-		options, message );
-
-	return system( command );
-}
-
-/*
-==============
-Sys_Dialog
-
-Display a *nix dialog box
-==============
-*/
-dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *title )
-{
-	typedef enum
-	{
-		NONE = 0,
-		ZENITY,
-		KDIALOG,
-		XMESSAGE,
-		NUM_DIALOG_PROGRAMS
-	} dialogCommandType_t;
-	typedef int (*dialogCommandBuilder_t)( dialogType_t, const char *, const char * );
-
-	const char              *session = getenv( "DESKTOP_SESSION" );
-	qboolean                tried[ NUM_DIALOG_PROGRAMS ] = { qfalse };
-	dialogCommandBuilder_t  commands[ NUM_DIALOG_PROGRAMS ] = { NULL };
-	dialogCommandType_t     preferredCommandType = NONE;
-
-	commands[ ZENITY ] = &Sys_ZenityCommand;
-	commands[ KDIALOG ] = &Sys_KdialogCommand;
-	commands[ XMESSAGE ] = &Sys_XmessageCommand;
-
-	// This may not be the best way
-	if( !Q_stricmp( session, "gnome" ) )
-		preferredCommandType = ZENITY;
-	else if( !Q_stricmp( session, "kde" ) )
-		preferredCommandType = KDIALOG;
-
-	while( 1 )
-	{
-		int i;
-		int exitCode;
-
-		for( i = NONE + 1; i < NUM_DIALOG_PROGRAMS; i++ )
-		{
-			if( preferredCommandType != NONE && preferredCommandType != i )
-				continue;
-
-			if( !tried[ i ] )
-			{
-				exitCode = commands[ i ]( type, message, title );
-
-				if( exitCode >= 0 )
-				{
-					switch( type )
-					{
-						case DT_YES_NO:    return exitCode ? DR_NO : DR_YES;
-						case DT_OK_CANCEL: return exitCode ? DR_CANCEL : DR_OK;
-						default:           return DR_OK;
-					}
-				}
-
-				tried[ i ] = qtrue;
-
-				// The preference failed, so start again in order
-				if( preferredCommandType != NONE )
-				{
-					preferredCommandType = NONE;
-					break;
-				}
-			}
-		}
-
-		for( i = NONE + 1; i < NUM_DIALOG_PROGRAMS; i++ )
-		{
-			if( !tried[ i ] )
-				continue;
-		}
-
-		break;
-	}
-
-	Com_DPrintf( S_COLOR_YELLOW "WARNING: failed to show a dialog\n" );
-	return DR_OK;
-}
-#endif
 
 /*
 ==============
@@ -751,6 +580,46 @@ void Sys_GLimpInit( void )
 
 /*
 ==============
+Sys_InitGettext
+
+Initialise gettext
+==============
+*/
+void Sys_InitGettext( void )
+{
+	char dir[ 2 * MAX_CVAR_VALUE_STRING ];
+	Cvar_Get( "localepath", "", CVAR_ARCHIVE | CVAR_INIT );
+	Cvar_Get( "locale", "/locale", CVAR_ARCHIVE | CVAR_INIT );
+
+	Cvar_VariableStringBuffer( "localepath", dir, sizeof( dir ) );
+	if( !*dir )
+		Cvar_VariableStringBuffer( "fs_homepath", dir, MAX_CVAR_VALUE_STRING );
+	Q_strcat( dir, sizeof( dir ), Cvar_VariableString( "locale" ) );
+
+    errno = 0;
+
+    if (!setlocale(LC_ALL, ""))
+    {
+        fprintf(stderr, "Failed to set LC_ALL to native locale: %s\n",
+                errno ? strerror(errno) : "Unknown error");
+    }
+
+	bindtextdomain( PRODUCT_NAME, dir );
+	textdomain( PRODUCT_NAME );
+}
+
+/*
+==============
+Sys_Gettext
+==============
+*/
+char *Sys_Gettext(const char *msgid)
+{
+	return gettext(msgid);
+}
+
+/*
+==============
 Sys_PlatformInit
 
 Unix specific initialisation
@@ -772,17 +641,6 @@ void Sys_PlatformInit( void )
 
 /*
 ==============
-Sys_PlatformExit
-
-Unix specific deinitialisation
-==============
-*/
-void Sys_PlatformExit( void )
-{
-}
-
-/*
-==============
 Sys_SetEnv
 
 set/unset environment variables (empty value removes it)
@@ -795,24 +653,4 @@ void Sys_SetEnv(const char *name, const char *value)
 		setenv(name, value, 1);
 	else
 		unsetenv(name);
-}
-
-/*
-==============
-Sys_PID
-==============
-*/
-int Sys_PID( void )
-{
-	return getpid( );
-}
-
-/*
-==============
-Sys_PIDIsRunning
-==============
-*/
-qboolean Sys_PIDIsRunning( int pid )
-{
-	return kill( pid, 0 ) == 0;
 }

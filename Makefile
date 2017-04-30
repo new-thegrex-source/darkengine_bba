@@ -4,7 +4,7 @@
 # GNU Make required
 #
 
-COMPILE_PLATFORM=$(shell uname|sed -e s/_.*//|tr '[:upper:]' '[:lower:]'|sed -e 's/\//_/g')
+COMPILE_PLATFORM=$(shell uname|sed -e s/_.*//|tr '[:upper:]' '[:lower:]')
 
 COMPILE_ARCH=$(shell uname -m | sed -e s/i.86/x86/)
 
@@ -18,25 +18,25 @@ ifeq ($(COMPILE_PLATFORM),darwin)
 endif
 
 ifndef BUILD_STANDALONE
-  BUILD_STANDALONE = 0
+  BUILD_STANDALONE = 1
 endif
 ifndef BUILD_CLIENT
-  BUILD_CLIENT     = 0
+  BUILD_CLIENT     = 1
 endif
 ifndef BUILD_CLIENT_SMP
-  BUILD_CLIENT_SMP = 0
+  BUILD_CLIENT_SMP =0
 endif
 ifndef BUILD_SERVER
-  BUILD_SERVER     = 0
+  BUILD_SERVER     =0
 endif
 ifndef BUILD_GAME_SO
-  BUILD_GAME_SO    = 0
+  BUILD_GAME_SO    =0
 endif
 ifndef BUILD_GAME_QVM
-  BUILD_GAME_QVM   = 1
+  BUILD_GAME_QVM   =1
 endif
 ifndef BUILD_MISSIONPACK
-  BUILD_MISSIONPACK= 0
+  BUILD_MISSIONPACK=0
 endif
 
 ifneq ($(PLATFORM),darwin)
@@ -97,10 +97,6 @@ ifndef BUILD_DIR
 BUILD_DIR=build
 endif
 
-ifndef TEMPDIR
-TEMPDIR=/tmp
-endif
-
 ifndef GENERATE_DEPENDENCIES
 GENERATE_DEPENDENCIES=1
 endif
@@ -134,7 +130,7 @@ USE_MUMBLE=1
 endif
 
 ifndef USE_VOIP
-USE_VOIP=0
+USE_VOIP=1
 endif
 
 ifndef USE_INTERNAL_SPEEX
@@ -143,10 +139,6 @@ endif
 
 ifndef USE_INTERNAL_ZLIB
 USE_INTERNAL_ZLIB=1
-endif
-
-ifndef USE_INTERNAL_JPEG
-USE_INTERNAL_JPEG=1
 endif
 
 ifndef USE_LOCAL_HEADERS
@@ -159,6 +151,10 @@ endif
 
 ifndef DEBUG_CFLAGS
 DEBUG_CFLAGS=-g -O0
+endif
+
+ifndef USE_FREETYPE
+USE_FREETYPE=1
 endif
 
 #############################################################################
@@ -176,7 +172,7 @@ GDIR=$(MOUNT_DIR)/game
 CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
-JPDIR=$(MOUNT_DIR)/jpeg-8c
+JPDIR=$(MOUNT_DIR)/jpeg-6b
 SPEEXDIR=$(MOUNT_DIR)/libspeex
 ZDIR=$(MOUNT_DIR)/zlib
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
@@ -186,6 +182,7 @@ Q3LCCETCDIR=$(MOUNT_DIR)/tools/lcc/etc
 Q3LCCSRCDIR=$(MOUNT_DIR)/tools/lcc/src
 SDLHDIR=$(MOUNT_DIR)/SDL12
 LIBSDIR=$(MOUNT_DIR)/libs
+FTDIR=$(MOUNT_DIR)/freetype2
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
 
@@ -213,15 +210,13 @@ ifneq ($(BUILD_CLIENT),0)
 endif
 
 # version info
-VERSION=gpp1
+VERSION=1.1.0
 
 USE_SVN=
-SVN_VERSION=
 ifeq ($(wildcard .svn),.svn)
   SVN_REV=$(shell LANG=C svnversion .)
   ifneq ($(SVN_REV),)
     VERSION:=$(VERSION)_SVN$(SVN_REV)
-    SVN_VERSION=svn$(SVN_REV)
     USE_SVN=1
   endif
 endif
@@ -237,10 +232,10 @@ LIB=lib
 INSTALL=install
 MKDIR=mkdir
 
-ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu"))
+ifeq ($(PLATFORM),linux)
 
-  ifeq ($(ARCH),axp)
-    ARCH=alpha
+  ifeq ($(ARCH),alpha)
+    ARCH=axp
   else
   ifeq ($(ARCH),x86_64)
     LIB=lib64
@@ -265,6 +260,10 @@ ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu"))
     ifeq ($(USE_OPENAL_DLOPEN),1)
       CLIENT_CFLAGS += -DUSE_OPENAL_DLOPEN
     endif
+  endif
+
+  ifeq ($(USE_FREETYPE),1)
+    BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
   endif
 
   ifeq ($(USE_CURL),1)
@@ -308,11 +307,6 @@ ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu"))
     OPTIMIZEVM += -mtune=ultrasparc3 -mv8plus
     HAVE_VM_COMPILED=true
   endif
-  ifeq ($(ARCH),alpha)
-    # According to http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=410555
-    # -ffast-math will cause the client to die with SIGFPE on Alpha
-    OPTIMIZE = $(OPTIMIZEVM)
-  endif
   endif
   endif
 
@@ -353,6 +347,10 @@ ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu"))
     CLIENT_CFLAGS += -I$(SDLHDIR)/include
   endif
 
+  ifeq ($(USE_FREETYPE),1)
+    CLIENT_LDFLAGS += -lfreetype
+  endif
+
   ifeq ($(ARCH),x86)
     # linux32 make ...
     BASE_CFLAGS += -m32
@@ -369,7 +367,6 @@ else # ifeq Linux
 
 ifeq ($(PLATFORM),darwin)
   HAVE_VM_COMPILED=true
-  LIBS = -framework Cocoa
   CLIENT_LIBS=
   OPTIMIZEVM=
 
@@ -393,6 +390,10 @@ ifeq ($(PLATFORM),darwin)
 
   BASE_CFLAGS += -fno-strict-aliasing -DMACOS_X -fno-common -pipe
 
+  ifeq ($(USE_FREETYPE),1)
+    BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
+  endif
+
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -411,6 +412,10 @@ ifeq ($(PLATFORM),darwin)
     endif
   endif
 
+  ifeq ($(USE_FREETYPE),1)
+    CLIENT_LDFLAGS += $(shell freetype-config --libs)
+  endif
+
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_CFLAGS += -DUSE_CODEC_VORBIS
     CLIENT_LIBS += -lvorbisfile -lvorbis -logg
@@ -426,7 +431,7 @@ ifeq ($(PLATFORM),darwin)
   #  the file has been modified by each build.
   LIBSDLMAIN=$(B)/libSDLmain.a
   LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
-  CLIENT_LIBS += -framework IOKit -framework OpenGL \
+  CLIENT_LIBS += -framework Cocoa -framework IOKit -framework OpenGL \
     $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
 
   OPTIMIZEVM += -falign-loops=16
@@ -463,6 +468,8 @@ ifeq ($(PLATFORM),mingw32)
     WINDRES=windres
   endif
 
+  ARCH=x86
+
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON
   CLIENT_CFLAGS =
@@ -483,24 +490,26 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
+  ifeq ($(USE_FREETYPE),1)
+    BASE_CFLAGS += -DBUILD_FREETYPE
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(FTDIR)
+    else
+      BASE_CFLAGS += $(shell freetype-config --cflags)
+    endif
+   # TTYC_CFLAGS += -UBUILD_FREETYPE
+  endif
+
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_CFLAGS += -DUSE_CODEC_VORBIS
   endif
 
-  ifeq ($(ARCH),x64)
-    OPTIMIZEVM = -O3 -fno-omit-frame-pointer \
-      -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
-      -fstrength-reduce
-    OPTIMIZE = $(OPTIMIZEVM) --fast-math
-    HAVE_VM_COMPILED = true
-  endif
-  ifeq ($(ARCH),x86)
-    OPTIMIZEVM = -O3 -march=i586 -fno-omit-frame-pointer \
-      -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
-      -fstrength-reduce
-    OPTIMIZE = $(OPTIMIZEVM) -ffast-math
-    HAVE_VM_COMPILED = true
-  endif
+  OPTIMIZEVM = -O3 -march=i586 -fno-omit-frame-pointer \
+    -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
+    -fstrength-reduce
+  OPTIMIZE = $(OPTIMIZEVM) -ffast-math
+
+  HAVE_VM_COMPILED = true
 
   SHLIBEXT=dll
   SHLIBCFLAGS=
@@ -508,9 +517,17 @@ ifeq ($(PLATFORM),mingw32)
 
   BINEXT=.exe
 
-  LIBS= -lws2_32 -lwinmm -lpsapi
+  LIBS= -lws2_32 -lwinmm
   CLIENT_LDFLAGS = -mwindows
   CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
+
+  ifeq ($(USE_FREETYPE),1)
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      CLIENT_LIBS += $(LIBSDIR)/win32/libfreetype.a
+    else
+      CLIENT_LIBS += $(shell freetype-config --libs)
+    endif
+  endif
 
   ifeq ($(USE_CURL),1)
     CLIENT_CFLAGS += -DUSE_CURL
@@ -518,11 +535,7 @@ ifeq ($(PLATFORM),mingw32)
     ifneq ($(USE_CURL_DLOPEN),1)
       ifeq ($(USE_LOCAL_HEADERS),1)
         CLIENT_CFLAGS += -DCURL_STATICLIB
-        ifeq ($(ARCH),x64)
-	  CLIENT_LIBS += $(LIBSDIR)/win64/libcurl.a
-	else
-          CLIENT_LIBS += $(LIBSDIR)/win32/libcurl.a
-        endif
+        CLIENT_LIBS += $(LIBSDIR)/win32/libcurl.a
       else
         CLIENT_LIBS += $(CURL_LIBS)
       endif
@@ -536,22 +549,14 @@ ifeq ($(PLATFORM),mingw32)
   ifeq ($(ARCH),x86)
     # build 32bit
     BASE_CFLAGS += -m32
-  else
-    BASE_CFLAGS += -m64
   endif
 
   # libmingw32 must be linked before libSDLmain
   CLIENT_LIBS += -lmingw32
   ifeq ($(USE_LOCAL_HEADERS),1)
     CLIENT_CFLAGS += -I$(SDLHDIR)/include
-    ifeq ($(ARCH), x86)
     CLIENT_LIBS += $(LIBSDIR)/win32/libSDLmain.a \
                       $(LIBSDIR)/win32/libSDL.dll.a
-    else
-    CLIENT_LIBS += $(LIBSDIR)/win64/libSDLmain.a \
-                      $(LIBSDIR)/win64/libSDL.dll.a \
-                      $(LIBSDIR)/win64/libSDL.a
-    endif
   else
     CLIENT_CFLAGS += $(SDL_CFLAGS)
     CLIENT_LIBS += $(SDL_LIBS)
@@ -567,15 +572,44 @@ else # ifeq mingw32
 
 ifeq ($(PLATFORM),freebsd)
 
-  # flags
-  BASE_CFLAGS = $(shell env MACHINE_ARCH=$(ARCH) make -f /dev/null -VCFLAGS) \
-    -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
-    -DUSE_ICON -DMAP_ANONYMOUS=MAP_ANON
+  ifneq (,$(findstring alpha,$(shell uname -m)))
+    ARCH=axp
+  else #default to x86
+    ARCH=x86
+  endif #alpha test
+
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
+    -DUSE_ICON
   CLIENT_CFLAGS = $(SDL_CFLAGS)
   SERVER_CFLAGS = 
-  HAVE_VM_COMPILED = true
+
+  ifeq ($(USE_OPENAL),1)
+    CLIENT_CFLAGS += -DUSE_OPENAL
+    ifeq ($(USE_OPENAL_DLOPEN),1)
+      CLIENT_CFLAGS += -DUSE_OPENAL_DLOPEN
+    endif
+  endif
+
+  ifeq ($(USE_CODEC_VORBIS),1)
+    CLIENT_CFLAGS += -DUSE_CODEC_VORBIS
+  endif
 
   OPTIMIZEVM = -O3 -funroll-loops -fomit-frame-pointer
+
+  ifeq ($(ARCH),axp)
+    BASE_CFLAGS += -DNO_VM_COMPILED
+    OPTIMIZEVM += -fexpensive-optimizations
+  else
+  ifeq ($(ARCH),x86)
+    OPTIMIZEVM += -mtune=pentiumpro \
+      -march=pentium -pipe -falign-loops=2 -falign-jumps=2 \
+      -falign-functions=2 -funroll-loops -fstrength-reduce
+    HAVE_VM_COMPILED=true
+  else
+    BASE_CFLAGS += -DNO_VM_COMPILED
+  endif
+  endif
+
   OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 
   SHLIBEXT=so
@@ -590,41 +624,14 @@ ifeq ($(PLATFORM),freebsd)
 
   CLIENT_LIBS += $(SDL_LIBS) -lGL
 
-  # optional features/libraries
   ifeq ($(USE_OPENAL),1)
-    CLIENT_CFLAGS += -DUSE_OPENAL
-    ifeq ($(USE_OPENAL_DLOPEN),1)
-      CLIENT_CFLAGS += -DUSE_OPENAL_DLOPEN
+    ifneq ($(USE_OPENAL_DLOPEN),1)
       CLIENT_LIBS += $(THREAD_LIBS) -lopenal
     endif
   endif
 
-  ifeq ($(USE_CURL),1)
-    CLIENT_CFLAGS += -DUSE_CURL
-    ifeq ($(USE_CURL_DLOPEN),1)
-      CLIENT_CFLAGS += -DUSE_CURL_DLOPEN
-      CLIENT_LIBS += -lcurl
-    endif
-  endif
-
-  ifeq ($(USE_CODEC_VORBIS),1)
-    CLIENT_CFLAGS += -DUSE_CODEC_VORBIS
-  endif
-
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LIBS += -lvorbisfile -lvorbis -logg
-  endif
-
-  # cross-compiling tweaks
-  ifeq ($(ARCH),i386)
-    ifeq ($(CROSS_COMPILING),1)
-      BASE_CFLAGS += -m32
-    endif
-  endif
-  ifeq ($(ARCH),amd64)
-    ifeq ($(CROSS_COMPILING),1)
-      BASE_CFLAGS += -m64
-    endif
   endif
 
 else # ifeq freebsd
@@ -886,16 +893,11 @@ endif
 
 ifeq ($(USE_INTERNAL_ZLIB),1)
   BASE_CFLAGS += -DNO_GZIP
-  BASE_CFLAGS += -I$(ZDIR)
+  ifneq ($(USE_LOCAL_HEADERS),1)
+    BASE_CFLAGS += -I$(ZDIR)
+  endif
 else
   LIBS += -lz
-endif
-
-ifeq ($(USE_INTERNAL_JPEG),1)
-  BASE_CFLAGS += -DUSE_INTERNAL_JPEG
-  BASE_CFLAGS += -I$(JPDIR)
-else
-  CLIENT_LIBS += -ljpeg
 endif
 
 ifdef DEFAULT_BASEDIR
@@ -923,7 +925,6 @@ else
 endif
 
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
-BASE_CFLAGS += -DSVN_VERSION=\\\"$(SVN_VERSION)\\\"
 
 ifeq ($(V),1)
 echo_cmd=@:
@@ -1095,7 +1096,7 @@ makedirs:
 # QVM BUILD TOOLS
 #############################################################################
 
-TOOLS_OPTIMIZE = -g -Wall -fno-strict-aliasing
+TOOLS_OPTIMIZE = -g -O2 -Wall -fno-strict-aliasing
 TOOLS_CFLAGS += $(TOOLS_OPTIMIZE) \
                 -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
                 -I$(Q3LCCSRCDIR) \
@@ -1217,17 +1218,17 @@ endef
 
 define DO_CGAME_Q3LCC
 $(echo_cmd) "CGAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -DSVN_VERSION=\"$(SVN_VERSION)\" -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
 endef
 
 define DO_GAME_Q3LCC
 $(echo_cmd) "GAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -DSVN_VERSION=\"$(SVN_VERSION)\" -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
 endef
 
 define DO_UI_Q3LCC
 $(echo_cmd) "UI_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -DSVN_VERSION=\"$(SVN_VERSION)\" -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
 endef
 
 
@@ -1312,6 +1313,42 @@ Q3OBJ = \
   $(B)/client/vm.o \
   $(B)/client/vm_interpreted.o \
   \
+  $(B)/client/jcapimin.o \
+  $(B)/client/jcapistd.o \
+  $(B)/client/jccoefct.o  \
+  $(B)/client/jccolor.o \
+  $(B)/client/jcdctmgr.o \
+  $(B)/client/jchuff.o   \
+  $(B)/client/jcinit.o \
+  $(B)/client/jcmainct.o \
+  $(B)/client/jcmarker.o \
+  $(B)/client/jcmaster.o \
+  $(B)/client/jcomapi.o \
+  $(B)/client/jcparam.o \
+  $(B)/client/jcphuff.o \
+  $(B)/client/jcprepct.o \
+  $(B)/client/jcsample.o \
+  $(B)/client/jdapimin.o \
+  $(B)/client/jdapistd.o \
+  $(B)/client/jdatasrc.o \
+  $(B)/client/jdcoefct.o \
+  $(B)/client/jdcolor.o \
+  $(B)/client/jddctmgr.o \
+  $(B)/client/jdhuff.o \
+  $(B)/client/jdinput.o \
+  $(B)/client/jdmainct.o \
+  $(B)/client/jdmarker.o \
+  $(B)/client/jdmaster.o \
+  $(B)/client/jdpostct.o \
+  $(B)/client/jdsample.o \
+  $(B)/client/jdtrans.o \
+  $(B)/client/jerror.o \
+  $(B)/client/jfdctflt.o \
+  $(B)/client/jidctflt.o \
+  $(B)/client/jmemmgr.o \
+  $(B)/client/jmemnobs.o \
+  $(B)/client/jutils.o \
+  \
   $(B)/client/tr_animation.o \
   $(B)/client/tr_backend.o \
   $(B)/client/tr_bsp.o \
@@ -1348,56 +1385,6 @@ Q3OBJ = \
   $(B)/client/con_passive.o \
   $(B)/client/con_log.o \
   $(B)/client/sys_main.o
-
-ifneq ($(USE_INTERNAL_JPEG),0)
-  Q3OBJ += \
-    $(B)/client/jaricom.o \
-    $(B)/client/jcapimin.o \
-    $(B)/client/jcapistd.o \
-    $(B)/client/jcarith.o \
-    $(B)/client/jccoefct.o  \
-    $(B)/client/jccolor.o \
-    $(B)/client/jcdctmgr.o \
-    $(B)/client/jchuff.o   \
-    $(B)/client/jcinit.o \
-    $(B)/client/jcmainct.o \
-    $(B)/client/jcmarker.o \
-    $(B)/client/jcmaster.o \
-    $(B)/client/jcomapi.o \
-    $(B)/client/jcparam.o \
-    $(B)/client/jcprepct.o \
-    $(B)/client/jcsample.o \
-    $(B)/client/jctrans.o \
-    $(B)/client/jdapimin.o \
-    $(B)/client/jdapistd.o \
-    $(B)/client/jdarith.o \
-    $(B)/client/jdatadst.o \
-    $(B)/client/jdatasrc.o \
-    $(B)/client/jdcoefct.o \
-    $(B)/client/jdcolor.o \
-    $(B)/client/jddctmgr.o \
-    $(B)/client/jdhuff.o \
-    $(B)/client/jdinput.o \
-    $(B)/client/jdmainct.o \
-    $(B)/client/jdmarker.o \
-    $(B)/client/jdmaster.o \
-    $(B)/client/jdmerge.o \
-    $(B)/client/jdpostct.o \
-    $(B)/client/jdsample.o \
-    $(B)/client/jdtrans.o \
-    $(B)/client/jerror.o \
-    $(B)/client/jfdctflt.o \
-    $(B)/client/jfdctfst.o \
-    $(B)/client/jfdctint.o \
-    $(B)/client/jidctflt.o \
-    $(B)/client/jidctfst.o \
-    $(B)/client/jidctint.o \
-    $(B)/client/jmemmgr.o \
-    $(B)/client/jmemnobs.o \
-    $(B)/client/jquant1.o \
-    $(B)/client/jquant2.o \
-    $(B)/client/jutils.o
-endif
 
 ifeq ($(ARCH),x86)
   Q3OBJ += \
@@ -1470,12 +1457,6 @@ ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86_64)
     Q3OBJ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
   endif
-  ifeq ($(ARCH),amd64)
-    Q3OBJ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
-  endif
-  ifeq ($(ARCH),x64)
-    Q3OBJ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
-  endif
   ifeq ($(ARCH),ppc)
     Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
   endif
@@ -1498,7 +1479,7 @@ endif
 
 ifeq ($(PLATFORM),darwin)
   Q3OBJ += \
-    $(B)/client/sys_osx.o
+    $(B)/client/sys_cocoa.o
 endif
 
 ifeq ($(USE_MUMBLE),1)
@@ -1603,12 +1584,6 @@ ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86_64)
     Q3DOBJ += $(B)/ded/vm_x86_64.o $(B)/ded/vm_x86_64_assembler.o
   endif
-  ifeq ($(ARCH),amd64)
-    Q3DOBJ += $(B)/ded/vm_x86_64.o $(B)/ded/vm_x86_64_assembler.o
-  endif
-  ifeq ($(ARCH),x64)
-    Q3DOBJ += $(B)/ded/vm_x86_64.o $(B)/ded/vm_x86_64_assembler.o
-  endif
   ifeq ($(ARCH),ppc)
     Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
   endif
@@ -1629,11 +1604,6 @@ else
   Q3DOBJ += \
     $(B)/ded/sys_unix.o \
     $(B)/ded/con_tty.o
-endif
-
-ifeq ($(PLATFORM),darwin)
-  Q3DOBJ += \
-    $(B)/ded/sys_osx.o
 endif
 
 $(B)/tremded$(FULLBINEXT): $(Q3DOBJ)

@@ -52,42 +52,14 @@ CG_AlienBuildableExplosion
 Generated a bunch of gibs launching out from a location
 ===================
 */
-void CG_AlienBuildableExplosion( vec3_t origin, vec3_t dir, int buildable )
+void CG_AlienBuildableExplosion( vec3_t origin, vec3_t dir )
 {
   particleSystem_t  *ps;
 
   trap_S_StartSound( origin, ENTITYNUM_WORLD, CHAN_AUTO, cgs.media.alienBuildableExplosion );
 
   //particle system
-  if (buildable == BA_A_OVERMIND)
-    ps = CG_SpawnNewParticleSystem( cgs.media.alienBuildableDestroyedPS );
-  else
-    ps = CG_SpawnNewParticleSystem( cgs.media.alienBuildableDestroyedPS );
-
-  if( CG_IsParticleSystemValid( &ps ) )
-  {
-    CG_SetAttachmentPoint( &ps->attachment, origin );
-    CG_SetParticleSystemNormal( ps, dir );
-    CG_AttachToPoint( &ps->attachment );
-  }
-}
-
-
-/*
-===================
-CG_AlienSpitefulAbcessExplosion
-
-Generated a bunch of gibs launching out from a location
-===================
-*/
-void CG_AlienSpitefulAbcessExplosion( vec3_t origin, vec3_t dir )
-{
-  particleSystem_t  *ps;
-
-  trap_S_StartSound( origin, ENTITYNUM_WORLD, CHAN_AUTO, cgs.media.alienBuildableExplosion );
-
-  //particle system
-  ps = CG_SpawnNewParticleSystem( cgs.media.alienSpiteful_AbcessDestroyedPS );
+  ps = CG_SpawnNewParticleSystem( cgs.media.alienBuildableDestroyedPS );
 
   if( CG_IsParticleSystemValid( &ps ) )
   {
@@ -104,17 +76,14 @@ CG_HumanBuildableExplosion
 Called for human buildables as they are destroyed
 =================
 */
-void CG_HumanBuildableExplosion( vec3_t origin, vec3_t dir, int buildable )
+void CG_HumanBuildableExplosion( vec3_t origin, vec3_t dir )
 {
   particleSystem_t  *ps;
 
   trap_S_StartSound( origin, ENTITYNUM_WORLD, CHAN_AUTO, cgs.media.humanBuildableExplosion );
 
   //particle system
-  if (buildable == BA_H_REACTOR)
-    ps = CG_SpawnNewParticleSystem( cgs.media.humanBuildableDestroyedPS );
-  else
-    ps = CG_SpawnNewParticleSystem( cgs.media.humanBuildableDestroyedPS );
+  ps = CG_SpawnNewParticleSystem( cgs.media.humanBuildableDestroyedPS );
 
   if( CG_IsParticleSystemValid( &ps ) )
   {
@@ -126,7 +95,7 @@ void CG_HumanBuildableExplosion( vec3_t origin, vec3_t dir, int buildable )
 
 
 #define CREEP_SIZE            64.0f
-#define CREEP_DISTANCE        228.0f
+#define CREEP_DISTANCE        64.0f
 
 /*
 ==================
@@ -141,7 +110,7 @@ static void CG_Creep( centity_t *cent )
   vec3_t        temp, origin;
   int           scaleUpTime = BG_Buildable( cent->currentState.modelindex )->buildTime;
   int           time;
-  // int creepSize;
+
   time = cent->currentState.time;
 
   //should the creep be growing or receding?
@@ -166,32 +135,16 @@ static void CG_Creep( centity_t *cent )
   VectorScale( temp, -CREEP_DISTANCE, temp );
   VectorAdd( temp, cent->lerpOrigin, temp );
 
-  
-  
   CG_Trace( &tr, cent->lerpOrigin, NULL, NULL, temp, cent->currentState.number, MASK_PLAYERSOLID );
-  VectorCopy( tr.endpos, origin );
-  
 
-//  size = CREEP_SIZE * frac;
-size = BG_Buildable( cent->currentState.modelindex )->creepSize * frac;
+  VectorCopy( tr.endpos, origin );
+
+  size = CREEP_SIZE * frac;
 
   if( size > 0.0f && tr.fraction < 1.0f )
-    CG_ImpactMark( cgs.media.creepShader, //qhandle_t markShader
-								  origin, //const vec3_t origin 
-			  cent->currentState.origin2, //const vec3_t dir
-									0.0f, //float orientation
-									1.0f, //red
-									1.0f, //green
-									1.0f, //blue
-									1.0f, //float alpha
-								  qtrue, //qboolean alphaFade
-								    size, //float radius
-								   qtrue);//qboolean temporary
-								   
-					   
-
+    CG_ImpactMark( cgs.media.creepShader, origin, cent->currentState.origin2,
+                   0.0f, 1.0f, 1.0f, 1.0f, 1.0f, qfalse, size, qtrue );
 }
-
 
 /*
 ======================
@@ -222,7 +175,7 @@ static qboolean CG_ParseBuildableAnimationFile( const char *filename, buildable_
   if( len == 0 || len >= sizeof( text ) - 1 )
   {
     trap_FS_FCloseFile( f );
-    CG_Printf( "File %s is %s\n", filename, len == 0 ? "empty" : "too long" );
+    CG_Printf( _("File %s is %s\n"), filename, len == 0 ? "empty" : "too long" );
     return qfalse;
   }
 
@@ -278,7 +231,7 @@ static qboolean CG_ParseBuildableAnimationFile( const char *filename, buildable_
 
   if( i != MAX_BUILDABLE_ANIMATIONS )
   {
-    CG_Printf( "Error parsing animation file: %s\n", filename );
+    CG_Printf( _("Error parsing animation file: %s\n"), filename );
     return qfalse;
   }
 
@@ -313,7 +266,7 @@ static qboolean CG_ParseBuildableSoundFile( const char *filename, buildable_t bu
   if ( len == 0 || len >= sizeof( text ) - 1 )
   {
     trap_FS_FCloseFile( f );
-    CG_Printf( "File %s is %s\n", filename, len == 0 ? "empty" : "too long" );
+    CG_Printf( _("File %s is %s\n"), filename, len == 0 ? "empty" : "too long" );
     return qfalse;
   }
 
@@ -344,7 +297,7 @@ static qboolean CG_ParseBuildableSoundFile( const char *filename, buildable_t bu
 
   if( i != MAX_BUILDABLE_ANIMATIONS )
   {
-    CG_Printf( "Error parsing sound file: %s\n", filename );
+    CG_Printf( _("Error parsing sound file: %s\n"), filename );
     return qfalse;
   }
 
@@ -390,12 +343,12 @@ void CG_InitBuildables( void )
     //animation.cfg
     Com_sprintf( filename, sizeof( filename ), "models/buildables/%s/animation.cfg", buildableName );
     if ( !CG_ParseBuildableAnimationFile( filename, i ) )
-      Com_Printf( S_COLOR_YELLOW "WARNING: failed to load animation file %s\n", filename );
+      Com_Printf( _(S_COLOR_YELLOW "WARNING: failed to load animation file %s\n"), filename );
 
     //sound.cfg
     Com_sprintf( filename, sizeof( filename ), "sound/buildables/%s/sound.cfg", buildableName );
     if ( !CG_ParseBuildableSoundFile( filename, i ) )
-      Com_Printf( S_COLOR_YELLOW "WARNING: failed to load sound file %s\n", filename );
+      Com_Printf( _(S_COLOR_YELLOW "WARNING: failed to load sound file %s\n"), filename );
 
     //models
     for( j = 0; j <= 3; j++ )
@@ -436,9 +389,6 @@ void CG_InitBuildables( void )
   }
 
   cgs.media.teslaZapTS = CG_RegisterTrailSystem( "models/buildables/tesla/zap" );
-  //f\FCr slime
-  cgs.media.slimeTS = CG_RegisterTrailSystem( "models/buildables/infestationslime" );
-
 }
 
 /*
@@ -455,7 +405,7 @@ static void CG_SetBuildableLerpFrameAnimation( buildable_t buildable, lerpFrame_
   lf->animationNumber = newAnimation;
 
   if( newAnimation < 0 || newAnimation >= MAX_BUILDABLE_ANIMATIONS )
-    CG_Error( "Bad animation number: %i", newAnimation );
+    CG_Error( _("Bad animation number: %i"), newAnimation );
 
   anim = &cg_buildables[ buildable ].animations[ newAnimation ];
 
@@ -467,7 +417,7 @@ static void CG_SetBuildableLerpFrameAnimation( buildable_t buildable, lerpFrame_
   lf->animationTime = lf->frameTime + anim->initialLerp;
 
   if( cg_debugAnim.integer )
-    CG_Printf( "Anim: %i\n", newAnimation );
+    CG_Printf( _("Anim: %i\n"), newAnimation );
 }
 
 /*
@@ -488,7 +438,7 @@ static void CG_RunBuildableLerpFrame( centity_t *cent )
   if( newAnimation != lf->animationNumber || !lf->animation )
   {
     if( cg_debugRandom.integer )
-      CG_Printf( "newAnimation: %d lf->animationNumber: %d lf->animation: %d\n",
+      CG_Printf( _("newAnimation: %d lf->animationNumber: %d lf->animation: %d\n"),
                  newAnimation, lf->animationNumber, lf->animation );
 
     CG_SetBuildableLerpFrameAnimation( buildable, lf, newAnimation );
@@ -497,7 +447,7 @@ static void CG_RunBuildableLerpFrame( centity_t *cent )
         cg_buildables[ buildable ].sounds[ newAnimation ].enabled )
     {
       if( cg_debugRandom.integer )
-        CG_Printf( "Sound for animation %d for a %s\n",
+        CG_Printf( _("Sound for animation %d for a %s\n"),
             newAnimation, BG_Buildable( buildable )->humanName );
 
       trap_S_StartSound( cent->lerpOrigin, cent->currentState.number, CHAN_AUTO,
@@ -602,8 +552,7 @@ static void CG_PositionAndOrientateBuildable( const vec3_t angles, const vec3_t 
                                               vec3_t outAxis[ 3 ], vec3_t outOrigin )
 {
   vec3_t  forward, start, end;
-  trace_t tr, box_tr;
-  float mag, fraction;
+  trace_t tr;
 
   AngleVectors( angles, forward, NULL, NULL );
   VectorCopy( normal, outAxis[ 2 ] );
@@ -623,27 +572,17 @@ static void CG_PositionAndOrientateBuildable( const vec3_t angles, const vec3_t 
 
   VectorMA( inOrigin, -TRACE_DEPTH, normal, end );
   VectorMA( inOrigin, 1.0f, normal, start );
-
-  // Take both capsule and box traces. If the capsule trace does not differ
-  //  significantly from the box trace use it. This may cause buildables to be
-  //  positioned *inside* the surface on which it is placed. This is intentional
-
   CG_CapTrace( &tr, start, mins, maxs, end, skipNumber,
-               MASK_PLAYERSOLID );
+               CONTENTS_SOLID | CONTENTS_PLAYERCLIP );
 
-  CG_Trace( &box_tr, start, mins, maxs, end, skipNumber,
-            MASK_PLAYERSOLID );
+  if( tr.fraction == 1.0f )
+  {
+    //erm we missed completely - try again with a box trace
+    CG_Trace( &tr, start, mins, maxs, end, skipNumber,
+              CONTENTS_SOLID | CONTENTS_PLAYERCLIP );
+  }
 
-  mag = Distance( tr.endpos, box_tr.endpos );
-
-  fraction = tr.fraction;
-
-  // this is either too far off of the bbox to be useful for gameplay purposes
-  //  or the model is positioned in thin air anyways.
-  if( mag > 15.0f || tr.fraction == 1.0f )
-    fraction = box_tr.fraction; 
-
-  VectorMA( inOrigin, fraction * -TRACE_DEPTH, normal, outOrigin );
+  VectorMA( inOrigin, tr.fraction * -TRACE_DEPTH, normal, outOrigin );
 }
 
 /*
@@ -679,8 +618,10 @@ void CG_GhostBuildable( buildable_t buildable )
 
   ent.hModel = cg_buildables[ buildable ].models[ 0 ];
 
-  if( !(ps->stats[ STAT_BUILDABLE ] & SB_VALID_TOGGLEBIT) )
-  ent.customShader = cgs.media.redBuildShader;
+  if( ps->stats[ STAT_BUILDABLE ] & SB_VALID_TOGGLEBIT )
+    ent.customShader = cgs.media.greenBuildShader;
+  else
+    ent.customShader = cgs.media.redBuildShader;
 
   //rescale the model
   scale = BG_BuildableConfig( buildable )->modelScale;
@@ -714,24 +655,8 @@ static void CG_BuildableParticleEffects( centity_t *cent )
 
   if( !( es->eFlags & EF_B_SPAWNED ) )
     return;
-	
-	
-	    //ORGANIC BULB LIGHT / BA_H_LIGHT - VIA PS
-    if( es->modelindex == BA_A_ORGANIC_BULB )
-  {
-    if( !CG_IsParticleSystemValid( &cent->buildablePS ) )
-    {
-      cent->buildablePS = CG_SpawnNewParticleSystem( cgs.media.organicbulbPS );
 
-      if( CG_IsParticleSystemValid( &cent->buildablePS ) )
-      {
-        CG_SetAttachmentCent( &cent->buildablePS->attachment, cent );
-        CG_AttachToCent( &cent->buildablePS->attachment );
-      }
-    }
-  }
-
-  else if( team == TEAM_HUMANS )
+  if( team == TEAM_HUMANS )
   {
     if( healthFrac < 0.33f && !CG_IsParticleSystemValid( &cent->buildablePS ) )
     {
@@ -895,7 +820,7 @@ void CG_BuildableStatusParse( const char *filename, buildStat_t *bs )
     }
     else
     {
-      Com_Printf("CG_BuildableStatusParse: unknown token %s in %s\n",
+      Com_Printf(_("CG_BuildableStatusParse: unknown token %s in %s\n"),
         token.string, filename );
       bs->loaded = qfalse;
       trap_Parse_FreeSource( handle );
@@ -933,12 +858,18 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
   qboolean        visible = qfalse;
   vec3_t          mins, maxs;
   entityState_t   *hit;
+  team_t          team;
   int             anim;
 
-  if( BG_Buildable( es->modelindex )->team == TEAM_ALIENS )
+  team = BG_Buildable( es->modelindex )->team;
+  if( team == TEAM_ALIENS )
     bs = &cgs.alienBuildStat;
-  else
+  else if( team == TEAM_HUMANS )
     bs = &cgs.humanBuildStat;
+  else if( team == TEAM_NONE && BG_IsDPoint( es->modelindex ) )
+    bs = &cgs.domBuildStat;
+  else
+    return;
 
   if( !bs->loaded )
     return;
@@ -957,14 +888,6 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
   if( es->modelindex == BA_A_BARRICADE &&
       ( anim == BANIM_DESTROYED || !( es->eFlags & EF_B_SPAWNED ) ) )
     maxs[ 2 ] = (int)( maxs[ 2 ] * BARRICADE_SHRINKPROP );
-
-  VectorCopy( cent->lerpOrigin, origin );
-  
-    // hack for shrunken shield
-  anim = es->torsoAnim & ~( ANIM_FORCEBIT | ANIM_TOGGLEBIT );
-  if( es->modelindex == BA_H_SHIELD &&
-      ( anim == BANIM_DESTROYED || !( es->eFlags & EF_B_SPAWNED ) ) )
-    maxs[ 2 ] = (int)( maxs[ 2 ] * SHIELD_SHRINKPROP );
 
   VectorCopy( cent->lerpOrigin, origin );
 
@@ -1065,6 +988,14 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
   else if( healthScale > 1.0f )
     healthScale = 1.0f;
 
+  // Offset the origin to account for Z-Offset models
+  origin[ 2 ] += BG_BuildableConfig( es->modelindex )->zOffset;
+
+  // Do not show domination status if full
+  if( BG_IsDPoint( es->modelindex ) &&
+      ( healthScale == 0.f || healthScale == 1.f ) )
+    visible = qfalse;
+
   if( CG_WorldToScreen( origin, &x, &y ) )
   {
     float  picH = bs->frameHeight;
@@ -1127,6 +1058,19 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
       else
         Vector4Copy( bs->healthSevereColor, healthColor );
 
+      // Domination points use team color
+      if( BG_IsDPoint( es->modelindex ) ) {
+        if( marked ) {
+          healthColor[ 0 ] = 0.02;
+          healthColor[ 1 ] = 0.69;
+          healthColor[ 2 ] = 0.78;
+        } else {
+          healthColor[ 0 ] = 0.77;
+          healthColor[ 1 ] = 0.;
+          healthColor[ 2 ] = 0.;
+        }
+      }
+
       healthColor[ 3 ] = color[ 3 ];
       trap_R_SetColor( healthColor );
 
@@ -1152,16 +1096,15 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
     }
 
     trap_R_SetColor( color );
-    if( !powered )
+    if( !powered && bs->noPowerShader )
     {
       float pX;
 
       pX = picX + ( subH * bs->horizontalMargin );
-	  trap_R_SetColor( NULL );
       CG_DrawPic( pX, subY, subH, subH, bs->noPowerShader );
     }
 
-    if( marked )
+    if( marked && bs->markedShader )
     {
       float mX;
 
@@ -1202,7 +1145,7 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
 CG_SortDistance
 ==================
 */
-int CG_SortDistance( const void *a, const void *b )
+static int CG_SortDistance( const void *a, const void *b )
 {
   centity_t    *aent, *bent;
   float        adist, bdist;
@@ -1226,12 +1169,17 @@ CG_PlayerIsBuilder
 */
 static qboolean CG_PlayerIsBuilder( buildable_t buildable )
 {
+  team_t team = BG_Buildable( buildable )->team;
+
+  if( team == TEAM_NONE && BG_IsDPoint( buildable ) )
+    return qtrue;
+
   switch( cg.predictedPlayerState.weapon )
   {
     case WP_ABUILD:
+    case WP_ABUILD2:
     case WP_HBUILD:
-      return BG_Buildable( buildable )->team ==
-             BG_Weapon( cg.predictedPlayerState.weapon )->team;
+      return team == BG_Weapon( cg.predictedPlayerState.weapon )->team;
 
     default:
       return qfalse;
@@ -1305,6 +1253,7 @@ void CG_Buildable( centity_t *cent )
   team_t          team = BG_Buildable( es->modelindex )->team;
   float           scale;
   int             health;
+  float           healthScale;
 
   //must be before EF_NODRAW check
   if( team == TEAM_ALIENS )
@@ -1380,6 +1329,30 @@ void CG_Buildable( centity_t *cent )
     trap_S_AddLoopingSound( es->number, cent->lerpOrigin, vec3_origin, prebuildSound );
   }
 
+  // captured domination point effects
+  if( es->modelindex >= BA_DPOINT_FIRST && es->modelindex <= BA_DPOINT_LAST &&
+      es->eFlags & EF_B_POWERED )
+  {
+    vec3_t dl_origin;
+
+    VectorCopy( cent->lerpOrigin, dl_origin );
+    dl_origin[ 2 ] += 66.f;
+
+    // marked = humans
+    if( es->eFlags & EF_B_MARKED )
+    {
+      ent.customShader = cgs.media.humanDominationShader;
+      trap_R_AddLightToScene( dl_origin, 125, 0.02f, 0.69f, 0.78f);
+    }
+
+    // unmarked = aliens
+    else
+    {
+      ent.customShader = cgs.media.alienDominationShader;
+      trap_R_AddLightToScene( dl_origin, 125, 0.75f, 0.f, 0.f);
+    }
+  }
+
   CG_BuildableAnimation( cent, &ent.oldframe, &ent.frame, &ent.backlerp );
 
   //rescale the model
@@ -1398,11 +1371,6 @@ void CG_Buildable( centity_t *cent )
 
   if( CG_PlayerIsBuilder( es->modelindex ) && CG_BuildableRemovalPending( es->number ) )
     ent.customShader = cgs.media.redBuildShader;
-
-  if( cg.warping )
-  {
-    ent.customShader = cgs.media.warpingEnvironmentShader;
-  }
 
   //add to refresh list
   trap_R_AddRefEntityToScene( &ent );
@@ -1449,11 +1417,6 @@ void CG_Buildable( centity_t *cent )
     if( CG_PlayerIsBuilder( es->modelindex ) && CG_BuildableRemovalPending( es->number ) )
       turretBarrel.customShader = cgs.media.redBuildShader;
 
-    if( cg.warping )
-    {
-      turretBarrel.customShader = cgs.media.warpingEnvironmentShader;
-    }
-
     trap_R_AddRefEntityToScene( &turretBarrel );
   }
 
@@ -1499,11 +1462,6 @@ void CG_Buildable( centity_t *cent )
     if( CG_PlayerIsBuilder( es->modelindex ) && CG_BuildableRemovalPending( es->number ) )
       turretTop.customShader = cgs.media.redBuildShader;
 
-    if( cg.warping )
-    {
-      turretTop.customShader = cgs.media.warpingEnvironmentShader;
-    }
-
     trap_R_AddRefEntityToScene( &turretTop );
   }
 
@@ -1536,6 +1494,7 @@ void CG_Buildable( centity_t *cent )
   }
 
   health = es->generic1;
+  healthScale = (float)health / BG_Buildable( es->modelindex )->health;
 
   if( health < cent->lastBuildableHealth &&
       ( es->eFlags & EF_B_SPAWNED ) )

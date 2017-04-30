@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // g_maprotation.c -- the map rotation system
 
 #include "g_local.h"
@@ -114,8 +110,6 @@ typedef struct mapRotations_s
 static mapRotations_t mapRotations;
 
 static int G_NodeIndexAfter( int currentNode, int rotation );
-
-static int G_CurrentNodeIndex( int rotation );
 
 /*
 ===============
@@ -698,77 +692,6 @@ void G_PrintRotations( void )
 
 /*
 ===============
-G_PrintCurrentRotation
-
-Print the current rotation to ent
-===============
-*/
-void G_PrintCurrentRotation( gentity_t *ent, const char *command )
-{
-  mapRotation_t *mr;
-  char          currentMap[ MAX_QPATH ];
-  int           rotation;
-  int           index;
-  int           i;
-  qboolean      condition = qfalse;
-
-  rotation = g_currentMapRotation.integer;
-  if( !( rotation >= 0 && rotation < mapRotations.numRotations ) )
-  {
-    ADMP( "There is no map rotation\n" ); 
-    return;
-  }
-
-  mr = &mapRotations.rotations[ rotation ];
-  index = G_CurrentNodeIndex( rotation );
-  trap_Cvar_VariableStringBuffer( "mapname", currentMap, sizeof( currentMap ) );
-
-  ADMBP_begin( );
-  ADMBP( va( "%s^7 %s\n", command, mr->name ) );
-
-  for( i = 0; i < mr->numNodes; i++ )
-  {
-    node_t *node = mr->nodes[ i ];
-
-    if( node->type == NT_MAP )
-    {
-      char info[ MAX_STRING_CHARS ] = { "" };
-      char *marker;
-
-      marker = ( condition ) ? "^5 " : "^7 ";
-
-      if( G_NodeIndexAfter( i, rotation ) == index )
-      {
-        if( !Q_stricmp( node->u.map.name, currentMap ) )
-          marker = "^2*";
-        else
-        {
-          marker = "^1*";
-          Com_sprintf( info, sizeof( info ), " ^7(^2%s^7)", currentMap );
-        }
-      }
-      if( condition )
-        Q_strcat( info, sizeof( info ), " ^5?" );
-      condition = qfalse;
-
-      ADMBP( va( " %s %s%s\n",
-                 marker, node->u.map.name, info ) );
-    }
-    else if( node->type != NT_LABEL )
-    {
-      condition = qtrue;
-    }
-  }
-
-  if( g_nextMap.string[ 0 ] )
-    ADMBP( va( "^3the next map has been set to %s\n", g_nextMap.string ) );
-  if( g_layouts.string[ 0 ] )
-    ADMBP( va( "^3the next layout has been set to %s\n", g_layouts.string ) );
-  ADMBP_end( );
-}
-
-/*
-===============
 G_ClearRotationStack
 
 Clear the rotation stack
@@ -1017,7 +940,7 @@ static qboolean G_EvaluateMapCondition( condition_t **condition )
   switch( localCondition->lhs )
   {
     case CV_RANDOM:
-      result = rand( ) / ( RAND_MAX / 2 + 1 );
+      result = rand( ) & 1;
       break;
 
     case CV_NUMCLIENTS:

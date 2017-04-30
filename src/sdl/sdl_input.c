@@ -35,6 +35,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../client/client.h"
 #include "../sys/sys_local.h"
 
+#define ARRAYLEN(x) (sizeof(x)/sizeof(x[0]))
+
 #ifdef MACOS_X
 // Mouse acceleration needs to be disabled
 #define MACOS_X_ACCELERATION_HACK
@@ -68,7 +70,6 @@ static cvar_t *in_joystick          = NULL;
 static cvar_t *in_joystickDebug     = NULL;
 static cvar_t *in_joystickThreshold = NULL;
 static cvar_t *in_joystickNo        = NULL;
-static cvar_t *in_joystickUseAnalog = NULL;
 
 static int vidRestartTime = 0;
 
@@ -216,7 +217,7 @@ IN_TranslateSDLToQ3Key
 static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 	keyNum_t *key, qboolean down )
 {
-	static unsigned char buf[ 2 ] = { '\0', '\0' };
+	static unsigned char buf[ 5 ] = {0};
 
 	*buf = '\0';
 	*key = 0;
@@ -355,16 +356,10 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 		*buf = '\0';
 	}
 
-	// Don't allow extended ASCII to generate characters
-	if( *buf & 0x80 )
-		*buf = '\0';
-	
 	memcpy( buf, Q_UTF8Encode( keysym->unicode ), sizeof( buf ) );
 
 	return (char *)buf;
 }
-
-
 
 #ifdef MACOS_X_ACCELERATION_HACK
 /*
@@ -615,7 +610,6 @@ struct
 {
 	qboolean buttons[16];  // !!! FIXME: these might be too many.
 	unsigned int oldaxes;
-	int oldaaxes[16];
 	unsigned int oldhats;
 } stick_state;
 
@@ -629,13 +623,17 @@ static void IN_InitJoystick( void )
 {
 	int i = 0;
 	int total = 0;
-	char buf[16384] = "";
 
 	if (stick != NULL)
 		SDL_JoystickClose(stick);
 
 	stick = NULL;
 	memset(&stick_state, '\0', sizeof (stick_state));
+
+	if( !in_joystick->integer ) {
+		Com_DPrintf( "Joystick is not active.\n" );
+		return;
+	}
 
 	if (!SDL_WasInit(SDL_INIT_JOYSTICK))
 	{
@@ -650,27 +648,12 @@ static void IN_InitJoystick( void )
 
 	total = SDL_NumJoysticks();
 	Com_DPrintf("%d possible joysticks\n", total);
-
-	// Print list and build cvar to allow ui to select joystick.
 	for (i = 0; i < total; i++)
-	{
-		Q_strcat(buf, sizeof(buf), SDL_JoystickName(i));
-		Q_strcat(buf, sizeof(buf), "\n");
-	}
-
-	Cvar_Get( "in_availableJoysticks", buf, CVAR_ROM );
-
-	if( !in_joystick->integer ) {
-		Com_DPrintf( "Joystick is not active.\n" );
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-		return;
-	}
+		Com_DPrintf("[%d] %s\n", i, SDL_JoystickName(i));
 
 	in_joystickNo = Cvar_Get( "in_joystickNo", "0", CVAR_ARCHIVE );
 	if( in_joystickNo->integer < 0 || in_joystickNo->integer >= total )
 		Cvar_Set( "in_joystickNo", "0" );
-
-	in_joystickUseAnalog = Cvar_Get( "in_joystickUseAnalog", "0", CVAR_ARCHIVE );
 
 	stick = SDL_JoystickOpen( in_joystickNo->integer );
 
@@ -680,12 +663,11 @@ static void IN_InitJoystick( void )
 	}
 
 	Com_DPrintf( "Joystick %d opened\n", in_joystickNo->integer );
-	Com_DPrintf( "Name:       %s\n", SDL_JoystickName(in_joystickNo->integer) );
-	Com_DPrintf( "Axes:       %d\n", SDL_JoystickNumAxes(stick) );
-	Com_DPrintf( "Hats:       %d\n", SDL_JoystickNumHats(stick) );
-	Com_DPrintf( "Buttons:    %d\n", SDL_JoystickNumButtons(stick) );
-	Com_DPrintf( "Balls:      %d\n", SDL_JoystickNumBalls(stick) );
-	Com_DPrintf( "Use Analog: %s\n", in_joystickUseAnalog->integer ? "Yes" : "No" );
+	Com_DPrintf( "Name:    %s\n", SDL_JoystickName(in_joystickNo->integer) );
+	Com_DPrintf( "Axes:    %d\n", SDL_JoystickNumAxes(stick) );
+	Com_DPrintf( "Hats:    %d\n", SDL_JoystickNumHats(stick) );
+	Com_DPrintf( "Buttons: %d\n", SDL_JoystickNumButtons(stick) );
+	Com_DPrintf( "Balls: %d\n", SDL_JoystickNumBalls(stick) );
 
 	SDL_JoystickEventState(SDL_QUERY);
 }
@@ -713,7 +695,7 @@ IN_JoyMove
 */
 static void IN_JoyMove( void )
 {
-	qboolean joy_pressed[ARRAY_LEN(joy_keys)];
+	qboolean joy_pressed[ARRAYLEN(joy_keys)];
 	unsigned int axes = 0;
 	unsigned int hats = 0;
 	int total = 0;
@@ -756,8 +738,8 @@ static void IN_JoyMove( void )
 	total = SDL_JoystickNumButtons(stick);
 	if (total > 0)
 	{
-		if (total > ARRAY_LEN(stick_state.buttons))
-			total = ARRAY_LEN(stick_state.buttons);
+		if (total > ARRAYLEN(stick_state.buttons))
+			total = ARRAYLEN(stick_state.buttons);
 		for (i = 0; i < total; i++)
 		{
 			qboolean pressed = (SDL_JoystickGetButton(stick, i) != 0);
@@ -866,27 +848,11 @@ static void IN_JoyMove( void )
 		for (i = 0; i < total; i++)
 		{
 			Sint16 axis = SDL_JoystickGetAxis(stick, i);
-
-			if (in_joystickUseAnalog->integer)
-			{
-				float f = ( (float) abs(axis) ) / 32767.0f;
-				
-				if( f < in_joystickThreshold->value ) axis = 0;
-
-				if ( axis != stick_state.oldaaxes[i] )
-				{
-					Com_QueueEvent( 0, SE_JOYSTICK_AXIS, i, axis, 0, NULL );
-					stick_state.oldaaxes[i] = axis;
-				}
-			}
-			else
-			{
-				float f = ( (float) axis ) / 32767.0f;
-				if( f < -in_joystickThreshold->value ) {
-					axes |= ( 1 << ( i * 2 ) );
-				} else if( f > in_joystickThreshold->value ) {
-					axes |= ( 1 << ( ( i * 2 ) + 1 ) );
-				}
+			float f = ( (float) axis ) / 32767.0f;
+			if( f < -in_joystickThreshold->value ) {
+				axes |= ( 1 << ( i * 2 ) );
+			} else if( f > in_joystickThreshold->value ) {
+				axes |= ( 1 << ( ( i * 2 ) + 1 ) );
 			}
 		}
 	}
@@ -941,11 +907,16 @@ static void IN_ProcessEvents( void )
 		{
 			case SDL_KEYDOWN:
 				character = IN_TranslateSDLToQ3Key( &e.key.keysym, &key, qtrue );
+
+				if( character && *character )
+				{
+					void *buf = Z_Malloc( 5 );
+					memcpy( buf, character, 5 );
+					Com_QueueEvent( 0, SE_CHAR, 5, 0, 0, buf );
+				}
+
 				if( key )
 					Com_QueueEvent( 0, SE_KEY, key, qtrue, 0, NULL );
-
-				if( character )
-					Com_QueueEvent( 0, SE_CHAR, *character, 0, 0, NULL );
 				break;
 
 			case SDL_KEYUP:
@@ -981,7 +952,7 @@ static void IN_ProcessEvents( void )
 				break;
 
 			case SDL_QUIT:
-				Cbuf_ExecuteText(EXEC_NOW, "quit Closed window\n");
+				Sys_Quit( );
 				break;
 
 			case SDL_VIDEORESIZE:
@@ -997,14 +968,6 @@ static void IN_ProcessEvents( void )
 				vidRestartTime = Sys_Milliseconds() + 1000;
 			}
 			break;
-			case SDL_ACTIVEEVENT:
-				if (e.active.state & SDL_APPINPUTFOCUS) {
-					Cvar_SetValue( "com_unfocused",	!e.active.gain);
-				}
-				if (e.active.state & SDL_APPACTIVE) {
-					Cvar_SetValue( "com_minimized", !e.active.gain);
-				}
-				break;
 
 			default:
 				break;
@@ -1069,27 +1032,11 @@ void IN_Frame( void )
 
 /*
 ===============
-IN_InitKeyLockStates
-===============
-*/
-void IN_InitKeyLockStates( void )
-{
-	unsigned char *keystate = SDL_GetKeyState(NULL);
-
-	keys[K_SCROLLOCK].down = keystate[SDLK_SCROLLOCK];
-	keys[K_KP_NUMLOCK].down = keystate[SDLK_NUMLOCK];
-	keys[K_CAPSLOCK].down = keystate[SDLK_CAPSLOCK];
-}
-
-/*
-===============
 IN_Init
 ===============
 */
 void IN_Init( void )
 {
-	int appState;
-
 	if( !SDL_WasInit( SDL_INIT_VIDEO ) )
 	{
 		Com_Error( ERR_FATAL, "IN_Init called before SDL_Init( SDL_INIT_VIDEO )\n" );
@@ -1106,7 +1053,7 @@ void IN_Init( void )
 
 	in_joystick = Cvar_Get( "in_joystick", "0", CVAR_ARCHIVE|CVAR_LATCH );
 	in_joystickDebug = Cvar_Get( "in_joystickDebug", "0", CVAR_TEMP );
-	in_joystickThreshold = Cvar_Get( "joy_threshold", "0.15", CVAR_ARCHIVE );
+	in_joystickThreshold = Cvar_Get( "in_joystickThreshold", "0.15", CVAR_ARCHIVE );
 
 #ifdef MACOS_X_ACCELERATION_HACK
 	in_disablemacosxmouseaccel = Cvar_Get( "in_disablemacosxmouseaccel", "1", CVAR_ARCHIVE );
@@ -1126,12 +1073,6 @@ void IN_Init( void )
 		IN_DeactivateMouse( );
 		mouseAvailable = qfalse;
 	}
-
-	appState = SDL_GetAppState( );
-	Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );
-	Cvar_SetValue( "com_minimized", !( appState & SDL_APPACTIVE ) );
-
-	IN_InitKeyLockStates( );
 
 	IN_InitJoystick( );
 	Com_DPrintf( "------------------------------------\n" );

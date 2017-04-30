@@ -197,7 +197,8 @@ typedef enum
   CG_TESTPRINTINT,
   CG_TESTPRINTFLOAT,
   CG_ACOS,
-  
+
+  CG_GETTEXT = 300,
   CG_R_LOADFACE,
   CG_R_FREEFACE,
   CG_R_LOADGLYPH,
@@ -249,7 +250,7 @@ typedef enum
   // int (*CG_LastAttacker)( void );
 
   CG_KEY_EVENT,
-  // void  (*CG_KeyEvent)( int key, qboolean down );
+  // void  (*CG_KeyEvent)( int key, qboolean down, qboolean isChar );
 
   CG_MOUSE_EVENT,
   // void  (*CG_MouseEvent)( int dx, int dy );

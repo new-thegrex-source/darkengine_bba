@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // g_public.h -- game module information visible to server
 
 #define GAME_API_VERSION  9
@@ -229,7 +225,9 @@ typedef enum {
   G_SEND_GAMESTAT,
 
   G_ADDCOMMAND,
-  G_REMOVECOMMAND
+  G_REMOVECOMMAND,
+
+  G_GETTEXT = 300
 } gameImport_t;
 
 

@@ -26,9 +26,6 @@
 #define uint32_t UINT32
 #else
 #include <unistd.h>
-#ifdef __sun
-#define _POSIX_C_SOURCE 199309L
-#endif
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -115,7 +112,6 @@ int mumble_link(const char* name)
 	}
 	close(shmfd);
 #endif
-	memset(lm, 0, sizeof(LinkedMem));
 	mbstowcs(lm->name, name, sizeof(lm->name));
 
 	return 0;
@@ -132,12 +128,12 @@ void mumble_update_coordinates2(float fAvatarPosition[3], float fAvatarFront[3],
 	if (!lm)
 		return;
 
-	memcpy(lm->fAvatarPosition, fAvatarPosition, sizeof(lm->fAvatarPosition));
-	memcpy(lm->fAvatarFront, fAvatarFront, sizeof(lm->fAvatarFront));
-	memcpy(lm->fAvatarTop, fAvatarTop, sizeof(lm->fAvatarTop));
-	memcpy(lm->fCameraPosition, fCameraPosition, sizeof(lm->fCameraPosition));
-	memcpy(lm->fCameraFront, fCameraFront, sizeof(lm->fCameraFront));
-	memcpy(lm->fCameraTop, fCameraTop, sizeof(lm->fCameraTop));
+	memcpy(lm->fAvatarPosition, fAvatarPosition, sizeof(fAvatarPosition));
+	memcpy(lm->fAvatarFront, fAvatarFront, sizeof(fAvatarFront));
+	memcpy(lm->fAvatarTop, fAvatarTop, sizeof(fAvatarTop));
+	memcpy(lm->fCameraPosition, fCameraPosition, sizeof(fCameraPosition));
+	memcpy(lm->fCameraFront, fCameraFront, sizeof(fCameraFront));
+	memcpy(lm->fCameraTop, fCameraTop, sizeof(fCameraTop));
 	lm->uiVersion = 2;
 	lm->uiTick = GetTickCount();
 }
@@ -156,7 +152,6 @@ void mumble_set_context(const unsigned char* context, size_t len)
 	if (!lm)
 		return;
 	len = MIN(sizeof(lm->context), len);
-	lm->context_len = len;
 	memcpy(lm->context, context, len);
 }
 

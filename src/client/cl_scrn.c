@@ -132,14 +132,10 @@ static glyphInfo_t *Glyph( const char *s )
 ** SCR_DrawChar
 ** chars are drawn at 640*480 virtual screen size
 */
-static void SCR_DrawChar( int x, int y, float size, int ch ) {
-	int row, col;
-	float frow, fcol;
+static void SCR_DrawChar( int x, int y, float size, const char *s ) {
 	float	ax, ay, aw, ah;
 
-	ch &= 255;
-
-	if ( ch == ' ' ) {
+	if ( *s == ' ' ) {
 		return;
 	}
 
@@ -153,24 +149,39 @@ static void SCR_DrawChar( int x, int y, float size, int ch ) {
 	ah = size;
 	SCR_AdjustFrom640( &ax, &ay, &aw, &ah );
 
-	row = ch>>4;
-	col = ch&15;
+  if( cls.useLegacyConsoleFace )
+  {
+    int row, col;
+    char ch = *s;
+    float frow, fcol;
 
-	frow = row*0.0625;
-	fcol = col*0.0625;
-	size = 0.0625;
+    row = ch>>4;
+    col = ch&15;
 
-	re.DrawStretchPic( ax, ay, aw, ah,
+    frow = row*0.0625;
+    fcol = col*0.0625;
+    size = 0.0625;
+
+    re.DrawStretchPic( ax, ay, aw, ah,
 					   fcol, frow, 
 					   fcol + size, frow + size, 
 					   cls.charSetShader );
+  }
+  else
+  {
+    glyphInfo_t *glyph = Glyph( s );
+
+    re.DrawStretchPic( ax, ay, aw, glyph->imageHeight,
+        glyph->s, glyph->t,
+        glyph->s2, glyph->t2,
+        glyph->glyph );
+  }
 }
 
 void SCR_DrawConsoleFontChar( float x, float y, const char *s )
 {
   float xadj, yadj;
   glyphInfo_t *glyph;
-  int ch;
 
   if( cls.useLegacyConsoleFont )
   {
@@ -181,9 +192,9 @@ void SCR_DrawConsoleFontChar( float x, float y, const char *s )
   if( *s == ' ' )
     return;
 
-  glyph = Glyph( ch );
+  glyph = Glyph( s );
 
-  xadj = ( SCR_ConsoleFontCharWidth( ch ) - glyph->xSkip ) / 2.0f;
+  xadj = ( SCR_ConsoleFontCharWidth( s ) - glyph->xSkip ) / 2.0f;
   yadj = glyph->top;
 
   re.DrawStretchPic( x + xadj, y - yadj, glyph->imageWidth, glyph->imageHeight,
@@ -196,14 +207,14 @@ void SCR_DrawConsoleFontChar( float x, float y, const char *s )
 ** SCR_DrawSmallChar
 ** small chars are drawn at native screen resolution
 */
-void SCR_DrawSmallChar( int x, int y, int ch ) {
+void SCR_DrawSmallChar( int x, int y, const char *s ) {
 	int row, col;
 	float frow, fcol;
 	float size;
 
-  if( Q_UTF8Width( ch ) <= 1 )
+  if( Q_UTF8Width( s ) <= 1 )
   {
-    int ch = (int) ch;
+    int ch = (int) *s;
 
     ch &= 255;
 
@@ -229,7 +240,7 @@ void SCR_DrawSmallChar( int x, int y, int ch ) {
   }
   else
   {
-    glyphInfo_t *glyph = Glyph( ch );
+    glyphInfo_t *glyph = Glyph( s );
 
     re.DrawStretchPic( x, y, SMALLCHAR_WIDTH, glyph->imageHeight,
                glyph->s,
@@ -352,7 +363,7 @@ void SCR_DrawStringExt( int x, int y, float size, const char *string, float *set
 			s += 2;
 			continue;
 		}
-		SCR_DrawChar( xx, y, size, *s );
+		SCR_DrawChar( xx, y, size, s );
 		xx += size;
     s += Q_UTF8Width( s );
 	}
@@ -385,7 +396,7 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 		qboolean noColorEscape ) {
 	vec4_t		color;
 	const char	*s;
-	int			xx;
+	float       xx;
 
 	// draw the colored text
 	s = string;
@@ -596,7 +607,7 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 	if ( uivm && !VM_Call( uivm, UI_IS_FULLSCREEN )) {
 		switch( cls.state ) {
 		default:
-			Com_Error( ERR_FATAL, "SCR_DrawScreenField: bad cls.state" );
+			Com_Error( ERR_FATAL, _("SCR_DrawScreenField: bad cls.state") );
 			break;
 		case CA_CINEMATIC:
 			SCR_DrawCinematic();
@@ -659,7 +670,7 @@ void SCR_UpdateScreen( void ) {
 	}
 
 	if ( ++recursive > 2 ) {
-		Com_Error( ERR_FATAL, "SCR_UpdateScreen: recursively called" );
+		Com_Error( ERR_FATAL, _("SCR_UpdateScreen: recursively called") );
 	}
 	recursive = 1;
 
@@ -667,10 +678,8 @@ void SCR_UpdateScreen( void ) {
 	// that case.
 	if( uivm || com_dedicated->integer )
 	{
-		// XXX
-		extern cvar_t* r_anaglyphMode;
 		// if running in stereo, we need to draw the frame twice
-		if ( cls.glconfig.stereoEnabled || r_anaglyphMode->integer) {
+		if ( cls.glconfig.stereoEnabled || Cvar_VariableIntegerValue("r_anaglyphMode")) {
 			SCR_DrawScreenField( STEREO_LEFT );
 			SCR_DrawScreenField( STEREO_RIGHT );
 		} else {

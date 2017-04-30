@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 //==========================================================
@@ -413,8 +409,7 @@ target_alien_win_use
 */
 void target_alien_win_use( gentity_t *self, gentity_t *other, gentity_t *activator )
 {
-  if( !level.uncondHumanWin )
-    level.uncondAlienWin = qtrue;
+  level.uncondAlienWin = qtrue;
 }
 
 /*
@@ -434,8 +429,7 @@ target_human_win_use
 */
 void target_human_win_use( gentity_t *self, gentity_t *other, gentity_t *activator )
 {
-  if( !level.uncondAlienWin )
-    level.uncondHumanWin = qtrue;
+  level.uncondHumanWin = qtrue;
 }
 
 /*

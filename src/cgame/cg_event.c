@@ -51,7 +51,7 @@ static void CG_Obituary( entityState_t *ent )
   mod = ent->eventParm;
 
   if( target < 0 || target >= MAX_CLIENTS )
-    CG_Error( "CG_Obituary: target out of range" );
+    CG_Error( _("CG_Obituary: target out of range") );
 
   ci = &cgs.clientinfo[ target ];
   gender = ci->gender;
@@ -82,61 +82,52 @@ static void CG_Obituary( entityState_t *ent )
   switch( mod )
   {
     case MOD_FALLING:
-      message = "^5fell fowl to gravity";
+      message = "fell fowl to gravity";
       break;
     case MOD_CRUSH:
-      message = "^5was squished";
+      message = "was squished";
       break;
     case MOD_WATER:
-      message = "^5forgot to pack a snorkel";
+      message = "forgot to pack a snorkel";
       break;
     case MOD_SLIME:
-      message = "^5was sucked by an infestation slime";
+      message = "melted";
       break;
     case MOD_LAVA:
-      message = "^5did a back flip into the lava";
+      message = "did a back flip into the lava";
       break;
     case MOD_TARGET_LASER:
-      message = "^5saw the light";
+      message = "saw the light";
       break;
     case MOD_TRIGGER_HURT:
-      message = "^5was in the wrong place";
+      message = "was in the wrong place";
       break;
     case MOD_HSPAWN:
-      message = "^5should have run further";
+      message = "should have run further";
       break;
     case MOD_ASPAWN:
-      message = "^5shouldn't have trod in the acid";
+      message = "shouldn't have trod in the acid";
       break;
     case MOD_MGTURRET:
-      message = "^5was gunned down by a turret";
-      break;
-    case MOD_MGTURRET2:
-      message = "^5was roasted by a flame turret";
+      message = "was gunned down by a turret";
       break;
     case MOD_TESLAGEN:
-      message = "^5was zapped by a tesla generator";
+      message = "was zapped by a tesla generator";
       break;
     case MOD_ATUBE:
-      message = "^5was melted by an acid tube";
+      message = "was melted by an acid tube";
       break;
     case MOD_OVERMIND:
-      message = "^5got too close to the overmind";
+      message = "got too close to the overmind";
       break;
     case MOD_REACTOR:
-      message = "^5got too close to the reactor";
+      message = "got too close to the reactor";
       break;
     case MOD_SLOWBLOB:
-      message = "^5should have visited a medical station";
+      message = "should have visited a medical station";
       break;
     case MOD_SWARM:
-      message = "^5was hunted down by the swarm";
-      break;
-    case MOD_SPITEFUL_ABCESS:
-      message = "^5was raped by a Spiteful Abcess";
-      break;
-    case MOD_WARP_BLOCKED:
-      message = "^5warped into a wall";
+      message = "was hunted down by the swarm";
       break;
     default:
       message = NULL;
@@ -149,100 +140,63 @@ static void CG_Obituary( entityState_t *ent )
     {
       case MOD_FLAMER_SPLASH:
         if( gender == GENDER_FEMALE )
-          message = "^5toasted herself";
+          message = "toasted herself";
         else if( gender == GENDER_NEUTER )
-          message = "^5toasted itself";
+          message = "toasted itself";
         else
-          message = "^5toasted himself";
+          message = "toasted himself";
         break;
 
       case MOD_LCANNON_SPLASH:
         if( gender == GENDER_FEMALE )
-          message = "^5irradiated herself";
+          message = "irradiated herself";
         else if( gender == GENDER_NEUTER )
-          message = "^5irradiated itself";
+          message = "irradiated itself";
         else
-          message = "^5irradiated himself";
+          message = "irradiated himself";
         break;
 
-
-      case MOD_ROCKETL_SPLASH:
-        if( gender == GENDER_FEMALE )
-          message = "^5blew herself up";
-        else if( gender == GENDER_NEUTER )
-          message = "^5blew itself up";
-        else
-          message = "^5blew himself up";
-        break;
-
-      case MOD_PSAWBLADE:
-        if( gender == GENDER_FEMALE )
-          message = "^5sliced herself up";
-        else if( gender == GENDER_NEUTER )
-          message = "^5sliced itself up";
-        else
-          message = "^5sliced himself up";
-        break;
-		
-      case MOD_MD2:
-        if( gender == GENDER_FEMALE )
-          message = "^5 vaporized herself up";
-        else if( gender == GENDER_NEUTER )
-          message = "^vaporized itself up";
-        else
-          message = "^vaporized himself up";
-        break;	
-		
       case MOD_GRENADE:
         if( gender == GENDER_FEMALE )
-          message = "^5blew herself up";
+          message = "blew herself up";
         else if( gender == GENDER_NEUTER )
-          message = "^5blew itself up";
+          message = "blew itself up";
         else
-          message = "^5blew himself up";
+          message = "blew himself up";
         break;
 
       case MOD_LEVEL3_BOUNCEBALL:
         if( gender == GENDER_FEMALE )
-          message = "^5sniped herself";
+          message = "sniped herself";
         else if( gender == GENDER_NEUTER )
-          message = "^5sniped itself";
+          message = "sniped itself";
         else
-          message = "^5sniped himself";
-        break;
-
-      case MOD_LEVEL5_PRICKLES:
-        if( gender == GENDER_FEMALE )
-          message = "^5spiked herself";
-        else if( gender == GENDER_NEUTER )
-          message = "^5spiked itself";
-        else
-          message = "^5spiked himself";
+          message = "sniped himself";
         break;
 
       case MOD_PRIFLE:
         if( gender == GENDER_FEMALE )
-          message = "^5pulse rifled herself";
+          message = "pulse rifled herself";
         else if( gender == GENDER_NEUTER )
-          message = "^5pulse rifled itself";
+          message = "pulse rifled itself";
         else
-          message = "^5pulse rifled himself";
+          message = "pulse rifled himself";
         break;
 
       default:
         if( gender == GENDER_FEMALE )
-          message = "^5killed herself";
+          message = "killed herself";
         else if( gender == GENDER_NEUTER )
-          message = "^5killed itself";
+          message = "killed itself";
         else
-          message = "^5killed himself";
+          message = "killed himself";
         break;
     }
   }
 
   if( message )
   {
-    CG_Printf( "%s" S_COLOR_WHITE " %s\n", targetName, message );
+    CG_Printf( _("%s" S_COLOR_WHITE " %s\n"), targetName, message );
     return;
   }
 
@@ -265,180 +219,128 @@ static void CG_Obituary( entityState_t *ent )
     switch( mod )
     {
       case MOD_PAINSAW:
-        message = "^5was sawn by^7";
+        message = _("was sawn by");
         break;
       case MOD_BLASTER:
-        message = "^5was blasted by^7";
+        message = _("was blasted by");
         break;
       case MOD_MACHINEGUN:
-        message = "^5was machinegunned by^7";
+        message = _("was machinegunned by");
         break;
       case MOD_CHAINGUN:
-        message = "^5was chaingunned by^7";
+        message = _("was chaingunned by");
         break;
       case MOD_SHOTGUN:
-        message = "^5was gunned down by^7";
+        message = _("was gunned down by");
         break;
       case MOD_PRIFLE:
-        message = "^5was pulse rifled by^7";
+        message = _("was pulse rifled by");
         break;
       case MOD_MDRIVER:
-        message = "^5was mass driven by^7";
-        break;
-      case MOD_MD2:
-        message = "^5was vaporized by^7";
+        message = _("was mass driven by");
         break;
       case MOD_LASGUN:
-        message = "^5was lasgunned by^7";
+        message = _("was lasgunned by");
         break;
       case MOD_FLAMER:
-        message = "^5was grilled by^7";
-        message2 = "^5's ^5flamer";
+        message = _("was grilled by");
+        message2 = _("'s flamer");
         break;
       case MOD_FLAMER_SPLASH:
-        message = "^5was toasted by^7";
-        message2 = "^5's ^5flamer";
+        message = _("was toasted by");
+        message2 = _("'s flamer");
         break;
       case MOD_LCANNON:
-        message = "^5felt the full force of^7";
-        message2 = "^5's ^5lucifer cannon";
+        message = _("felt the full force of");
+        message2 = _("'s lucifer cannon");
         break;
       case MOD_LCANNON_SPLASH:
-        message = "^5was caught in the fallout of^7";
-        message2 = "^5's ^5lucifer cannon";
-        break;
-      case MOD_ROCKETL:
-        message = "^5ate^7";
-        message2 = "^5's ^5rocket";
-        break;
-      case MOD_ROCKETL_SPLASH:
-        message = "^5almost dodged^7";
-        message2 = "^5's ^5rocket";
-        break;
-      case MOD_LIGHTNING:
-        message = "^5was electrocuted by^7";
+        message = _("was caught in the fallout of");
+        message2 = _("'s lucifer cannon");
         break;
       case MOD_GRENADE:
-        message = "^5couldn't escape^7";
-        message2 = "^5's ^5grenade";
-        break;
-      case MOD_PSAWBLADE:
-        message = "^5was sliced by^7";
-        message2 = "^5's ^5blades";
+        message = _("couldn't escape");
+        message2 = _("'s grenade");
         break;
 
       case MOD_ABUILDER_CLAW:
-        message = "^5should leave^7";
-        message2 = "^5's ^5buildings alone";
+        message = _("should leave");
+        message2 = _("'s buildings alone");
         break;
       case MOD_LEVEL0_BITE:
-        message = "^5was bitten by^7";
+        message = _("was bitten by");
         break;
       case MOD_LEVEL1_CLAW:
-        message = "^5was swiped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL1 )->humanName );
+        message = _("was swiped by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL1 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL2_CLAW:
-      case MOD_LEVEL2_CLAW_UPG:
-        message = "^5was clawed by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName );
+        message = _("was clawed by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL2_ZAP:
-        message = "^5was zapped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName );
-        message2 = className;
-        break;
-      case MOD_LEVEL2_BOUNCEBALL:
-        message = "^5was sniped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName );
-        message2 = className;
-        break;
-	  case MOD_LEVEL5_CLAW:
-        message = "^5was sliced by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL5 )->humanName );
-        message2 = className;
-        break;
-      case MOD_LEVEL5_ZAP:
-        message = "^5was zapped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL5 )->humanName );
-        message2 = className;
-        break;
-      case MOD_LEVEL5_BOUNCEBALL:
-        message = "^5was sniped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL5 )->humanName );
+        message = _("was zapped by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL3_CLAW:
-        message = "^5was chomped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName );
+        message = _("was chomped by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL3_POUNCE:
-        message = "^5was pounced upon by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName );
+        message = _("was pounced upon by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName) );
         message2 = className;
         break;
-		
-      case MOD_LEVEL5_POUNCE:
-        message = "^5was air pounced upon by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL5 )->humanName );
-        message2 = className;
-        break;
-		
-      case MOD_LEVEL5_PRICKLES:
-        message = "^5was spiked by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL5 )->humanName );
-        message2 = className;
-        break;
-		
       case MOD_LEVEL3_BOUNCEBALL:
-        message = "^5was sniped by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName );
+        message = _("was sniped by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL4_CLAW:
-        message = "^5was mauled by^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL4 )->humanName );
+        message = _("was mauled by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL4 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL4_TRAMPLE:
-        message = "^5should have gotten out of the way of^7";
-        Com_sprintf( className, 64, "^5's %s",
-            BG_ClassConfig( PCL_ALIEN_LEVEL4 )->humanName );
+        message = _("should have gotten out of the way of");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL4 )->humanName) );
         message2 = className;
         break;
       case MOD_LEVEL4_CRUSH:
-        message = "^5was crushed under^7";
-        message2 = "^5's weight";
+        message = _("was crushed under");
+        message2 = _("'s weight");
         break;
 
       case MOD_POISON:
-        message = "^5should have used a medkit against^7";
-        message2 = "^5's poison";
+        message = _("should have used a medkit against");
+        message2 = _("'s poison");
+        break;
+      case MOD_LEVEL1_PCLOUD:
+        message = _("was gassed by");
+        Com_sprintf( className, 64, _("'s %s"),
+            _(BG_ClassConfig( PCL_ALIEN_LEVEL1 )->humanName) );
+        message2 = className;
         break;
 
+
       case MOD_TELEFRAG:
-        message = "^5tried to invade^7";
-        message2 = "^5's personal space";
+        message = _("tried to invade");
+        message2 = _("'s personal space");
         break;
-        
       default:
-        message = "^5was killed by^7";
+        message = _("was killed by");
         break;
     }
 
@@ -446,12 +348,12 @@ static void CG_Obituary( entityState_t *ent )
     {
       CG_Printf( "%s" S_COLOR_WHITE " %s %s%s" S_COLOR_WHITE "%s\n",
         targetName, message,
-        ( teamKill ) ? S_COLOR_RED "TEAMMATE " S_COLOR_WHITE : "",
+        ( teamKill ) ? _(S_COLOR_RED "TEAMMATE " S_COLOR_WHITE) : "",
         attackerName, message2 );
       if( teamKill && attacker == cg.clientNum )
       {
-        CG_CenterPrint( va ( "You killed " S_COLOR_RED "TEAMMATE "
-          S_COLOR_WHITE "%s", targetName ),
+        CG_CenterPrint( va ( _("You killed " S_COLOR_RED "TEAMMATE "
+          S_COLOR_WHITE "%s"), targetName ),
           SCREEN_HEIGHT * 0.30, BIGCHAR_WIDTH );
       }
       return;
@@ -459,7 +361,7 @@ static void CG_Obituary( entityState_t *ent )
   }
 
   // we don't know what it was
-  CG_Printf( "%s" S_COLOR_CYAN " ^5died\n", targetName );
+  CG_Printf( _("%s" S_COLOR_WHITE " died\n"), targetName );
 }
 
 
@@ -496,30 +398,6 @@ void CG_PainEvent( centity_t *cent, int health )
   // save pain time for programitic twitch animation
   cent->pe.painTime = cg.time;
   cent->pe.painDirection ^= 1;
-}
-
-/*
-================
-CG_HeadShotEvent
-
-Also called by playerstate transition
-================
-*/
-void CG_HeadShotEvent( centity_t *cent, int health )
-{
-  particleSystem_t *ps;
-
-  if( !cg_bleedSelfHeadShots.integer &&
-      cent->currentState.number == cg.snap->ps.clientNum )
-    return;
-
-  ps = CG_SpawnNewParticleSystem( cgs.media.headShotPS );
-  if( CG_IsParticleSystemValid( &ps ) )
-  {
-    CG_SetAttachmentCent( &ps->attachment, cent );
-    CG_AttachToCent( &ps->attachment );
-  }
-  //trap_S_StartSound( NULL, es->number, CHAN_VOICE, cgs.media.humanGibSound );
 }
 
 /*
@@ -593,7 +471,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
   int           clientNum;
   clientInfo_t  *ci;
   int           steptime;
-  qboolean      warpingEnemyWraith = qfalse;
 
   if( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
     steptime = 200;
@@ -604,7 +481,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
   event = es->event & ~EV_EVENT_BITS;
 
   if( cg_debugEvents.integer )
-    CG_Printf( "ent:%3i  event:%3i %s\n", es->number, event,
+    CG_Printf( _("ent:%3i  event:%3i %s\n"), es->number, event,
                BG_EventName( event ) );
 
   if( !event )
@@ -616,21 +493,13 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
 
   ci = &cgs.clientinfo[ clientNum ];
 
-  if( ci->team != cg.snap->ps.stats[ STAT_TEAM ] &&
-      cg.snap->ps.stats[ STAT_TEAM ] != TEAM_NONE &&
-      ( es->eFlags & EF_WARPING ) )
-  {
-    warpingEnemyWraith = qtrue;
-  }
-
   switch( event )
   {
     //
     // movement generated events
     //
     case EV_FOOTSTEP:
-      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE && 
-          !warpingEnemyWraith )
+      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE )
       {
         if( ci->footsteps == FOOTSTEP_CUSTOM )
           trap_S_StartSound( NULL, es->number, CHAN_BODY,
@@ -642,8 +511,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_FOOTSTEP_METAL:
-      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE &&
-          !warpingEnemyWraith )
+      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE )
       {
         if( ci->footsteps == FOOTSTEP_CUSTOM )
           trap_S_StartSound( NULL, es->number, CHAN_BODY,
@@ -655,8 +523,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_FOOTSTEP_SQUELCH:
-      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE &&
-          !warpingEnemyWraith )
+      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE )
       {
         trap_S_StartSound( NULL, es->number, CHAN_BODY,
           cgs.media.footsteps[ FOOTSTEP_FLESH ][ rand( ) & 3 ] );
@@ -664,8 +531,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_FOOTSPLASH:
-      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE &&
-          !warpingEnemyWraith )
+      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE )
       {
         trap_S_StartSound( NULL, es->number, CHAN_BODY,
           cgs.media.footsteps[ FOOTSTEP_SPLASH ][ rand( ) & 3 ] );
@@ -673,8 +539,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_FOOTWADE:
-      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE &&
-          !warpingEnemyWraith )
+      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE )
       {
         trap_S_StartSound( NULL, es->number, CHAN_BODY,
           cgs.media.footsteps[ FOOTSTEP_SPLASH ][ rand( ) & 3 ] );
@@ -682,8 +547,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_SWIM:
-      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE &&
-          !warpingEnemyWraith )
+      if( cg_footsteps.integer && ci->footsteps != FOOTSTEP_NONE )
       {
         trap_S_StartSound( NULL, es->number, CHAN_BODY,
           cgs.media.footsteps[ FOOTSTEP_SPLASH ][ rand( ) & 3 ] );
@@ -781,54 +645,12 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       }
 
     case EV_JUMP:
-      if( !warpingEnemyWraith )
-      {
-        trap_S_StartSound( NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*jump1.wav" ) );
+      trap_S_StartSound( NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*jump1.wav" ) );
 
-        if( BG_ClassHasAbility( cg.predictedPlayerState.stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
-        {
-          vec3_t  surfNormal, refNormal = { 0.0f, 0.0f, 1.0f };
-          vec3_t  is;
-
-          if( clientNum != cg.predictedPlayerState.clientNum )
-            break;
-
-          //set surfNormal
-          VectorCopy( cg.predictedPlayerState.grapplePoint, surfNormal );
-
-          //if we are moving from one surface to another smooth the transition
-          if( !VectorCompare( surfNormal, cg.lastNormal ) && surfNormal[ 2 ] != 1.0f )
-          {
-            CrossProduct( refNormal, surfNormal, is );
-            VectorNormalize( is );
-
-            //add the op
-            CG_addSmoothOp( is, 15.0f, 1.0f );
-          }
-
-          //copy the current normal to the lastNormal
-          VectorCopy( surfNormal, cg.lastNormal );
-        }
-      }
-      break;
-
-    case EV_AIRPOUNCE:
-      trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.airpounce);
-	  //airpounce gfx effect
-	  {
-        particleSystem_t *ps = CG_SpawnNewParticleSystem( cgs.media.airpounceblast );
-
-        if( CG_IsParticleSystemValid( &ps ) )
-        {
-          CG_SetAttachmentCent( &ps->attachment, cent );
-          CG_AttachToCent( &ps->attachment );
-        }
-      }
-	  
       if( BG_ClassHasAbility( cg.predictedPlayerState.stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
       {
         vec3_t  surfNormal, refNormal = { 0.0f, 0.0f, 1.0f };
-        vec3_t  is;
+        vec3_t  rotAxis;
 
         if( clientNum != cg.predictedPlayerState.clientNum )
           break;
@@ -839,11 +661,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
         //if we are moving from one surface to another smooth the transition
         if( !VectorCompare( surfNormal, cg.lastNormal ) && surfNormal[ 2 ] != 1.0f )
         {
-          CrossProduct( refNormal, surfNormal, is );
-          VectorNormalize( is );
+          CrossProduct( refNormal, surfNormal, rotAxis );
+          VectorNormalize( rotAxis );
 
           //add the op
-          CG_addSmoothOp( is, 15.0f, 1.0f );
+          CG_addSmoothOp( rotAxis, 15.0f, 1.0f );
         }
 
         //copy the current normal to the lastNormal
@@ -851,7 +673,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       }
 
       break;
-	  
+
     case EV_LEV1_GRAB:
       trap_S_StartSound( NULL, es->number, CHAN_VOICE, cgs.media.alienL1Grab );
       break;
@@ -870,10 +692,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
         trap_S_StartSound( NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*taunt.wav" ) );
       break;
 
-	case EV_HUMMEL:
-        trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.hummelSound );
-      break;
-	  
     case EV_WATER_TOUCH:
       trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.watrInSound );
       break;
@@ -946,75 +764,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
         trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.hardBounceSound2 );
       break;
 
-    case EV_ACIDBOMB_BOUNCE:
-      if( rand( ) & 1 )
-        trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.acidBombBounceSound1 );
-      else
-        trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.acidBombBounceSound2 );
-      break;
-
-    case EV_ROCKETL_PRIME:
-      trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.rocketlPrimeSound );
-      break;
-
-    case EV_WARP_ENTER:
-      {
-        particleSystem_t *ps;
-
-        ps = CG_SpawnNewParticleSystem( cgs.media.warpEnterPS );
-
-        if( CG_IsParticleSystemValid( &ps ) )
-        {
-          CG_SetAttachmentPoint( &ps->attachment, position );
-          CG_AttachToPoint( &ps->attachment );
-        }
-
-        if( clientNum == cg.predictedPlayerState.clientNum )
-        {
-          trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.warpEnterSound );
-        }
-        else
-        {
-          trap_S_StartSound( position, ENTITYNUM_WORLD, CHAN_AUTO, cgs.media.warpEnterSound );
-        }
-
-        CG_InduceViewQuake( cent->lerpOrigin, 15 );
-      }
-      break;
-
-    case EV_WARP_EXIT:
-      {
-        particleSystem_t *ps;
-
-        ps = CG_SpawnNewParticleSystem( cgs.media.warpExitPS );
-
-        if( CG_IsParticleSystemValid( &ps ) )
-        {
-          CG_SetAttachmentPoint( &ps->attachment, position );
-          CG_AttachToPoint( &ps->attachment );
-        }
-
-        if( clientNum == cg.predictedPlayerState.clientNum )
-        {
-          trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.warpExitSound );
-        }
-        else
-        {
-          trap_S_StartSound( position, ENTITYNUM_WORLD, CHAN_AUTO, cgs.media.warpExitSound );
-        }
-
-        CG_InduceViewQuake( cent->lerpOrigin, 15 );
-      }
-      break;
-
-    case EV_GRENADE_PRIME:
-      trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.grenadePrimeSound );
-      break;
-
-    case EV_GRENADE_TICK:
-      trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.grenadeTickSound );
-      break;
-
     //
     // missile impacts
     //
@@ -1033,53 +782,15 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       CG_MissileHitWall( es->weapon, es->generic1, 0, position, dir, IMPACTSOUND_METAL, es->torsoAnim );
       break;
 
-#define BUILDABLE_EXPLOSION_QUAKE 50
-
     case EV_HUMAN_BUILDABLE_EXPLOSION:
       ByteToDir( es->eventParm, dir );
-      CG_HumanBuildableExplosion( position, dir, es->modelindex );
-      CG_InduceViewQuake( position, BUILDABLE_EXPLOSION_QUAKE );
+      CG_HumanBuildableExplosion( position, dir );
       break;
 
     case EV_ALIEN_BUILDABLE_EXPLOSION:
       ByteToDir( es->eventParm, dir );
-      CG_AlienBuildableExplosion( position, dir, es->modelindex );
-      
-      if ( es->modelindex == BA_A_SPITEFUL_ABCESS )
-        CG_AlienSpitefulAbcessExplosion( position, dir );
-
-      CG_InduceViewQuake( position, BUILDABLE_EXPLOSION_QUAKE );
+      CG_AlienBuildableExplosion( position, dir );
       break;
-	  
-//Scleim greifer schwanz f\FCr slime
-    case EV_SLIMETRAIL:
-      cent->currentState.weapon = WP_NONE;
-      {
-        centity_t *source = &cg_entities[ es->generic1 ];
-        centity_t *target = &cg_entities[ es->clientNum ];
-        vec3_t    sourceOffset = { 0.0f, 0.0f, 0.0f };
-
-        if( !CG_IsTrailSystemValid( &source->muzzleTS ) )
-        {
-		//trailsystem
-          source->muzzleTS = CG_SpawnNewTrailSystem( cgs.media.slimeTS );
-
-          if( CG_IsTrailSystemValid( &source->muzzleTS ) )
-          {
-            CG_SetAttachmentCent( &source->muzzleTS->frontAttachment, source );
-            CG_SetAttachmentCent( &source->muzzleTS->backAttachment, target );
-            CG_AttachToCent( &source->muzzleTS->frontAttachment );
-            CG_AttachToCent( &source->muzzleTS->backAttachment );
-            CG_SetAttachmentOffset( &source->muzzleTS->frontAttachment, sourceOffset );
-
-            source->muzzleTSDeathTime = cg.time + cg_teslaTrailTime.integer;
-          }
-        }
-      }
-      break;
-	  
-
-
 
     case EV_TESLATRAIL:
       cent->currentState.weapon = WP_TESLAGEN;
@@ -1140,15 +851,10 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_PAIN:
-      {
-        const int health = es->eventParm & ~EVENT_HEADSHOT_BIT;
-        // local player sounds are triggered in CG_CheckLocalSounds,
-        // so ignore events on the player
-        if( cent->currentState.number != cg.snap->ps.clientNum )
-          CG_PainEvent( cent, health );
-        if( es->eventParm & EVENT_HEADSHOT_BIT )
-          CG_HeadShotEvent( cent, health );
-      }
+      // local player sounds are triggered in CG_CheckLocalSounds,
+      // so ignore events on the player
+      if( cent->currentState.number != cg.snap->ps.clientNum )
+        CG_PainEvent( cent, es->eventParm );
       break;
 
     case EV_DEATH1:
@@ -1156,8 +862,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
     case EV_DEATH3:
       trap_S_StartSound( NULL, es->number, CHAN_VOICE,
           CG_CustomSound( es->number, va( "*death%i.wav", event - EV_DEATH1 + 1 ) ) );
-      if( es->eventParm & EVENT_HEADSHOT_BIT )
-        CG_HeadShotEvent( cent, 0 );
       break;
 
     case EV_OBITUARY:
@@ -1166,25 +870,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
 
     case EV_GIB_PLAYER:
       // no gibbing
-      break;
-
-    case EV_BLEED:
-      if( !warpingEnemyWraith &&
-          ( cg_bleedSelfWounds.integer ||
-            cent->currentState.number != cg.snap->ps.clientNum ) )
-      {
-        particleSystem_t *ps = NULL;
-        if( ci->team == TEAM_ALIENS )
-          ps = CG_SpawnNewParticleSystem( cgs.media.alienWoundsBleedPS );
-        else if( ci->team == TEAM_HUMANS )
-          ps = CG_SpawnNewParticleSystem( cgs.media.humanWoundsBleedPS );
-
-        if( ( ps != NULL ) && CG_IsParticleSystemValid( &ps ) )
-        {
-          CG_SetAttachmentCent( &ps->attachment, cent );
-          CG_AttachToCent( &ps->attachment );
-        }
-      }
       break;
 
     case EV_STOPLOOPINGSOUND:
@@ -1216,7 +901,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       if( cg.predictedPlayerState.stats[ STAT_TEAM ] == TEAM_ALIENS )
       {
         trap_S_StartLocalSound( cgs.media.alienOvermindAttack, CHAN_ANNOUNCER );
-        CG_CenterPrint( "The Overmind is under attack!", 200, GIANTCHAR_WIDTH * 4 );
+        CG_CenterPrint( _("The Overmind is under attack!"), 200, GIANTCHAR_WIDTH * 4 );
       }
       break;
 
@@ -1224,15 +909,15 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       if( cg.predictedPlayerState.stats[ STAT_TEAM ] == TEAM_ALIENS )
       {
         trap_S_StartLocalSound( cgs.media.alienOvermindDying, CHAN_ANNOUNCER );
-        CG_CenterPrint( "The Overmind is dying!", 200, GIANTCHAR_WIDTH * 4 );
+        CG_CenterPrint( _("The Overmind is dying!"), 200, GIANTCHAR_WIDTH * 4 );
       }
       break;
 
     case EV_DCC_ATTACK:
       if( cg.predictedPlayerState.stats[ STAT_TEAM ] == TEAM_HUMANS )
       {
-        CG_CenterPrint( "Our base is under attack!", 200, GIANTCHAR_WIDTH * 4 );
-		trap_S_StartLocalSound( cgs.media.humanbaseunderatt, CHAN_ANNOUNCER );
+        //trap_S_StartLocalSound( cgs.media.humanDCCAttack, CHAN_ANNOUNCER );
+        CG_CenterPrint( _("Our base is under attack!"), 200, GIANTCHAR_WIDTH * 4 );
       }
       break;
 
@@ -1244,7 +929,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       if( cg.predictedPlayerState.stats[ STAT_TEAM ] == TEAM_ALIENS )
       {
         trap_S_StartLocalSound( cgs.media.alienOvermindSpawns, CHAN_ANNOUNCER );
-        CG_CenterPrint( "^5The Overmind needs spawns!", 200, GIANTCHAR_WIDTH * 4 );
+        CG_CenterPrint( _("The Overmind needs spawns!"), 200, GIANTCHAR_WIDTH * 4 );
       }
       break;
 
@@ -1289,62 +974,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
         }
       }
       break;
-	  
-	      case EV_FORCE_FIELD:
-      {
-        particleSystem_t *ps = CG_SpawnNewParticleSystem( cgs.media.forcefieldPS );
-        trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.forcefieldSound );
-
-        if( CG_IsParticleSystemValid( &ps ) )
-        {
-          CG_SetAttachmentCent( &ps->attachment, cent );
-          ByteToDir( es->eventParm, dir );
-          CG_SetParticleSystemNormal( ps, dir );
-          CG_AttachToCent( &ps->attachment );
-        }
-      }
-	        break;
-	      case EV_ALIEN_SLIME:
-      {
-        particleSystem_t *ps = CG_SpawnNewParticleSystem( cgs.media.alienSlimePS );
-
-
-        if( CG_IsParticleSystemValid( &ps ) )
-        {
-          CG_SetAttachmentCent( &ps->attachment, cent );
-          ByteToDir( es->eventParm, dir );
-          CG_SetParticleSystemNormal( ps, dir );
-          CG_AttachToCent( &ps->attachment );
-        }
-      }
-      break;
 
     case EV_MEDKIT_USED:
-      // the parameter is the healer's entity number
-      {
-        const int   healerNum = es->eventParm;
-        const char  *configstring;
-        const char  *name;
-
-        if( healerNum != clientNum )
-        {
-          if( healerNum == cg.clientNum )
-          {
-            configstring = CG_ConfigString( clientNum + CS_PLAYERS );
-            // isolate the player's name
-            name = Info_ValueForKey( configstring, "n" );
-
-            CG_Printf( S_COLOR_CYAN "You bandaged " S_COLOR_WHITE "%s" S_COLOR_CYAN "'s wounds.\n", name );
-          } else if( clientNum == cg.clientNum )
-          {
-            configstring = CG_ConfigString( healerNum + CS_PLAYERS );
-            // isolate the player's name
-            name = Info_ValueForKey( configstring, "n" );
-
-            CG_Printf( S_COLOR_WHITE "%s" S_COLOR_CYAN " bandaged your wounds.\n", name );
-          }
-        }
-      }
       trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.medkitUseSound );
       break;
 
@@ -1358,7 +989,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     default:
-      CG_Error( "Unknown event: %i", event );
+      CG_Error( _("Unknown event: %i"), event );
       break;
   }
 }
@@ -1374,7 +1005,6 @@ void CG_CheckEvents( centity_t *cent )
 {
   entity_event_t event;
   entity_event_t oldEvent = EV_NONE;
-
 
   // check for event-only entities
   if( cent->currentState.eType > ET_EVENTS )
@@ -1396,7 +1026,6 @@ void CG_CheckEvents( centity_t *cent )
       oldEvent = cent->currentState.event;
       cent->currentState.event = event;
     }
-
   }
   else
   {

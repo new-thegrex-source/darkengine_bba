@@ -19,11 +19,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #ifndef _G_ADMIN_H
 #define _G_ADMIN_H
 
@@ -37,13 +33,8 @@ TREMULOUS EDGE MOD SRC FILE
 
 #define MAX_ADMIN_FLAG_LEN 20
 #define MAX_ADMIN_FLAGS 1024
-#define MAX_ADMIN_FLAG_KEYS 128
 #define MAX_ADMIN_CMD_LEN 20
-#define MAX_ADMIN_BAN_REASON 80
-
-#define MAX_ADMIN_EXPIRED_BANS   64
-#define G_ADMIN_BAN_EXPIRED(b,t) ((b)->expires != 0 && (b)->expires <= (t))
-#define G_ADMIN_BAN_STALE(b,t)   ((b)->expires != 0 && (b)->expires + 86400 <= (t))
+#define MAX_ADMIN_BAN_REASON 50
 
 /*
  * IMMUNITY - cannot be vote kicked, vote muted
@@ -63,7 +54,6 @@ TREMULOUS EDGE MOD SRC FILE
 #define ADMF_IMMUNITY        "IMMUNITY"
 #define ADMF_NOCENSORFLOOD   "NOCENSORFLOOD"
 #define ADMF_SPEC_ALLCHAT    "SPECALLCHAT"
-#define ADMF_CVA    "CALLVOTEALLOW"
 #define ADMF_FORCETEAMCHANGE "FORCETEAMCHANGE"
 #define ADMF_UNACCOUNTABLE   "UNACCOUNTABLE"
 #define ADMF_NO_VOTE_LIMIT   "NOVOTELIMIT"
@@ -75,8 +65,8 @@ TREMULOUS EDGE MOD SRC FILE
 #define ADMF_ALLFLAGS        "ALLFLAGS"
 #define ADMF_ADMINCHAT       "ADMINCHAT"
 
-#define MAX_ADMIN_LISTITEMS 100
-#define MAX_ADMIN_SHOWBANS 100
+#define MAX_ADMIN_LISTITEMS 20
+#define MAX_ADMIN_SHOWBANS 10
 
 // important note: QVM does not seem to allow a single char to be a
 // member of a struct at init time.  flag has been converted to char*
@@ -84,7 +74,6 @@ typedef struct
 {
   char *keyword;
   qboolean ( * handler ) ( gentity_t *ent );
-  qboolean silent;
   char *flag;
   char *function;  // used for !help
   char *syntax;  // used for !help
@@ -95,7 +84,6 @@ typedef struct g_admin_level
 {
   struct g_admin_level *next;
   int level;
-  int score; // total score required for automatically gaining this level, -1 for disabled
   char name[ MAX_NAME_LENGTH ];
   char flags[ MAX_ADMIN_FLAGS ];
 }
@@ -104,22 +92,16 @@ g_admin_level_t;
 typedef struct g_admin_admin
 {
   struct g_admin_admin *next;
-  int level;
-  int score; // total score the player currently has
   char guid[ 33 ];
   char name[ MAX_NAME_LENGTH ];
+  int level;
   char flags[ MAX_ADMIN_FLAGS ];
 }
 g_admin_admin_t;
 
 #define ADDRLEN 16
-/*
-addr_ts are passed as "arg" to admin_search for IP address matching
-admin_search prints (char *)arg, so the stringified address needs to be first
-*/
 typedef struct
 {
-  char str[ 44 ];
   enum
   {
     IPv4,
@@ -127,8 +109,8 @@ typedef struct
   } type;
   byte addr[ ADDRLEN ];
   int mask;
+  char str[ 44 ];
 } addr_t;
-
 typedef struct g_admin_ban
 {
   struct g_admin_ban *next;
@@ -136,11 +118,9 @@ typedef struct g_admin_ban
   char guid[ 33 ];
   addr_t ip;
   char reason[ MAX_ADMIN_BAN_REASON ];
-  char made[ 20 ]; // "YYYY-MM-DD hh:mm:ss"
+  char made[ 18 ]; // big enough for strftime() %c
   int expires;
   char banner[ MAX_NAME_LENGTH ];
-  int warnCount;
-  int id;
 }
 g_admin_ban_t;
 
@@ -169,8 +149,6 @@ void G_admin_authlog( gentity_t *ent );
 // admin command functions
 qboolean G_admin_time( gentity_t *ent );
 qboolean G_admin_setlevel( gentity_t *ent );
-qboolean G_admin_register( gentity_t *ent );
-qboolean G_admin_l1( gentity_t *ent );
 qboolean G_admin_kick( gentity_t *ent );
 qboolean G_admin_adjustban( gentity_t *ent );
 qboolean G_admin_ban( gentity_t *ent );
@@ -180,50 +158,28 @@ qboolean G_admin_listadmins( gentity_t *ent );
 qboolean G_admin_listlayouts( gentity_t *ent );
 qboolean G_admin_listplayers( gentity_t *ent );
 qboolean G_admin_changemap( gentity_t *ent );
-qboolean G_admin_cp( gentity_t *ent );
-qboolean G_admin_broadcast( gentity_t *ent );
-qboolean G_admin_warn( gentity_t *ent );
 qboolean G_admin_mute( gentity_t *ent );
 qboolean G_admin_denybuild( gentity_t *ent );
 qboolean G_admin_showbans( gentity_t *ent );
 qboolean G_admin_adminhelp( gentity_t *ent );
-qboolean G_admin_info( gentity_t *ent );
 qboolean G_admin_admintest( gentity_t *ent );
 qboolean G_admin_allready( gentity_t *ent );
 qboolean G_admin_endvote( gentity_t *ent );
-qboolean G_admin_spawn( gentity_t *ent );
 qboolean G_admin_spec999( gentity_t *ent );
 qboolean G_admin_rename( gentity_t *ent );
 qboolean G_admin_restart( gentity_t *ent );
 qboolean G_admin_nextmap( gentity_t *ent );
 qboolean G_admin_namelog( gentity_t *ent );
-qboolean G_admin_score_info( gentity_t *ent );
 qboolean G_admin_lock( gentity_t *ent );
-qboolean G_admin_pause( gentity_t *ent );
-qboolean G_admin_builder( gentity_t *ent );
 qboolean G_admin_buildlog( gentity_t *ent );
 qboolean G_admin_revert( gentity_t *ent );
-qboolean G_admin_flaglist( gentity_t *ent );
-qboolean G_admin_flag( gentity_t *ent );
-qboolean G_admin_slap( gentity_t *ent );
-qboolean G_admin_stats( gentity_t *ent );
-qboolean G_admin_say_area( gentity_t *ent );
-qboolean G_admin_say( gentity_t *ent );
-qboolean G_admin_vsay( gentity_t *ent );
-qboolean G_admin_m( gentity_t *ent );
-
-g_admin_level_t *G_admin_find_level_for_score( int score );
-void G_admin_add_score( gentity_t *ent, int score );
-void G_admin_reset_score( gentity_t *ent );
-g_admin_level_t *G_admin_level( const int l );
-g_admin_level_t *G_admin_level_next( g_admin_level_t *level );
 
 void G_admin_print( gentity_t *ent, char *m );
 void G_admin_buffer_print( gentity_t *ent, char *m );
 void G_admin_buffer_begin( void );
 void G_admin_buffer_end( gentity_t *ent );
+
 void G_admin_duration( int secs, char *duration, int dursize );
 void G_admin_cleanup( void );
-void G_admin_writeconfig( void );
 
 #endif /* ifndef _G_ADMIN_H */

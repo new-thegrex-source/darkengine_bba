@@ -511,3 +511,8 @@ void trap_SetPbClStatus( int status )
 {
   syscall( UI_SET_PBCLSTATUS, status );
 }
+
+void trap_Gettext( char *buffer, const char *msgid, int bufferLength )
+{
+  syscall( UI_GETTEXT, buffer, msgid, bufferLength );
+}

@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // bg_lib.c -- standard C library replacement routines used by code
 // compiled for the virtual machine
 
@@ -73,7 +69,7 @@ TREMULOUS EDGE MOD SRC FILE
 static char sccsid[] = "@(#)qsort.c 8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$Id: bg_lib.c 2248 2011-08-08 22:39:07Z cschwarz $";
+  "$Id: bg_lib.c 1586 2009-10-03 12:41:40Z msk $";
 #endif /* LIBC_SCCS and not lint */
 
 static char* med3(char *, char *, char *, cmp_t *);
@@ -335,21 +331,17 @@ int toupper( int c )
 
 void *memmove( void *dest, const void *src, size_t count )
 {
-  size_t i;
+  int   i;
 
   if( dest > src )
   {
-    i = count;
-    while( i > 0 )
-    {
-      i--;
-      ((char *)dest)[ i ] = ((char *)src)[ i ];
-    }
+    for( i = count - 1; i >= 0; i-- )
+      ( (char *)dest )[ i ] = ( (char *)src )[ i ];
   }
   else
   {
     for( i = 0; i < count; i++ )
-      ((char *) dest)[ i ] = ((char *)src)[ i ];
+      ( (char *)dest )[ i ] = ( (char *)src )[ i ];
   }
 
   return dest;
@@ -2393,8 +2385,13 @@ static int dopr (char *buffer, size_t maxlen, const char *format, va_list args)
         break; /* some picky compilers need this */
     }
   }
-  if (maxlen > 0)
-    buffer[currlen] = '\0';
+  if (buffer != NULL)
+  {
+    if (currlen < maxlen - 1)
+      buffer[currlen] = '\0';
+    else
+      buffer[maxlen - 1] = '\0';
+  }
   return total;
 }
 
@@ -2717,6 +2714,8 @@ static int dopr_outch (char *buffer, size_t *currlen, size_t maxlen, char c)
 
 int Q_vsnprintf(char *str, size_t length, const char *fmt, va_list args)
 {
+  if (str != NULL)
+    str[0] = 0;
   return dopr(str, length, fmt, args);
 }
 
@@ -2802,13 +2801,13 @@ void *bsearch( const void *key, const void *base, size_t nmemb, size_t size,
   int    comp;
   void   *ptr;
 
-  while( low < high )
+  while( low <= high )
   {
     mid = low + (high - low) / 2;
     ptr = (void *)((char *)base + ( mid * size ));
     comp = compar (key, ptr);
     if( comp < 0 )
-      high = mid;
+      high = mid - 1;
     else if( comp > 0 )
       low = mid + 1;
     else

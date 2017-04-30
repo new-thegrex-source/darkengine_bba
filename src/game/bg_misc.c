@@ -20,11 +20,6 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
 
 // bg_misc.c -- both games misc functions, all completely stateless
 
@@ -38,34 +33,27 @@ void trap_FS_FCloseFile( fileHandle_t f );
 void trap_FS_Seek( fileHandle_t f, long offset, fsOrigin_t origin ); // fsOrigin_t
 int  trap_FS_GetFileList(  const char *path, const char *extension, char *listbuf, int bufsize );
 
-#define STAGE_GE_5   ((1 << S5))
-#define STAGE_GE_4   ((1 << S4) | STAGE_GE_5)
-#define STAGE_GE_3   ((1 << S3) | STAGE_GE_4)
-#define STAGE_GE_2   ((1 << S2) | STAGE_GE_3)
-#define STAGE_GE_1   ((1 << S1) | STAGE_GE_2)
-
 static const buildableAttributes_t bg_buildableList[ ] =
 {
-//ALIEN BUILDINGS
   {
     BA_A_SPAWN,            //int       buildNum;
     "eggpod",              //char      *buildName;
     "Egg",                 //char      *humanName;
     "The most basic alien structure. It allows aliens to spawn "
-    "and protect the Overmind. Without any of these, the Overmind "
-    "is left nearly defenseless and defeat is imminent.",
+      "and protect the Overmind. Without any of these, the Overmind "
+      "is left nearly defenseless and defeat is imminent.",
     "team_alien_spawn",    //char      *entityName;
     TR_GRAVITY,            //trType_t  traj;
     0.0,                   //float     bounce;
     ASPAWN_BP,             //int       buildPoints;
-    STAGE_GE_1,            //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     ASPAWN_HEALTH,         //int       health;
     ASPAWN_REGEN,          //int       regenRate;
     ASPAWN_SPLASHDAMAGE,   //int       splashDamage;
     ASPAWN_SPLASHRADIUS,   //int       splashRadius;
     MOD_ASPAWN,            //int       meansOfDeath;
     TEAM_ALIENS,           //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
     BANIM_IDLE1,           //int       idleAnim;
     100,                   //int       nextthink;
     ASPAWN_BT,             //int       buildTime;
@@ -73,13 +61,14 @@ static const buildableAttributes_t bg_buildableList[ ] =
     0,                     //int       turretRange;
     0,                     //int       turretFireSpeed;
     WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal; 
+    0.5f,                  //float     minNormal;
     qtrue,                 //qboolean  invertNormal;
     qfalse,                //qboolean  creepTest;
     ASPAWN_CREEPSIZE,      //int       creepSize;
     qfalse,                //qboolean  dccTest;
     qfalse,                //qboolean  transparentTest;
     qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
     ASPAWN_VALUE,          //int       value;
   },
   {
@@ -87,20 +76,20 @@ static const buildableAttributes_t bg_buildableList[ ] =
     "overmind",            //char      *buildName;
     "Overmind",            //char      *humanName;
     "A collective consciousness that controls all the alien structures "
-    "in its vicinity. It must be protected at all costs, since its "
-    "death will render alien structures defenseless.",
+      "in its vicinity. It must be protected at all costs, since its "
+      "death will render alien structures defenseless.",
     "team_alien_overmind", //char      *entityName;
     TR_GRAVITY,            //trType_t  traj;
     0.0,                   //float     bounce;
     OVERMIND_BP,           //int       buildPoints;
-    STAGE_GE_1,            //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     OVERMIND_HEALTH,       //int       health;
     OVERMIND_REGEN,        //int       regenRate;
     OVERMIND_SPLASHDAMAGE, //int       splashDamage;
     OVERMIND_SPLASHRADIUS, //int       splashRadius;
     MOD_ASPAWN,            //int       meansOfDeath;
     TEAM_ALIENS,           //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
     BANIM_IDLE1,           //int       idleAnim;
     OVERMIND_ATTACK_REPEAT,//int       nextthink;
     OVERMIND_BT,           //int       buildTime;
@@ -108,13 +97,14 @@ static const buildableAttributes_t bg_buildableList[ ] =
     0,                     //int       turretRange;
     0,                     //int       turretFireSpeed;
     WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                 //float     minNormal;
-    qtrue,                //qboolean  invertNormal;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
     qfalse,                //qboolean  creepTest;
     OVERMIND_CREEPSIZE,    //int       creepSize;
     qfalse,                //qboolean  dccTest;
     qfalse,                //qboolean  transparentTest;
     qtrue,                 //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
     OVERMIND_VALUE,        //int       value;
   },
   {
@@ -122,20 +112,20 @@ static const buildableAttributes_t bg_buildableList[ ] =
     "barricade",           //char      *buildName;
     "Barricade",           //char      *humanName;
     "Used to obstruct corridors and doorways, hindering humans from "
-    "threatening the spawns and Overmind. Barricades will shrink "
-    "to allow aliens to pass over them, however.",
+      "threatening the spawns and Overmind. Barricades will shrink "
+      "to allow aliens to pass over them, however.",
     "team_alien_barricade",//char      *entityName;
     TR_GRAVITY,            //trType_t  traj;
     0.0,                   //float     bounce;
     BARRICADE_BP,          //int       buildPoints;
-    STAGE_GE_1,            //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     BARRICADE_HEALTH,      //int       health;
     BARRICADE_REGEN,       //int       regenRate;
     BARRICADE_SPLASHDAMAGE,//int       splashDamage;
     BARRICADE_SPLASHRADIUS,//int       splashRadius;
     MOD_ASPAWN,            //int       meansOfDeath;
     TEAM_ALIENS,           //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
     BANIM_IDLE1,           //int       idleAnim;
     100,                   //int       nextthink;
     BARRICADE_BT,          //int       buildTime;
@@ -143,13 +133,14 @@ static const buildableAttributes_t bg_buildableList[ ] =
     0,                     //int       turretRange;
     0,                     //int       turretFireSpeed;
     WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal;
-    qtrue,                 //qboolean  invertNormal;//
+    0.707f,                //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
     qtrue,                 //qboolean  creepTest;
     BARRICADE_CREEPSIZE,   //int       creepSize;
     qfalse,                //qboolean  dccTest;
     qfalse,                //qboolean  transparentTest;
     qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
     BARRICADE_VALUE,       //int       value;
   },
   {
@@ -157,20 +148,20 @@ static const buildableAttributes_t bg_buildableList[ ] =
     "acid_tube",           //char      *buildName;
     "Acid Tube",           //char      *humanName;
     "Ejects lethal poisonous acid at an approaching human. These "
-    "are highly effective when used in conjunction with a trapper "
-    "to hold the victim in place.",
+      "are highly effective when used in conjunction with a trapper "
+      "to hold the victim in place.",
     "team_alien_acid_tube",//char      *entityName;
     TR_GRAVITY,            //trType_t  traj;
     0.0,                   //float     bounce;
     ACIDTUBE_BP,           //int       buildPoints;
-    STAGE_GE_1,            //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     ACIDTUBE_HEALTH,       //int       health;
     ACIDTUBE_REGEN,        //int       regenRate;
     ACIDTUBE_SPLASHDAMAGE, //int       splashDamage;
     ACIDTUBE_SPLASHRADIUS, //int       splashRadius;
     MOD_ASPAWN,            //int       meansOfDeath;
     TEAM_ALIENS,           //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
     BANIM_IDLE1,           //int       idleAnim;
     200,                   //int       nextthink;
     ACIDTUBE_BT,           //int       buildTime;
@@ -185,28 +176,65 @@ static const buildableAttributes_t bg_buildableList[ ] =
     qfalse,                //qboolean  dccTest;
     qfalse,                //qboolean  transparentTest;
     qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
     ACIDTUBE_VALUE,        //int       value;
+  },
+  {
+    BA_A_TRAPPER,          //int       buildNum;
+    "trapper",             //char      *buildName;
+    "Trapper",             //char      *humanName;
+    "Fires a blob of adhesive spit at any non-alien in its line of "
+      "sight. This hinders their movement, making them an easy target "
+      "for other defensive structures or aliens.",
+    "team_alien_trapper",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    TRAPPER_BP,            //int       buildPoints;
+    ( 1 << S2 )|( 1 << S3 ), //int  stages //NEEDS ADV BUILDER SO S2 AND UP
+    TRAPPER_HEALTH,        //int       health;
+    TRAPPER_REGEN,         //int       regenRate;
+    TRAPPER_SPLASHDAMAGE,  //int       splashDamage;
+    TRAPPER_SPLASHRADIUS,  //int       splashRadius;
+    MOD_ASPAWN,            //int       meansOfDeath;
+    TEAM_ALIENS,            //int       team;
+    ( 1 << WP_ABUILD2 ),   //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    100,                   //int       nextthink;
+    TRAPPER_BT,            //int       buildTime;
+    qfalse,                //qboolean  usable;
+    TRAPPER_RANGE,         //int       turretRange;
+    TRAPPER_REPEAT,        //int       turretFireSpeed;
+    WP_LOCKBLOB_LAUNCHER,  //weapon_t  turretProjType;
+    0.0f,                  //float     minNormal;
+    qtrue,                 //qboolean  invertNormal;
+    qtrue,                 //qboolean  creepTest;
+    TRAPPER_CREEPSIZE,     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qtrue,                 //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    TRAPPER_VALUE,         //int       value;
   },
   {
     BA_A_BOOSTER,          //int       buildNum;
     "booster",             //char      *buildName;
     "Booster",             //char      *humanName;
     "Laces the attacks of any alien that touches it with a poison "
-    "that will gradually deal damage to any humans exposed to it. "
-    "The booster also increases the rate of health regeneration for "
-    "any nearby aliens.",
+      "that will gradually deal damage to any humans exposed to it. "
+      "The booster also increases the rate of health regeneration for "
+      "any nearby aliens.",
     "team_alien_booster",  //char      *entityName;
     TR_GRAVITY,            //trType_t  traj;
     0.0,                   //float     bounce;
     BOOSTER_BP,            //int       buildPoints;
-    STAGE_GE_3,            //int  stages
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
     BOOSTER_HEALTH,        //int       health;
     BOOSTER_REGEN,         //int       regenRate;
     BOOSTER_SPLASHDAMAGE,  //int       splashDamage;
     BOOSTER_SPLASHRADIUS,  //int       splashRadius;
     MOD_ASPAWN,            //int       meansOfDeath;
     TEAM_ALIENS,            //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
+    ( 1 << WP_ABUILD2 ),   //weapon_t  buildWeapon;
     BANIM_IDLE1,           //int       idleAnim;
     100,                   //int       nextthink;
     BOOSTER_BT,            //int       buildTime;
@@ -214,33 +242,34 @@ static const buildableAttributes_t bg_buildableList[ ] =
     0,                     //int       turretRange;
     0,                     //int       turretFireSpeed;
     WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal; 
-    qtrue,                 //qboolean  invertNormal; 
+    0.707f,                //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
     qtrue,                 //qboolean  creepTest;
     BOOSTER_CREEPSIZE,     //int       creepSize;
     qfalse,                //qboolean  dccTest;
     qtrue,                 //qboolean  transparentTest;
     qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
     BOOSTER_VALUE,         //int       value;
   },
-   {
+  {
     BA_A_HIVE,             //int       buildNum;
     "hive",                //char      *buildName;
-    "Jellyfishes Hive",                //char      *humanName;
+    "Hive",                //char      *humanName;
     "Houses millions of tiny insectoid aliens. When a human "
-    "approaches this structure, the insectoids attack.",
+      "approaches this structure, the insectoids attack.",
     "team_alien_hive",     //char      *entityName;
     TR_GRAVITY,            //trType_t  traj;
     0.0,                   //float     bounce;
     HIVE_BP,               //int       buildPoints;
-    STAGE_GE_4,            //int  stages
+    ( 1 << S3 ),           //int  stages
     HIVE_HEALTH,           //int       health;
     HIVE_REGEN,            //int       regenRate;
     HIVE_SPLASHDAMAGE,     //int       splashDamage;
     HIVE_SPLASHRADIUS,     //int       splashRadius;
     MOD_ASPAWN,            //int       meansOfDeath;
-    TEAM_ALIENS,           //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
+    TEAM_ALIENS,            //int       team;
+    ( 1 << WP_ABUILD2 ),   //weapon_t  buildWeapon;
     BANIM_IDLE1,           //int       idleAnim;
     500,                   //int       nextthink;
     HIVE_BT,               //int       buildTime;
@@ -255,1624 +284,448 @@ static const buildableAttributes_t bg_buildableList[ ] =
     qfalse,                //qboolean  dccTest;
     qfalse,                //qboolean  transparentTest;
     qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
     HIVE_VALUE,            //int       value;
   },
   {
-    BA_A_PANZER_SMALL,        	//int       buildNum;
-    "panzer_small",         	//char      *buildName;
-    "[ye]Panzer Small",       //char      *humanName;
-	"LIGHT ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense.\n",
-    "team_alien_panzer_small", //char      *entityName;
-    TR_GRAVITY,          	   //trType_t  traj;
-    0,                  	   //float     bounce;
-    PANZER_SMALL_BP,           //int       buildPoints;
-    STAGE_GE_1,                //int  stages
-    PANZER_SMALL_HEALTH,       //int       health;
-    PANZER_SMALL_REGEN,        //int       regenRate;
-    PANZER_SMALL_SPLASHDAMAGE, //int       splashDamage;
-    PANZER_SMALL_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,                //int       meansOfDeath;
-    TEAM_ALIENS,               //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,               //int       idleAnim;
-    1000,                 		   //int       nextthink;
-    PANZER_SMALL_BT,           //int       buildTime;
-    qfalse,              	   //qboolean  usable;
-    0,                   	   //int       turretRange;
-    0,                   	   //int       turretFireSpeed;
-    WP_NONE,             	   //weapon_t  turretProjType;
-    0.0f,                	   //float     minNormal;
-    qtrue,                	   //qboolean  invertNormal;
-    qtrue,                	   //qboolean  creepTest;
-    PANZER_SMALL_CREEPSIZE,    //int       creepSize;
-    qfalse,               	   //qboolean  dccTest;
-    qfalse,               	   //qboolean  transparentTest;
-    qfalse,               	   //qboolean  uniqueTest;
-    PANZER_SMALL_VALUE,        //int       value;
-  },
-  {
-    BA_A_PANZER_MEDIUM,         //int       buildNum;
-    "panzer_medium",            //char      *buildName;
-    "[ye]Panzer Medium",      //char      *humanName;
-	"AVERAGE ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense.\n",
-    "team_alien_panzer_medium", //char      *entityName;
-    TR_GRAVITY,           	    //trType_t  traj;
-    0,                 		    //float     bounce;
-    PANZER_MEDIUM_BP,           //int       buildPoints;
-    STAGE_GE_3,                 //int  stages
-    PANZER_MEDIUM_HEALTH,       //int       health;
-    PANZER_MEDIUM_REGEN,        //int       regenRate;
-    PANZER_MEDIUM_SPLASHDAMAGE, //int       splashDamage;
-    PANZER_MEDIUM_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,           	    //int       meansOfDeath;
-    TEAM_ALIENS,           	    //int       team;
-    ( 1 << WP_ABUILD ),  	    //weapon_t  buildWeapon;
-    BANIM_IDLE1,         	    //int       idleAnim;
-    1000,                   		//int       nextthink;
-    PANZER_MEDIUM_BT,           //int       buildTime;
-    qfalse,               	    //qboolean  usable;
-    0,                    	    //int       turretRange;
-    0,                    	    //int       turretFireSpeed;
-    WP_NONE,             	    //weapon_t  turretProjType;
-    0.0f,                       //float     minNormal;
-    qtrue,                      //qboolean  invertNormal;
-    qtrue,                      //qboolean  creepTest;
-    PANZER_MEDIUM_CREEPSIZE,    //int       creepSize;
-    qfalse,                     //qboolean  dccTest;
-    qfalse,                     //qboolean  transparentTest;
-    qfalse,                     //qboolean  uniqueTest;
-    PANZER_MEDIUM_VALUE,        //int       value;
-  },
-  {
-    BA_A_PANZER_LARGE,          //int       buildNum;
-    "panzer_large",             //char      *buildName;
-    "[ye]Panzer Large",       //char      *humanName;
-	"HEAVY ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense.\n",
-    "team_alien_panzer_large",  //char      *entityName;
-    TR_GRAVITY,                 //trType_t  traj;
-    0,                          //float     bounce;
-    PANZER_LARGE_BP,            //int       buildPoints;
-    STAGE_GE_4,                 //int  stages
-    PANZER_LARGE_HEALTH,        //int       health;
-    PANZER_LARGE_REGEN,         //int       regenRate;
-    PANZER_LARGE_SPLASHDAMAGE,  //int       splashDamage;
-    PANZER_LARGE_SPLASHRADIUS,  //int       splashRadius;
-    MOD_ASPAWN,                 //int       meansOfDeath;
-    TEAM_ALIENS,                //int       team;
-    ( 1 << WP_ABUILD ),        //weapon_t  buildWeapon;
-    BANIM_IDLE1,                //int       idleAnim;
-    1000,                          //int       nextthink;
-    PANZER_LARGE_BT,            //int       buildTime;
-    qfalse,               	    //qboolean  usable;
-    0,                    	    //int       turretRange;
-    0,                     		//int       turretFireSpeed;
-    WP_NONE,             	    //weapon_t  turretProjType;
-    0.0f,                 	    //float     minNormal;
-    qtrue,                 		//qboolean  invertNormal;
-    qtrue,                 		//qboolean  creepTest;
-    PANZER_LARGE_CREEPSIZE,     //int       creepSize;
-    qfalse,                		//qboolean  dccTest;
-    qfalse,                		//qboolean  transparentTest;
-    qfalse,                		//qboolean  uniqueTest;
-    PANZER_LARGE_VALUE,         //int       value;
-  },
-  {
-    BA_A_TENDON_SMALL,          //int       buildNum;
-    "tendon_small",             //char      *buildName;
-    "[ye]Tendon Small",       //char      *humanName;
-	"LIGHT ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense or bridges.\n",
-    "team_alien_tendon_small",  //char      *entityName;
-    TR_GRAVITY,                 //trType_t  traj;
-    0,                          //float     bounce;
-    TENDON_SMALL_BP,            //int       buildPoints;
-    STAGE_GE_1,                 //int  stages
-    TENDON_SMALL_HEALTH,        //int       health;
-    TENDON_SMALL_REGEN,         //int       regenRate;
-    TENDON_SMALL_SPLASHDAMAGE,  //int       splashDamage;
-    TENDON_SMALL_SPLASHRADIUS,  //int       splashRadius;
-    MOD_ASPAWN,                 //int       meansOfDeath;
-    TEAM_ALIENS,                //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,                //int       idleAnim;
-    1000,                          //int       nextthink;
-    TENDON_SMALL_BT,            //int       buildTime;
-    qfalse,                     //qboolean  usable;
-    0,                          //int       turretRange;
-    0,                          //int       turretFireSpeed;
-    WP_NONE,                    //weapon_t  turretProjType;
-    0.0f,                       //float     minNormal;
-    qtrue,                      //qboolean  invertNormal;
-    qtrue,                      //qboolean  creepTest;
-    TENDON_SMALL_CREEPSIZE,     //int       creepSize;
-    qfalse,                     //qboolean  dccTest;
-    qfalse,                     //qboolean  transparentTest;
-    qfalse,                     //qboolean  uniqueTest;
-    TENDON_SMALL_VALUE,         //int       value;
-  },
-  {
-    BA_A_TENDON_MEDIUM,         //int       buildNum;
-    "tendon_medium",           //char      *buildName;
-    "[ye]Tendon Medium",           //char      *humanName;
-	"AVERAGE ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense or bridges.\n"
-	"50HP",
-    "team_alien_tendon_medium",//char      *entityName;
-    TR_GRAVITY,            //trType_t  traj;
-    0.0,                   //float     bounce;
-    TENDON_MEDIUM_BP,           //int       buildPoints;
-    STAGE_GE_2,                 //int  stages
-    TENDON_MEDIUM_HEALTH,       //int       health;
-    TENDON_MEDIUM_REGEN,        //int       regenRate;
-    TENDON_MEDIUM_SPLASHDAMAGE, //int       splashDamage;
-    TENDON_MEDIUM_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,             //int       meansOfDeath;
-    TEAM_ALIENS,            //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,           //int       idleAnim;
-    1000,                   //int       nextthink;
-    TENDON_MEDIUM_BT,           //int       buildTime;
-    qfalse,                //qboolean  usable;
-    0,                     //int       turretRange;
-    0,                     //int       turretFireSpeed;
-    WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal;
-    qtrue,                 //qboolean  invertNormal;
-    qtrue,                 //qboolean  creepTest;
-    TENDON_MEDIUM_CREEPSIZE,    //int       creepSize;
-    qfalse,                //qboolean  dccTest;
-    qfalse,                //qboolean  transparentTest;
-    qfalse,                //qboolean  uniqueTest;
-    TENDON_MEDIUM_VALUE,            //int       value;
-  },
-  {
-    BA_A_TENDON_LARGE,         //int       buildNum;
-    "tendon_large",           //char      *buildName;
-    "[ye]Tendon Large",           //char      *humanName;
-	"HEAVY ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense or big bridges.\n"
-	"100HP",
-    "team_alien_tendon_large",//char      *entityName;
-    TR_GRAVITY,            //trType_t  traj;
-    0,                   //float     bounce;
-    TENDON_LARGE_BP,           //int       buildPoints;
-    STAGE_GE_3,                //int  stages
-    TENDON_LARGE_HEALTH,       //int       health;
-    TENDON_LARGE_REGEN,        //int       regenRate;
-    TENDON_LARGE_SPLASHDAMAGE, //int       splashDamage;
-    TENDON_LARGE_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,             //int       meansOfDeath;
-    TEAM_ALIENS,            //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,           //int       idleAnim;
-    1000,                   //int       nextthink;
-    TENDON_LARGE_BT,           //int       buildTime;
-    qfalse,                //qboolean  usable;
-    0,                     //int       turretRange;
-    0,                     //int       turretFireSpeed;
-    WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal;
-    qtrue,                 //qboolean  invertNormal;
-    qtrue,                 //qboolean  creepTest;
-    TENDON_LARGE_CREEPSIZE,    //int       creepSize;
-    qfalse,                //qboolean  dccTest;
-    qfalse,                //qboolean  transparentTest;
-    qfalse,                //qboolean  uniqueTest;
-    TENDON_LARGE_VALUE,            //int       value;
-  },
-  {
-    BA_A_NET,         //int       buildNum;
-    "net",           //char      *buildName;
-    "[ye]Net",           //char      *humanName;
-	"LIGHT ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-	"Can be used for camouflage.\n"
-	"80HP",
-    "team_alien_net",//char      *entityName;
-    TR_GRAVITY,            //trType_t  traj;
-    0,                   //float     bounce;
-    NET_BP,           //int       buildPoints;
-    STAGE_GE_3,       //int  stages
-    NET_HEALTH,       //int       health;
-    NET_REGEN,        //int       regenRate;
-    NET_SPLASHDAMAGE, //int       splashDamage;
-    NET_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,             //int       meansOfDeath;
-    TEAM_ALIENS,            //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,           //int       idleAnim;
-    1000,                   //int       nextthink;
-    NET_BT,           //int       buildTime;
-    qfalse,                //qboolean  usable;
-    0,                     //int       turretRange;
-    0,                     //int       turretFireSpeed;
-    WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal;
-    qtrue,                 //qboolean  invertNormal;
-    qtrue,                 //qboolean  creepTest;
-    NET_CREEPSIZE,    //int       creepSize;
-    qfalse,                //qboolean  dccTest;
-    qfalse,                //qboolean  transparentTest;
-    qfalse,                //qboolean  uniqueTest;
-    NET_VALUE,            //int       value;
-  },
-  {
-    BA_A_NET_SPIKE,         //int       buildNum;
-    "net_spike",           //char      *buildName;
-    "[ye]Net Spike",           //char      *humanName;
-	"LIGHT ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-	"Can be used for camouflage.\n"
-	"50HP",
-    "team_alien_net_spike",//char      *entityName;
-    TR_GRAVITY,            //trType_t  traj;
-    0,                   //float     bounce;
-    NET_SPIKE_BP,           //int       buildPoints;
-    STAGE_GE_1,             //int  stages
-    NET_SPIKE_HEALTH,       //int       health;
-    NET_SPIKE_REGEN,        //int       regenRate;
-    NET_SPIKE_SPLASHDAMAGE, //int       splashDamage;
-    NET_SPIKE_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,             //int       meansOfDeath;
-    TEAM_ALIENS,            //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,           //int       idleAnim;
-    1000,                   //int       nextthink;
-    NET_SPIKE_BT,           //int       buildTime;
-    qfalse,                //qboolean  usable;
-    0,                     //int       turretRange;
-    0,                     //int       turretFireSpeed;
-    WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal;
-    qtrue,                 //qboolean  invertNormal;
-    qtrue,                 //qboolean  creepTest;
-    NET_SPIKE_CREEPSIZE,    //int       creepSize;
-    qfalse,                //qboolean  dccTest;
-    qfalse,                //qboolean  transparentTest;
-	qfalse,                //qboolean  uniqueTest;
-    NET_SPIKE_VALUE,            //int       value;
-  },
-    {
-    BA_A_INFESTATION_SLIME,         //int       buildNum;
-    "infestation_slime",           //char      *buildName;
-    "[ye]Infestation Slime",           //char      *humanName;
-	"LIGHT ORGANIC INFESTATION\n"
-    "[yei]Used for passive and active base defense.\n"
-	"Has the ability to slow down human players.\n"
-	"Nearby Humans get *sucked* in and take damage.\n"
-	"250HP",
-    "team_alien_infestation_slime",//char      *entityName;
-    TR_GRAVITY,            //trType_t  traj;
-    0,                   //float     bounce;
-    INFESTATION_SLIME_BP,           //int       buildPoints;
-    STAGE_GE_5,                     //int  stages
-    INFESTATION_SLIME_HEALTH,       //int       health;
-    INFESTATION_SLIME_REGEN,        //int       regenRate;
-    INFESTATION_SLIME_SPLASHDAMAGE, //int       splashDamage;
-    INFESTATION_SLIME_SPLASHRADIUS, //int       splashRadius;
-    MOD_ASPAWN,             //int       meansOfDeath;
-    TEAM_ALIENS,            //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,           //int       idleAnim;
-    200,                   //int       nextthink;
-    INFESTATION_SLIME_BT,           //int       buildTime;
-    qfalse,                //qboolean  usable;
-    0,                     //int       turretRange;
-    0,                     //int       turretFireSpeed;
-    WP_NONE,               //weapon_t  turretProjType;
-    0.0f,                  //float     minNormal;
-    qtrue,                 //qboolean  invertNormal;
-    qtrue,                 //qboolean  creepTest;
-    INFESTATION_SLIME_CREEPSIZE,    //int       creepSize;
-    qfalse,                //qboolean  transparentTest;
-    qfalse,                //qboolean  uniqueTest;
-	INFESTATION_SLIME_VALUE,        //int       value;
-  },
-  {
-    BA_A_INFESTATION_THICKET,         	   //int       buildNum;
-    "infestation_thicket",           	   //char      *buildName;
-    "[ye]Infestation Thicket",           //char      *humanName;
-	"AVERAGE ORGANIC INFESTATION\n"
-    "[yei]Used for passive base defense.\n"
-	"Has the ability to slow down human players.\n"
-	"It's dense undergrowth can be used for camouflage.\n",
-    "team_alien_infestation_thicket",	  //char      *entityName;
-    TR_GRAVITY,           				  //trType_t  traj;
-    0,                  				  //float     bounce;
-    INFESTATION_THICKET_BP,          	  //int       buildPoints;
-    STAGE_GE_1,                           //int       stages
-    INFESTATION_THICKET_HEALTH,      	  //int       health;
-    INFESTATION_THICKET_REGEN,     	      //int       regenRate;
-    INFESTATION_THICKET_SPLASHDAMAGE, 	  //int       splashDamage;
-    INFESTATION_THICKET_SPLASHRADIUS, 	  //int       splashRadius;
-    MOD_ASPAWN,            				  //int       meansOfDeath;
-    TEAM_ALIENS,          				  //int       team;
-    ( 1 << WP_ABUILD ),              //weapon_t  buildWeapon;
-    BANIM_IDLE1,       				      //int       idleAnim;
-    1000,                  				  //int       nextthink;
-    INFESTATION_THICKET_BT,      	      //int       buildTime;
-    qfalse,              				  //qboolean  usable;
-    0,                  			      //int       turretRange;
-    0,                   				  //int       turretFireSpeed;
-    WP_NONE,           				      //weapon_t  turretProjType;
-    0.0f,             				      //float     minNormal;
-    qtrue,                		          //qboolean  invertNormal;
-    qtrue,               				  //qboolean  creepTest;
-    INFESTATION_THICKET_CREEPSIZE,    	  //int       creepSize;
-    qfalse,               				  //qboolean  dccTest;
-    qfalse,               				  //qboolean  transparentTest;
-	qfalse,               				  //qboolean  uniqueTest;
-    INFESTATION_THICKET_VALUE,            //int       value;
-   },
-   {
-    BA_A_INFESTATION_BLISTER,       	 //int       buildNum;
-    "infestation_blister",          	 //char      *buildName;
-    "[ye]Infestation Blister",         //char      *humanName;
-	"HEAVY ORGANIC INFESTATION\n"
-    "[yei]Used for passive base defense.\n"
-	"Has the ability to slow down human players.\n"
-	"Creates a creep of massive scale.\n",
-    "team_alien_infestation_blister",	 //char      *entityName;
-    TR_GRAVITY,           				 //trType_t  traj;
-    0.0,                   				 //float     bounce;
-    INFESTATION_BLISTER_BP,        	     //int       buildPoints;
-    STAGE_GE_2,       			 //int  stages
-    INFESTATION_BLISTER_HEALTH,      	 //int       health;
-    INFESTATION_BLISTER_REGEN,        	 //int       regenRate;
-    INFESTATION_BLISTER_SPLASHDAMAGE,	 //int       splashDamage;
-    INFESTATION_BLISTER_SPLASHRADIUS, 	 //int       splashRadius;
-    MOD_ASPAWN,            				 //int       meansOfDeath;
-    TEAM_ALIENS,           				 //int       team;
-    ( 1 << WP_ABUILD ),    			     //weapon_t  buildWeapon;
-    BANIM_IDLE1,          				 //int       idleAnim;
-    1000,                   			     //int       nextthink;
-    INFESTATION_BLISTER_BT,              //int       buildTime;
-    qfalse,                				 //qboolean  usable;
-    0,                     				 //int       turretRange;
-    0,                     				 //int       turretFireSpeed;
-    WP_NONE,             			     //weapon_t  turretProjType;
-    0.0f,               			     //float     minNormal;
-    qtrue,                				 //qboolean  invertNormal;
-    qtrue,                 				 //qboolean  creepTest;
-    INFESTATION_BLISTER_CREEPSIZE,       //int       creepSize;
-    qfalse,               				 //qboolean  dccTest;
-    qfalse,               				 //qboolean  transparentTest;
-    qfalse,              			     //qboolean  uniqueTest;
-    INFESTATION_BLISTER_VALUE,           //int       value;
-  },
-  {
-    BA_A_REFLECTOR,        				 //int       buildNum;
-    "reflector",         			     //char      *buildName;
-    "[ye]Reflector",      	         //char      *humanName;
-	"INTELLIGENT ORGANIC STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-	"This structure is filled with mercury.\n"
-	"It reflects Pulse Rifle & Lucifer shots.\n"
-	"Its vulnerable to mechanical projectiles.\n",
-    "team_alien_reflector",				 //char      *entityName;
-    TR_GRAVITY,            		         //trType_t  traj;
-    0.0,                   				 //float     bounce;
-    REFLECTOR_BP,        			     //int       buildPoints;
-    STAGE_GE_3,            			 //int  stages
-    REFLECTOR_HEALTH,       			 //int       health;
-    REFLECTOR_REGEN,       			  	 //int       regenRate;
-    REFLECTOR_SPLASHDAMAGE, 			 //int       splashDamage;
-    REFLECTOR_SPLASHRADIUS,				 //int       splashRadius;
-    MOD_ASPAWN,             			 //int       meansOfDeath;
-    TEAM_ALIENS,            			 //int       team;
-    ( 1 << WP_ABUILD ),    				 //weapon_t  buildWeapon;
-    BANIM_IDLE1,          				 //int       idleAnim;
-    1000,                  				 //int       nextthink;
-    REFLECTOR_BT,        			     //int       buildTime;
-    qfalse,              			     //qboolean  usable;
-    0,                   	  		     //int       turretRange;
-    0,                   			     //int       turretFireSpeed;
-    WP_NONE,            			     //weapon_t  turretProjType;
-    0.0f,               			     //float     minNormal;
-    qtrue,              			     //qboolean  invertNormal;
-    qtrue,               			     //qboolean  creepTest;
-    REFLECTOR_CREEPSIZE, 			     //int       creepSize;
-    qfalse,                				 //qboolean  dccTest;
-    qfalse,                				 //qboolean  transparentTest;
-	qfalse,               				 //qboolean  uniqueTest;
-    REFLECTOR_VALUE,      		         //int       value;
-  },
-  {
-    BA_A_MUSCLE,        				 //int       buildNum;
-    "muscle",          					 //char      *buildName;
-    "[ye]Muscle",         		     //char      *humanName;
-	"INTELLIGENT ORGANIC STRUCTURE\n"
-    "[yei]Used to push alien players up.\n",
-    "team_alien_muscle",				//char      *entityName;
-    TR_GRAVITY,          			    //trType_t  traj;
-    0,                  			    //float     bounce;
-    MUSCLE_BP,         			            //int       buildPoints;
-    STAGE_GE_2,	                      	                //int  stages
-    MUSCLE_HEALTH,       				//int       health;
-    MUSCLE_REGEN,        				//int       regenRate;
-    MUSCLE_SPLASHDAMAGE, 				//int       splashDamage;
-    MUSCLE_SPLASHRADIUS, 				//int       splashRadius;
-    MOD_ASPAWN,             			//int       meansOfDeath;
-    TEAM_ALIENS,            			//int       team;
-    ( 1 << WP_ABUILD ),    				//weapon_t  buildWeapon;
-    BANIM_IDLE1,           				//int       idleAnim;
-    500,                   				//int       nextthink;
-    MUSCLE_BT,           				//int       buildTime;
-    qfalse,                				//qboolean  usable;
-    0,                     				//int       turretRange;
-    0,                     				//int       turretFireSpeed;
-    WP_NONE,               				//weapon_t  turretProjType;
-    0.0f,                  				//float     minNormal;
-    qtrue,                 				//qboolean  invertNormal;
-    qtrue,                 				//qboolean  creepTest;
-    MUSCLE_CREEPSIZE,    				//int       creepSize;
-    qfalse,                				//qboolean  dccTest;
-    qfalse,                				//qboolean  transparentTest;
-    qfalse,                				//qboolean  uniqueTest;
-    MUSCLE_VALUE,           		    //int       value;
-  },
-  {
-    BA_A_SPITEFUL_ABCESS,       	   //int       buildNum;
-    "spiteful_abcess",           	   //char      *buildName;
-    "[ye]Spiteful Abcess",           //char      *humanName;
-	"INTELLIGENT ORGANIC STRUCTURE\n"
-    "[yei]Used for active base defense.\n"
-	"The glowing top contains gas.\n",
-    "team_alien_spiteful_abcess",	  //char      *entityName;
-    TR_GRAVITY,           			  //trType_t  traj;
-    0.0,                   			  //float     bounce;
-    SPITEFUL_ABCESS_BP,         	  //int       buildPoints;
-    STAGE_GE_2,		                  //int  stages
-    SPITEFUL_ABCESS_HEALTH,      	  //int       health;
-    SPITEFUL_ABCESS_REGEN,       	  //int       regenRate;
-    SPITEFUL_ABCESS_SPLASHDAMAGE, 	  //int       splashDamage;
-    SPITEFUL_ABCESS_SPLASHRADIUS, 	  //int       splashRadius;
-    MOD_SPITEFUL_ABCESS,              //int       meansOfDeath;
-    TEAM_ALIENS,           			  //int       team;
-    ( 1 << WP_ABUILD ),    //weapon_t  buildWeapon;
-    BANIM_IDLE1,          			  //int       idleAnim;
-    200,                   			  //int       nextthink;
-    SPITEFUL_ABCESS_BT,         	  //int       buildTime;
-    qfalse,                			  //qboolean  usable;
-    0,                    			  //int       turretRange;
-    0,                    			  //int       turretFireSpeed;
-    WP_NONE,               			  //weapon_t  turretProjType;
-    0.0f,                  			  //float     minNormal;
-    qtrue,                 			  //qboolean  invertNormal;
-    qtrue,                 			  //qboolean  creepTest;
-    SPITEFUL_ABCESS_CREEPSIZE,    	  //int       creepSize;
-    qfalse,                			  //qboolean  dccTest;
-    qfalse,                			  //qboolean  transparentTest;
-    qfalse,                			  //qboolean  uniqueTest;
-    SPITEFUL_ABCESS_VALUE,            //int       value;
-  },
-  {
-    BA_A_COCOON,         			 //int       buildNum;
-    "cocoon",           			 //char      *buildName;
-    "[ye]Cocoon",           		 //char      *humanName;
-	"INTELLIGENT ORGANIC STRUCTURE\n"
-    "[yei]This heals your team faster\n"
-    "+faster adv.goon barb regen.\n"
-	"Can only be built once\n",
-    "team_alien_cocoon",			 //char      *entityName;
-    TR_GRAVITY,            			 //trType_t  traj;
-    0,                   			 //float     bounce;
-    COCOON_BP,           			 //int       buildPoints;
-    STAGE_GE_4, 				 //int  stages
-    COCOON_HEALTH,       			 //int       health;
-    COCOON_REGEN,        			 //int       regenRate;
-    COCOON_SPLASHDAMAGE, 			 //int       splashDamage;
-    COCOON_SPLASHRADIUS, 			 //int       splashRadius;
-    MOD_ASPAWN,             		 //int       meansOfDeath;
-    TEAM_ALIENS,            		 //int       team;
-    ( 1 << WP_ABUILD ),     		 //weapon_t  buildWeapon;
-    BANIM_IDLE1,           			 //int       idleAnim;
-    1000,                   			 //int       nextthink;
-    COCOON_BT,           			 //int       buildTime;
-    qfalse,                			 //qboolean  usable;
-    0,                     			 //int       turretRange;
-    0,                     			 //int       turretFireSpeed;
-    WP_NONE,               			 //weapon_t  turretProjType;
-    0.0f,                  			 //float     minNormal;
-    qtrue,                 			 //qboolean  invertNormal;
-    qtrue,                 			 //qboolean  creepTest;
-    COCOON_CREEPSIZE,    			 //int       creepSize;
-    qfalse,                			 //qboolean  dccTest;
-    qfalse,                			 //qboolean  transparentTest;
-    qtrue,                 			 //qboolean  uniqueTest;
-    COCOON_VALUE,            		 //int       value;
-  },
-  {
-    BA_A_ORGANIC_BULB,         		//int       buildNum;
-    "organic_bulb",          	    //char      *buildName;
-    "[ye]Organic Bulb",           //char      *humanName;
-	"INTELLIGENT ORGANIC STRUCTURE\n"
-    "[yei]Used to light spots.\n",
-    "team_alien_organic_bulb",		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    ORGANIC_BULB_BP,           		//int       buildPoints;
-    STAGE_GE_3,           		//int  stages
-    ORGANIC_BULB_HEALTH,       		//int       health;
-    ORGANIC_BULB_REGEN,        		//int       regenRate;
-    ORGANIC_BULB_SPLASHDAMAGE, 		//int       splashDamage;
-    ORGANIC_BULB_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_ASPAWN,             		//int       meansOfDeath;
-    TEAM_ALIENS,            		//int       team;
-    ( 1 << WP_ABUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    1000,                   			//int       nextthink;
-    ORGANIC_BULB_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                  			//float     minNormal;
-    qtrue,                 			//qboolean  invertNormal;
-    qtrue,                 			//qboolean  creepTest;
-    ORGANIC_BULB_CREEPSIZE,    		//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    ORGANIC_BULB_VALUE,             //int       value;
-  },
-  {
-    BA_A_POD,         				//int       buildNum;
-    "pod",           				//char      *buildName;
-    "[ye]Pod",           			//char      *humanName;
-	"HEAVY ORGANIC STRUCTURE\n"
-    "[yei]This contains on top of the Pod Stump.\n"
-	"It is used to shield the top of bases.\n",
-    "team_alien_pod",				//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    POD_BP,           				//int       buildPoints;
-    STAGE_GE_4,           		        //int  stages
-    POD_HEALTH,       				//int       health;
-    POD_REGEN,        				//int       regenRate;
-    POD_SPLASHDAMAGE, 				//int       splashDamage;
-    POD_SPLASHRADIUS, 				//int       splashRadius;
-    MOD_ASPAWN,             		//int       meansOfDeath;
-    TEAM_ALIENS,            		//int       team;
-    ( 1 << WP_ABUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    1000,                   			//int       nextthink;
-    POD_BT,           				//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                  			//float     minNormal;
-    qtrue,                 			//qboolean  invertNormal;
-    qtrue,                 			//qboolean  creepTest;
-    POD_CREEPSIZE,    				//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    POD_VALUE,            			//int       value;
-  },
-  {
-    BA_A_POD_STUMP,         		//int       buildNum;
-    "pod_stump",           			//char      *buildName;
-    "[ye]Pod Stump",           	//char      *humanName;
-	"HEAVY ORGANIC STRUCTURE\n"
-    "[yei]This is the stump for Pod.\n",
-    "team_alien_pod_stump",			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    POD_STUMP_BP,           		//int       buildPoints;
-    STAGE_GE_4,           		//int  stages
-    POD_STUMP_HEALTH,       		//int       health;
-    POD_STUMP_REGEN,        		//int       regenRate;
-    POD_STUMP_SPLASHDAMAGE, 		//int       splashDamage;
-    POD_STUMP_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_ASPAWN,             		//int       meansOfDeath;
-    TEAM_ALIENS,            		//int       team;
-    ( 1 << WP_ABUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    1000,                   			//int       nextthink;
-    POD_STUMP_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    1.0f,                  			//float     minNormal;
-    qtrue,                 			//qboolean  invertNormal;
-    qtrue,                 			//qboolean  creepTest;
-    POD_STUMP_CREEPSIZE,    		//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    POD_STUMP_VALUE,            	//int       value;
-  },
-  {
-    BA_A_CREEPCOLONY,      			//int       buildNum;
-    "creepcolony",         			//char      *buildName;
-    "[ye]Creep colony",        	//char      *humanName;
-    "[yei]Gives your team extra buildpoints.",
-    "team_alien_creepcolony" ,		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    CREEPCOLONY_BP,        			//int       buildPoints;
-    STAGE_GE_3, 		                //int  stages
-    CREEPCOLONY_HEALTH,    			//int       health;
-    CREEPCOLONY_REGEN,     			//int       regenRate;
-    CREEPCOLONY_SPLASHDAMAGE, 		//int       splashDamage;
-    CREEPCOLONY_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_ASPAWN,            			//int       meansOfDeath;
-    TEAM_ALIENS,           			//int       team;
-    ( 1 << WP_ABUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    1000,                   		//int       nextthink;
-    CREEPCOLONY_BT,        			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qtrue,                 			//qboolean  invertNormal;
-    qtrue,                 			//qboolean  creepTest;
-    CREEPCOLONY_CREEPSIZE, 			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    CREEPCOLONY_VALUE,     			//int       value;
-  },
-  
-//HUMAN BUILDINGS
-  {
-    BA_H_SPAWN,            			//int       buildNum;
-    "telenode",            			//char      *buildName;
-    "Telenode",            			//char      *humanName;
+    BA_H_SPAWN,            //int       buildNum;
+    "telenode",            //char      *buildName;
+    "Telenode",            //char      *humanName;
     "The most basic human structure. It provides a means for humans "
       "to enter the battle arena. Without any of these the humans "
       "cannot spawn and defeat is imminent.",
-    "team_human_spawn",    			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    HSPAWN_BP,             			//int       buildPoints;
-    STAGE_GE_1,                                 //int  stages
-    HSPAWN_HEALTH,         			//int       health;
-    0,                     			//int       regenRate;
-    HSPAWN_SPLASHDAMAGE,   			//int       splashDamage;
-    HSPAWN_SPLASHRADIUS,   			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		        //int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    100,                   			//int       nextthink;
-    HSPAWN_BT,             			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qfalse,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qtrue,                 			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    HSPAWN_VALUE,          			//int       value;
+    "team_human_spawn",    //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    HSPAWN_BP,             //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    HSPAWN_HEALTH,         //int       health;
+    0,                     //int       regenRate;
+    HSPAWN_SPLASHDAMAGE,   //int       splashDamage;
+    HSPAWN_SPLASHRADIUS,   //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    100,                   //int       nextthink;
+    HSPAWN_BT,             //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qtrue,                 //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    HSPAWN_VALUE,          //int       value;
   },
   {
-    BA_H_MGTURRET,         			//int       buildNum;
-    "mgturret",            			//char      *buildName;
-    "Machinegun Turret",   			//char      *humanName;
+    BA_H_MGTURRET,         //int       buildNum;
+    "mgturret",            //char      *buildName;
+    "Machinegun Turret",   //char      *humanName;
     "Automated base defense that is effective against large targets "
       "but slow to begin firing. Should always be "
       "backed up by physical support.",
-    "team_human_mgturret", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    MGTURRET_BP,           			//int       buildPoints;
-    STAGE_GE_1,                                 //int  stages
-    MGTURRET_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    MGTURRET_SPLASHDAMAGE, 			//int       splashDamage;
-    MGTURRET_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    50,                    			//int       nextthink;
-    MGTURRET_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    MGTURRET_RANGE,        			//int       turretRange;
-    MGTURRET_REPEAT,       			//int       turretFireSpeed;
-    WP_MGTURRET,           			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qtrue,                 			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    MGTURRET_VALUE,        			//int       value;
+    "team_human_mgturret", //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    MGTURRET_BP,           //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    MGTURRET_HEALTH,       //int       health;
+    0,                     //int       regenRate;
+    MGTURRET_SPLASHDAMAGE, //int       splashDamage;
+    MGTURRET_SPLASHRADIUS, //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),   //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    50,                    //int       nextthink;
+    MGTURRET_BT,           //int       buildTime;
+    qfalse,                //qboolean  usable;
+    MGTURRET_RANGE,        //int       turretRange;
+    MGTURRET_REPEAT,       //int       turretFireSpeed;
+    WP_MGTURRET,           //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qtrue,                 //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    MGTURRET_VALUE,        //int       value;
   },
   {
-    BA_H_MGTURRET2,         		//int       buildNum;
-    "mgturret2",            		//char      *buildName;
-    "[ye]Flame Turret",   		//char      *humanName;
-    "Automated base defense that is effective against large targets "
-      "but slow to begin firing. Should always be "
-      "backed up by physical support.",
-    "team_human_mgturret2", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    MGTURRET2_BP,           		//int       buildPoints;
-    STAGE_GE_3,                		//int  stages
-    MGTURRET2_HEALTH,       		//int       health;
-    0,                     			//int       regenRate;
-    MGTURRET2_SPLASHDAMAGE, 		//int       splashDamage;
-    MGTURRET2_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    50,                    			//int       nextthink;
-    MGTURRET2_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    MGTURRET2_RANGE,        		//int       turretRange;
-    MGTURRET2_REPEAT,       		//int       turretFireSpeed;
-    WP_MGTURRET2,           		//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qtrue,                 			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    MGTURRET_VALUE,        			//int       value;
-  },
-  {
-    BA_H_TESLAGEN,         			//int       buildNum;
-    "tesla",               			//char      *buildName;
-    "Tesla Generator",     			//char      *humanName;
+    BA_H_TESLAGEN,         //int       buildNum;
+    "tesla",               //char      *buildName;
+    "Tesla Generator",     //char      *humanName;
     "A structure equipped with a strong electrical attack that fires "
       "instantly and always hits its target. It is effective against smaller "
       "aliens and for consolidating basic defense.",
-    "team_human_tesla",    			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    TESLAGEN_BP,           			//int       buildPoints;
-    STAGE_GE_4,           			//int       stages
-    TESLAGEN_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    TESLAGEN_SPLASHDAMAGE, 			//int       splashDamage;
-    TESLAGEN_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    150,                   			//int       nextthink;
-    TESLAGEN_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    TESLAGEN_RANGE,        			//int       turretRange;
-    TESLAGEN_REPEAT,       			//int       turretFireSpeed;
-    WP_TESLAGEN,           			//weapon_t  turretProjType;
-    0.95f,                 			//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qtrue,                 			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    TESLAGEN_VALUE,        			//int       value;
+    "team_human_tesla",    //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    TESLAGEN_BP,           //int       buildPoints;
+    ( 1 << S3 ),           //int       stages
+    TESLAGEN_HEALTH,       //int       health;
+    0,                     //int       regenRate;
+    TESLAGEN_SPLASHDAMAGE, //int       splashDamage;
+    TESLAGEN_SPLASHRADIUS, //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    150,                   //int       nextthink;
+    TESLAGEN_BT,           //int       buildTime;
+    qfalse,                //qboolean  usable;
+    TESLAGEN_RANGE,        //int       turretRange;
+    TESLAGEN_REPEAT,       //int       turretFireSpeed;
+    WP_TESLAGEN,           //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qtrue,                 //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    TESLAGEN_VALUE,        //int       value;
   },
   {
-    BA_H_ARMOURY,          			//int       buildNum;
-    "arm",                 			//char      *buildName;
-    "Armoury",             			//char      *humanName;
+    BA_H_ARMOURY,          //int       buildNum;
+    "arm",                 //char      *buildName;
+    "Armoury",             //char      *humanName;
     "An essential part of the human base, providing a means "
       "to upgrade the basic human equipment. A range of upgrades "
       "and weapons are available for sale from the armoury.",
-    "team_human_armoury",  			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    ARMOURY_BP,            			//int       buildPoints;
-    STAGE_GE_1,                                 //int  stages
-    ARMOURY_HEALTH,        			//int       health;
-    0,                     			//int       regenRate;
-    ARMOURY_SPLASHDAMAGE,  			//int       splashDamage;
-    ARMOURY_SPLASHRADIUS,  			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    100,                   			//int       nextthink;
-    ARMOURY_BT,            			//int       buildTime;
-    qtrue,                 			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    ARMOURY_VALUE,         			//int       value;
+    "team_human_armoury",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    ARMOURY_BP,            //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    ARMOURY_HEALTH,        //int       health;
+    0,                     //int       regenRate;
+    ARMOURY_SPLASHDAMAGE,  //int       splashDamage;
+    ARMOURY_SPLASHRADIUS,  //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    100,                   //int       nextthink;
+    ARMOURY_BT,            //int       buildTime;
+    qtrue,                 //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    ARMOURY_VALUE,         //int       value;
   },
   {
-    BA_H_DCC,              			//int       buildNum;
-    "dcc",                 			//char      *buildName;
-    "Defence Computer",    			//char      *humanName;
+    BA_H_DCC,              //int       buildNum;
+    "dcc",                 //char      *buildName;
+    "Defence Computer",    //char      *humanName;
     "A structure that enables self-repair functionality in "
       "human structures. Each Defence Computer built increases "
       "repair rate slightly.",
-    "team_human_dcc",      			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    DC_BP,                 			//int       buildPoints;
-    STAGE_GE_2,      			        //int       stages
-    DC_HEALTH,             			//int       health;
-    0,                     			//int       regenRate;
-    DC_SPLASHDAMAGE,       			//int       splashDamage;
-    DC_SPLASHRADIUS,       			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            			//int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    100,                   			//int       nextthink;
-    DC_BT,                 			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    DC_VALUE,              			//int       value;
+    "team_human_dcc",      //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    DC_BP,                 //int       buildPoints;
+    ( 1 << S2 )|( 1 << S3 ), //int       stages
+    DC_HEALTH,             //int       health;
+    0,                     //int       regenRate;
+    DC_SPLASHDAMAGE,       //int       splashDamage;
+    DC_SPLASHRADIUS,       //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    100,                   //int       nextthink;
+    DC_BT,                 //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    DC_VALUE,              //int       value;
   },
   {
-    BA_H_MEDISTAT,         			//int       buildNum;
-    "medistat",            			//char      *buildName;
-    "Medistation",         			//char      *humanName;
+    BA_H_MEDISTAT,         //int       buildNum;
+    "medistat",            //char      *buildName;
+    "Medistation",         //char      *humanName;
     "A structure that automatically restores "
       "the health and stamina of any human that stands on it. "
       "It may only be used by one person at a time. This structure "
       "also issues medkits.",
-    "team_human_medistat", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    MEDISTAT_BP,           			//int       buildPoints;
-    STAGE_GE_1,                                 //int  stages
-    MEDISTAT_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    MEDISTAT_SPLASHDAMAGE, 			//int       splashDamage;
-    MEDISTAT_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		        //int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    100,                   			//int       nextthink;
-    MEDISTAT_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qtrue,                 			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    MEDISTAT_VALUE,        			//int       value;
+    "team_human_medistat", //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    MEDISTAT_BP,           //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    MEDISTAT_HEALTH,       //int       health;
+    0,                     //int       regenRate;
+    MEDISTAT_SPLASHDAMAGE, //int       splashDamage;
+    MEDISTAT_SPLASHRADIUS, //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    100,                   //int       nextthink;
+    MEDISTAT_BT,           //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qtrue,                 //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    MEDISTAT_VALUE,        //int       value;
   },
   {
-    BA_H_REACTOR,          			//int       buildNum;
-    "reactor",             			//char      *buildName;
-    "Reactor",             			//char      *humanName;
+    BA_H_REACTOR,          //int       buildNum;
+    "reactor",             //char      *buildName;
+    "Reactor",             //char      *humanName;
     "All structures except the telenode rely on a reactor to operate. "
       "The reactor provides power for all the human structures either "
       "directly or via repeaters. Only one reactor can be built at a time.",
-    "team_human_reactor",  			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    REACTOR_BP,            			//int       buildPoints;
-    STAGE_GE_1,                                 //int  stages
-    REACTOR_HEALTH,        			//int       health;
-    0,                     			//int       regenRate;
-    REACTOR_SPLASHDAMAGE,  			//int       splashDamage;
-    REACTOR_SPLASHRADIUS,  			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    REACTOR_ATTACK_DCC_REPEAT, 		//int       nextthink;
-    REACTOR_BT,            			//int       buildTime;
-    qtrue,                 			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qtrue,                 			//qboolean  uniqueTest;
-    REACTOR_VALUE,         			//int       value;
+    "team_human_reactor",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    REACTOR_BP,            //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    REACTOR_HEALTH,        //int       health;
+    0,                     //int       regenRate;
+    REACTOR_SPLASHDAMAGE,  //int       splashDamage;
+    REACTOR_SPLASHRADIUS,  //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    REACTOR_ATTACK_DCC_REPEAT, //int       nextthink;
+    REACTOR_BT,            //int       buildTime;
+    qtrue,                 //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qtrue,                 //qboolean  uniqueTest;
+    qfalse,                //qboolean  zone;
+    REACTOR_VALUE,         //int       value;
   },
   {
-    BA_H_REPEATER,         			//int       buildNum;
-    "repeater",            			//char      *buildName;
-    "Repeater",            			//char      *humanName;
+    BA_H_REPEATER,         //int       buildNum;
+    "repeater",            //char      *buildName;
+    "Repeater",            //char      *humanName;
     "A power distributor that transmits power from the reactor "
       "to remote locations, so that bases may be built far "
       "from the reactor.",
-    "team_human_repeater", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    REPEATER_BP,           			//int       buildPoints;
-    STAGE_GE_2,                                 //int  stages
-    REPEATER_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    REPEATER_SPLASHDAMAGE, 			//int       splashDamage;
-    REPEATER_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		        //int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    100,                   			//int       nextthink;
-    REPEATER_BT,           			//int       buildTime;
-    qtrue,                 			//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    REPEATER_VALUE,        			//int       value;
+    "team_human_repeater", //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    REPEATER_BP,           //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    REPEATER_HEALTH,       //int       health;
+    0,                     //int       regenRate;
+    REPEATER_SPLASHDAMAGE, //int       splashDamage;
+    REPEATER_SPLASHRADIUS, //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,            //int       team;
+    ( 1 << WP_HBUILD ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    100,                   //int       nextthink;
+    REPEATER_BT,           //int       buildTime;
+    qtrue,                 //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qtrue,                 //qboolean  zone;
+    REPEATER_VALUE,        //int       value;
   },
   {
-    BA_H_CONTAINER_SMALL,         	//int       buildNum;
-    "container_small",            	//char      *buildName;
-    "[ye]Container Small",   		//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_container_small", 	//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    CONTAINER_SMALL_BP,           	//int       buildPoints;
-    STAGE_GE_1,                         //int  stages
-    CONTAINER_SMALL_HEALTH,       	//int       health;
-    0,                     			//int       regenRate;
-    CONTAINER_SMALL_SPLASHDAMAGE, 	//int       splashDamage;
-    CONTAINER_SMALL_SPLASHRADIUS, 	//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    CONTAINER_SMALL_BT,             //int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    CONTAINER_SMALL_VALUE,        	//int       value;
-  }, 
-  {
-    BA_H_CONTAINER_MEDIUM,         	//int       buildNum;
-    "container_medium",            	//char      *buildName;
-    "[ye]Container Medium",   	//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_container_medium", //char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    CONTAINER_MEDIUM_BP,            //int       buildPoints;
-    STAGE_GE_3, 		    //int  stages
-    CONTAINER_MEDIUM_HEALTH,        //int       health;
-    0,                     			//int       regenRate;
-    CONTAINER_MEDIUM_SPLASHDAMAGE,  //int       splashDamage;
-    CONTAINER_MEDIUM_SPLASHRADIUS,  //int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    CONTAINER_MEDIUM_BT,            //int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    CONTAINER_MEDIUM_VALUE,         //int       value;
-  }, 
-  {
-    BA_H_CONTAINER_LARGE,         	//int       buildNum;
-    "container_large",            	//char      *buildName;
-    "[ye]Container Large",   		//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_container_large", 	//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    CONTAINER_LARGE_BP,           	//int       buildPoints;
-    STAGE_GE_4, 					//int  stages
-    CONTAINER_LARGE_HEALTH,       	//int       health;
-    0,                    		 	//int       regenRate;
-    CONTAINER_LARGE_SPLASHDAMAGE, 	//int       splashDamage;
-    CONTAINER_LARGE_SPLASHRADIUS, 	//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    CONTAINER_LARGE_BT,           	//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    CONTAINER_LARGE_VALUE,        	//int       value;
-  }, 
-  {
-    BA_H_PLATE_SMALL,         		//int       buildNum;
-    "plate_small",            		//char      *buildName;
-    "[ye]Plate Small",   			//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense or bridges.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_plate_small", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    PLATE_SMALL_BP,           		//int       buildPoints;
-    STAGE_GE_1,                         //int  stages
-    PLATE_SMALL_HEALTH,       		//int       health;
-    0,                     			//int       regenRate;
-    PLATE_SMALL_SPLASHDAMAGE, 		//int       splashDamage;
-    PLATE_SMALL_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    PLATE_SMALL_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    PLATE_SMALL_VALUE,        		//int       value;
-  }, 
-  {
-    BA_H_PLATE_LARGE,         		//int       buildNum;
-    "plate_large",            		//char      *buildName;
-    "[ye]Plate Large",   			//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense or bridges.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_plate_large", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    PLATE_LARGE_BP,           		//int       buildPoints;
-    STAGE_GE_3, 					//int  stages
-    PLATE_LARGE_HEALTH,       		//int       health;
-    0,                     			//int       regenRate;
-    PLATE_LARGE_SPLASHDAMAGE, 		//int       splashDamage;
-    PLATE_LARGE_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    PLATE_LARGE_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    PLATE_LARGE_VALUE,        		//int       value;
-  }, 
-  {
-    BA_H_FENCE,         			//int       buildNum;
-    "fence",            			//char      *buildName;
-    "[ye]Fence",   				//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_fence", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    FENCE_BP,           			//int       buildPoints;
-    STAGE_GE_1,	                                //int  stages
-    FENCE_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    FENCE_SPLASHDAMAGE, 			//int       splashDamage;
-    FENCE_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    FENCE_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    FENCE_VALUE,        			//int       value;
-  }, 
-  {
-    BA_H_FENCE_ROD,         		//int       buildNum;
-    "fence_rod",            		//char      *buildName;
-    "[ye]Fence Rod",   			//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_fence_rod", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    FENCE_ROD_BP,           		//int       buildPoints;
-    STAGE_GE_1, 		                //int  stages
-    FENCE_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    FENCE_ROD_SPLASHDAMAGE, 		//int       splashDamage;
-    FENCE_ROD_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    FENCE_ROD_BT,          	 		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    FENCE_ROD_VALUE,        		//int       value;
-  }, 
-  {
-    BA_H_BARRIER_LINE,         		//int       buildNum;
-    "barrier_line",            		//char      *buildName;
-    "[ye]Barrier Line",   		//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_barrier_line", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    BARRIER_LINE_BP,           		//int       buildPoints;
-    STAGE_GE_2,                         //int  stages
-    BARRIER_LINE_HEALTH,       		//int       health;
-    0,                     			//int       regenRate;
-    BARRIER_LINE_SPLASHDAMAGE, 		//int       splashDamage;
-    BARRIER_LINE_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    BARRIER_LINE_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    BARRIER_LINE_VALUE,        		//int       value;
-  }, 
-  {
-    BA_H_BARRIER_CORNER,         	//int       buildNum;
-    "barrier_corner",            	//char      *buildName;
-    "[ye]Barrier Corner",   		//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_barrier_corner", 	//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    BARRIER_CORNER_BP,           	//int       buildPoints;
-    STAGE_GE_2,               		//int  stages
-    BARRIER_CORNER_HEALTH,       	//int       health;
-    0,                     			//int       regenRate;
-    BARRIER_CORNER_SPLASHDAMAGE, 	//int       splashDamage;
-    BARRIER_CORNER_SPLASHRADIUS, 	//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    BARRIER_CORNER_BT,           	//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    BARRIER_CORNER_VALUE,        	//int       value;
-  }, 
-  {
-    BA_H_BARRIER_POINT,         	//int       buildNum;
-    "barrier_point",            	//char      *buildName;
-    "[ye]Barrier Point",   		//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used for passive base defense.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_barrier_point", 	//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    BARRIER_POINT_BP,           	//int       buildPoints;
-    STAGE_GE_3, 		        //int  stages
-    BARRIER_POINT_HEALTH,       	//int       health;
-    0,                     			//int       regenRate;
-    BARRIER_POINT_SPLASHDAMAGE, 	//int       splashDamage;
-    BARRIER_POINT_SPLASHRADIUS, 	//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    BARRIER_POINT_BT,           	//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    BARRIER_POINT_VALUE,        	//int       value;
-  }, 
-  {
-    BA_H_SHIELD,         			//int       buildNum;
-    "shield",            			//char      *buildName;
-    "[ye]Shield",   				//char      *humanName;
-	"INTELLIGENT STRUCTURE\n"
-    "[yei]Energy-Shield / Floodgate."
-	"Can only be used by humans.",
-    "team_human_shield", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    SHIELD_BP,           			//int       buildPoints;
-    STAGE_GE_5,				        //int  stages
-    SHIELD_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    SHIELD_SPLASHDAMAGE, 			//int       splashDamage;
-    SHIELD_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    100,                   			//int       nextthink;
-    SHIELD_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0,                 				//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    SHIELD_VALUE,        			//int       value;
-  }, 
-  {
-    BA_H_LADDER,         			//int       buildNum;
-    "ladder",            			//char      *buildName;
-    "[ye]Ammo Supply",   			//char      *humanName;
-	"INTELLIGENT STRUCTURE\n"
-    "[yei]A tiny ammo box for non-energy weapons.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_ladder", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0,                   			//float     bounce;
-    LADDER_BP,           			//int       buildPoints;
-    STAGE_GE_3, 		                //int  stages
-    LADDER_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    LADDER_SPLASHDAMAGE, 			//int       splashDamage;
-    LADDER_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    LADDER_BT,           			//int       buildTime;
-    qtrue,                 			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0,                 				//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    LADDER_VALUE,        			//int       value;
+    BA_DPOINT_A,           //int       buildNum;
+    "dpoint_a",            //char      *buildName;
+    "^3Domination Point A",//char      *humanName;
+    "^3Domination Point A"
+		"",
+    "domination_point_a",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    0,                     //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    DOMINATION_HEALTH,     //int       health;
+    0,                     //int       regenRate;
+    0,                     //int       splashDamage;
+    0,                     //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_NONE,             //int       team;
+    ( 1 << WP_HBUILD )|
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    DOMINATION_THINK,      //int       nextthink;
+    0,                     //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.f,                   //float     minNormal;
+    qtrue,                 //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qtrue,                 //qboolean  zone;
+    0,                     //int       value;
   },
   {
-    BA_H_TEFLON_FOIL,         		//int       buildNum;
-    "teflon_foil",           	 	//char      *buildName;
-    "[ye]Teflon Foil",   			//char      *humanName;
-	"SEMI-SOLID STRUCTURE\n"
- 	"[yei]Can be used for camouflage.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_teflon_foil", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    TEFLON_FOIL_BP,           		//int       buildPoints;
-    STAGE_GE_1,                         //int  stages
-    TEFLON_FOIL_HEALTH,       		//int       health;
-    0,                     			//int       regenRate;
-    TEFLON_FOIL_SPLASHDAMAGE, 		//int       splashDamage;
-    TEFLON_FOIL_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    TEFLON_FOIL_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                		 	//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    TEFLON_FOIL_VALUE,        		//int       value;
+    BA_DPOINT_B,           //int       buildNum;
+    "dpoint_b",            //char      *buildName;
+    "^3Domination Point B",//char      *humanName;
+    "^3Domination Point B"
+		"",
+    "domination_point_b",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    0,                     //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    DOMINATION_HEALTH,     //int       health;
+    0,                     //int       regenRate;
+    0,                     //int       splashDamage;
+    0,                     //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_NONE,             //int       team;
+    ( 1 << WP_HBUILD )|
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    DOMINATION_THINK,      //int       nextthink;
+    0,                     //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.f,                   //float     minNormal;
+    qtrue,                 //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qtrue,                 //qboolean  zone;
+    0,                     //int       value;
   },
   {
-    BA_H_BARREL,         			//int       buildNum;
-    "barrel",            			//char      *buildName;
-    "[ye]Barrel",   				//char      *humanName;
-	"SOLID STRUCTURE\n"
-    "[yei]Used to build bases.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_barrel", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    BARREL_BP,           			//int       buildPoints;
-    STAGE_GE_2,                                 //int  stages
-    BARREL_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    BARREL_SPLASHDAMAGE, 			//int       splashDamage;
-    BARREL_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    BARREL_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    BARREL_VALUE,        			//int       value;
-  }, 
+    BA_DPOINT_C,           //int       buildNum;
+    "dpoint_c",            //char      *buildName;
+    "^3Domination Point C",//char      *humanName;
+    "^3Domination Point C"
+		"",
+    "domination_point_c",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    0,                     //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    DOMINATION_HEALTH,     //int       health;
+    0,                     //int       regenRate;
+    0,                     //int       splashDamage;
+    0,                     //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_NONE,              //int       team;
+    ( 1 << WP_HBUILD )|
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    DOMINATION_THINK,      //int       nextthink;
+    0,                     //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.f,                   //float     minNormal;
+    qtrue,                 //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qtrue,                 //qboolean  zone;
+    0,                     //int       value;
+  },
   {
-    BA_H_LIGHT,         			//int       buildNum;
-    "light",            			//char      *buildName;
-    "[ye]ForceField",   			//char      *humanName;
-	"INTELLIGENT SOLID STRUCTURE\n"
-    "[yei]Creates a forcefield wich.\n"
-    "pushes alien boddies back.\n",
-    "team_human_light", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    LIGHT_BP,           			//int       buildPoints;
-    STAGE_GE_5, 				//int  stages
-    LIGHT_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    LIGHT_SPLASHDAMAGE, 			//int       splashDamage;
-    LIGHT_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    400,                   			//int       nextthink;
-    LIGHT_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    LIGHT_VALUE,        			//int       value;
-  }, 
-  {
-    BA_H_COVER,         			//int       buildNum;
-    "cover",            			//char      *buildName;
-    "[ye]Cover",   				//char      *humanName;
-	"HEAVY SOLID STRUCTURE\n"
-    "[yei]This contains on top of the Cover Stump.\n"
-	"It is used to shield the top of bases.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_cover", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    COVER_BP,           			//int       buildPoints;
-    STAGE_GE_4, 					//int  stages
-    COVER_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    COVER_SPLASHDAMAGE, 			//int       splashDamage;
-    COVER_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    COVER_BT,           			//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    COVER_VALUE,        			//int       value;
-  }, 
-  {
-    BA_H_COVER_STUMP,         		//int       buildNum;
-    "cover_stump",            		//char      *buildName;
-    "[ye]Cover Stump",   			//char      *humanName;
-	"HEAVY SOLID STRUCTURE\n"
-    "[yei]This is the stump for the Cover.\n"
-    "This building doesn't need a powered area!\n",
-    "team_human_cover_stump", 		//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    COVER_STUMP_BP,           		//int       buildPoints;
-    STAGE_GE_4, 					//int  stages
-    COVER_STUMP_HEALTH,       		//int       health;
-    0,                     			//int       regenRate;
-    COVER_STUMP_SPLASHDAMAGE, 		//int       splashDamage;
-    COVER_STUMP_SPLASHRADIUS, 		//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),   			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    0,                    			//int       nextthink;
-    COVER_STUMP_BT,           		//int       buildTime;
-    qfalse,                			//qboolean  usable;
-    0,        						//int       turretRange;
-    0,       						//int       turretFireSpeed;
-    WP_NONE,           				//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal; 
-    qtrue,                			//qboolean  invertNormal; 
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                 		//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    COVER_STUMP_VALUE,        		//int       value;
-  }, 
-  {
-    BA_H_REFINERY,         			//int       buildNum;
-    "refinery",            			//char      *buildName;
-    "[ye]Refinery",            	//char      *humanName;
-	"SUPPLY STRUCTURE\n"
-    "[yei]Gives your team 75 buildpoints, ",
-    "team_human_refinery", 			//char      *entityName;
-    TR_GRAVITY,            			//trType_t  traj;
-    0.0,                   			//float     bounce;
-    REFINERY_BP,           			//int       buildPoints;
-    STAGE_GE_3, 		                //int  stages
-    REFINERY_HEALTH,       			//int       health;
-    0,                     			//int       regenRate;
-    REFINERY_SPLASHDAMAGE, 			//int       splashDamage;
-    REFINERY_SPLASHRADIUS, 			//int       splashRadius;
-    MOD_HSPAWN,            			//int       meansOfDeath;
-    TEAM_HUMANS,            		//int       team;
-    ( 1 << WP_HBUILD ),    			//weapon_t  buildWeapon;
-    BANIM_IDLE1,           			//int       idleAnim;
-    1000,                  			//int       nextthink;
-    REFINERY_BT,           			//int       buildTime;
-    qfalse,                 		//qboolean  usable;
-    0,                     			//int       turretRange;
-    0,                     			//int       turretFireSpeed;
-    WP_NONE,               			//weapon_t  turretProjType;
-    0.0f,                 			//float     minNormal;
-    qtrue,                			//qboolean  invertNormal;
-    qfalse,                			//qboolean  creepTest;
-    0,                     			//int       creepSize;
-    qfalse,                			//qboolean  dccTest;
-    qfalse,                			//qboolean  transparentTest;
-    qfalse,                			//qboolean  uniqueTest;
-    REFINERY_VALUE,        			//int       value;
-   },
-   };
+    BA_DPOINT_D,           //int       buildNum;
+    "dpoint_d",            //char      *buildName;
+    "^3Domination Point D",//char      *humanName;
+    "^3Domination Point D"
+		"",
+    "domination_point_d",  //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    0,                     //int       buildPoints;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    DOMINATION_HEALTH,     //int       health;
+    0,                     //int       regenRate;
+    0,                     //int       splashDamage;
+    0,                     //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_NONE,             //int       team;
+    ( 1 << WP_HBUILD )|
+    ( 1 << WP_ABUILD )|( 1 << WP_ABUILD2 ),    //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    DOMINATION_THINK,      //int       nextthink;
+    0,                     //int       buildTime;
+    qfalse,                //qboolean  usable;
+    0,                     //int       turretRange;
+    0,                     //int       turretFireSpeed;
+    WP_NONE,               //weapon_t  turretProjType;
+    0.f,                   //float     minNormal;
+    qtrue,                 //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qfalse,                //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    qtrue,                 //qboolean  zone;
+    0,                     //int       value;
+  }
+};
 
 int   bg_numBuildables = sizeof( bg_buildableList ) / sizeof( bg_buildableList[ 0 ] );
+
 static const buildableAttributes_t nullBuildable = { 0 };
+
 /*
 ==============
 BG_BuildableByName
@@ -1887,6 +740,7 @@ const buildableAttributes_t *BG_BuildableByName( const char *name )
     if( !Q_stricmp( bg_buildableList[ i ].name, name ) )
       return &bg_buildableList[ i ];
   }
+
   return &nullBuildable;
 }
 
@@ -1904,6 +758,7 @@ const buildableAttributes_t *BG_BuildableByEntityName( const char *name )
     if( !Q_stricmp( bg_buildableList[ i ].entityName, name ) )
       return &bg_buildableList[ i ];
   }
+
   return &nullBuildable;
 }
 
@@ -1958,6 +813,7 @@ void BG_BuildableBoundingBox( buildable_t buildable,
 
   if( mins != NULL )
     VectorCopy( buildableConfig->mins, mins );
+
   if( maxs != NULL )
     VectorCopy( buildableConfig->maxs, maxs );
 }
@@ -1987,6 +843,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
       MAXS          = 1 << 3,
       ZOFFSET       = 1 << 4
   };
+
 
   // load the file
   len = trap_FS_FOpenFile( filename, &f, FS_READ );
@@ -2124,22 +981,8 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
                   token, filename );
       return qfalse;
   }
+
   return qtrue;
-}
-
-/*
-===============
-BG_InitBGame
-
-rlly, idk, but
-===============
-*
-void G_InitBGame( int NULL )
-{
-  G_Printf( "SHIT" );
-  trap_Cvar_Set( "bg_language", "russian" );
-  G_RegisterCommands( );
-	//FUCKYOUSUKA
 }
 
 /*
@@ -2162,32 +1005,15 @@ void BG_InitBuildableConfigs( void )
   }
 }
 
-//langs
+////////////////////////////////////////////////////////////////////////////////
 
-static const langAttributes_t bg_langList[ ] =
-{
-  {
-	DEFAULT,	// langnum
-	"default"   // langName
-  },	
-  {
-	RUSSIAN,	// langnum
-	"russian"   // langName
-  },
-	
-};
-
-int   bg_numLangs = sizeof( bg_langList ) / sizeof( bg_langList[ 0 ] );
-static const langAttributes_t nullLang = { 0 };
-
-//CLASSES
 static const classAttributes_t bg_classList[ ] =
 {
   {
     PCL_NONE,                                       //int     classnum;
     "spectator",                                    //char    *className;
-    "Observer mode",
-    STAGE_GE_1,                                     //int  stages
+    "",
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     0,                                              //int     health;
     0.0f,                                           //float   fallDamage;
     0.0f,                                           //float   regenRate;
@@ -2198,7 +1024,7 @@ static const classAttributes_t bg_classList[ ] =
     0.000f,                                         //float   bob;
     1.0f,                                           //float   bobCycle;
     0,                                              //int     steptime;
-    800,                                            //float   speed;
+    600,                                            //float   speed;
     10.0f,                                          //float   acceleration;
     1.0f,                                           //float   airAcceleration;
     6.0f,                                           //float   friction;
@@ -2207,18 +1033,18 @@ static const classAttributes_t bg_classList[ ] =
     1.0f,                                           //float   knockbackScale;
     { PCL_NONE, PCL_NONE, PCL_NONE },               //int     children[ 3 ];
     0,                                              //int     cost;
-    0,                                               //int     value;
+    0                                               //int     value;
   },
   {
     PCL_ALIEN_BUILDER0,                             //int     classnum;
     "builder",                                      //char    *className;
     "Responsible for building and maintaining all the alien structures. "
       "Has a weak melee slash attack.",
-    STAGE_GE_1,                                     //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     ABUILDER_HEALTH,                                //int     health;
-    0.0f,                                           //float   fallDamage;
+    0.2f,                                           //float   fallDamage;
     ABUILDER_REGEN,                                 //float   regenRate;
-    SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
+    SCA_TAKESFALLDAMAGE|SCA_FOVWARPS|SCA_ALIENSENSE,//int     abilities;
     WP_ABUILD,                                      //weapon_t  startWeapon
     95.0f,                                          //float   buildDist;
     110,                                            //int     fov;
@@ -2234,7 +1060,7 @@ static const classAttributes_t bg_classList[ ] =
     1.0f,                                           //float   knockbackScale;
     { PCL_ALIEN_BUILDER0_UPG, PCL_ALIEN_LEVEL0, PCL_NONE },       //int     children[ 3 ];
     ABUILDER_COST,                                  //int     cost;
-    ABUILDER_VALUE,                                  //int     value;
+    ABUILDER_VALUE                                  //int     value;
   },
   {
     PCL_ALIEN_BUILDER0_UPG,                         //int     classnum;
@@ -2242,12 +1068,12 @@ static const classAttributes_t bg_classList[ ] =
     "Similar to the base Granger, except that in addition to "
       "being able to build structures it has a spit attack "
       "that slows victims and the ability to crawl on walls.",
-    STAGE_GE_2,                                     //int  stages
+    ( 1 << S2 )|( 1 << S3 ),                        //int  stages
     ABUILDER_UPG_HEALTH,                            //int     health;
-    0.0f,                                           //float   fallDamage;
+    0.2f,                                           //float   fallDamage;
     ABUILDER_UPG_REGEN,                             //float   regenRate;
-    SCA_FOVWARPS|SCA_WALLCLIMBER|SCA_ALIENSENSE,    //int     abilities;
-    WP_ABUILD,                                      //weapon_t  startWeapon
+    SCA_TAKESFALLDAMAGE|SCA_FOVWARPS|SCA_WALLCLIMBER|SCA_ALIENSENSE,    //int     abilities;
+    WP_ABUILD2,                                     //weapon_t  startWeapon
     105.0f,                                         //float   buildDist;
     110,                                            //int     fov;
     0.001f,                                         //float   bob;
@@ -2262,14 +1088,14 @@ static const classAttributes_t bg_classList[ ] =
     1.0f,                                           //float   knockbackScale;
     { PCL_ALIEN_LEVEL0, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
     ABUILDER_UPG_COST,                              //int     cost;
-    ABUILDER_UPG_VALUE,                              //int     value;
+    ABUILDER_UPG_VALUE                              //int     value;
   },
   {
     PCL_ALIEN_LEVEL0,                               //int     classnum;
     "level0",                                       //char    *classname;
     "Has a lethal reflexive bite and the ability to crawl on "
       "walls and ceilings.",
-    STAGE_GE_1,                                     //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL0_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL0_REGEN,                                   //float   regenRate;
@@ -2287,19 +1113,18 @@ static const classAttributes_t bg_classList[ ] =
     400.0f,                                         //float   stopSpeed;
     250.0f,                                         //float   jumpMagnitude;
     2.0f,                                           //float   knockbackScale;
-    { PCL_ALIEN_LEVEL1, PCL_NONE },                 //int     children[ 3 ];
+    { PCL_ALIEN_LEVEL1, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
     LEVEL0_COST,                                    //int     cost;
-    LEVEL0_VALUE,                                    //int     value;
+    LEVEL0_VALUE                                    //int     value;
   },
   {
     PCL_ALIEN_LEVEL1,                               //int     classnum;
     "level1",                                       //char    *classname;
-    "Has a melee attack, the ability to crawl on walls and "
-    "ceilings and the ability to temporarily become incorporeal "
-    "and pass through buildings and other players. In this state "
-    "the Wraith cannot be seen, heard or hurt. Provides a healing "
-    "aura that accelerates the healing rate of nearby aliens.",
-    STAGE_GE_2,                                     //int     stages
+    "A support class able to crawl on walls and ceilings. Its melee "
+      "attack is most effective when combined with the ability to grab "
+      "and hold its victims in place. Provides a weak healing aura "
+      "that accelerates the healing rate of nearby aliens.",
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL1_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL1_REGEN,                                   //float   regenRate;
@@ -2317,16 +1142,45 @@ static const classAttributes_t bg_classList[ ] =
     300.0f,                                         //float   stopSpeed;
     310.0f,                                         //float   jumpMagnitude;
     1.2f,                                           //float   knockbackScale;
+    { PCL_ALIEN_LEVEL2, PCL_ALIEN_LEVEL1_UPG, PCL_NONE },   //int     children[ 3 ];
+    LEVEL1_COST,                                     //int     cost;
+    LEVEL1_VALUE                                     //int     value;
+  },
+  {
+    PCL_ALIEN_LEVEL1_UPG,                           //int     classnum;
+    "level1upg",                                    //char    *classname;
+    "In addition to the basic Basilisk abilities, the Advanced "
+      "Basilisk sprays a poisonous gas which disorients any "
+      "nearby humans. Has a strong healing aura that "
+      "that accelerates the healing rate of nearby aliens.",
+    ( 1 << S2 )|( 1 << S3 ),                        //int  stages
+    LEVEL1_UPG_HEALTH,                              //int     health;
+    0.0f,                                           //float   fallDamage;
+    LEVEL1_UPG_REGEN,                               //float   regenRate;
+    SCA_FOVWARPS|SCA_WALLCLIMBER|SCA_ALIENSENSE,    //int     abilities;
+    WP_ALEVEL1_UPG,                                 //weapon_t  startWeapon
+    0.0f,                                           //float   buildDist;
+    120,                                            //int     fov;
+    0.001f,                                         //float   bob;
+    1.8f,                                           //float   bobCycle;
+    60,                                             //int     steptime;
+    LEVEL1_UPG_SPEED,                               //float   speed;
+    10.0f,                                          //float   acceleration;
+    1.0f,                                           //float   airAcceleration;
+    6.0f,                                           //float   friction;
+    300.0f,                                         //float   stopSpeed;
+    310.0f,                                         //float   jumpMagnitude;
+    1.1f,                                           //float   knockbackScale;
     { PCL_ALIEN_LEVEL2, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
-    LEVEL1_COST,                                    //int     cost;
-    LEVEL1_VALUE,                                   //int     value;
+    LEVEL1_UPG_COST,                                //int     cost;
+    LEVEL1_UPG_VALUE                                //int     value;
   },
   {
     PCL_ALIEN_LEVEL2,                               //int     classnum;
     "level2",                                       //char    *classname;
     "Has a melee attack and the ability to jump off walls. This "
       "allows the Marauder to gather great speed in enclosed areas.",
-    STAGE_GE_2,                                     //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL2_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL2_REGEN,                                   //float   regenRate;
@@ -2344,17 +1198,16 @@ static const classAttributes_t bg_classList[ ] =
     100.0f,                                         //float   stopSpeed;
     380.0f,                                         //float   jumpMagnitude;
     0.8f,                                           //float   knockbackScale;
-    { PCL_ALIEN_LEVEL5, PCL_ALIEN_LEVEL3, PCL_ALIEN_LEVEL2_UPG },   //int     children[ 3 ];
+    { PCL_ALIEN_LEVEL3, PCL_ALIEN_LEVEL2_UPG, PCL_NONE },   //int     children[ 3 ];
     LEVEL2_COST,                                    //int     cost;
-    LEVEL2_VALUE,                                    //int     value;
+    LEVEL2_VALUE                                    //int     value;
   },
   {
     PCL_ALIEN_LEVEL2_UPG,                           //int     classnum;
     "level2upg",                                    //char    *classname;
     "The Advanced Marauder has all the abilities of the basic Marauder "
-      "with the addition of a zap attack that chains through other "
-      "adv. marauders and can explode mines.",
-    STAGE_GE_3,                                     //int  stages
+      "with the addition of an area effect electric shock attack.",
+    ( 1 << S2 )|( 1 << S3 ),                        //int  stages
     LEVEL2_UPG_HEALTH,                              //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL2_UPG_REGEN,                               //float   regenRate;
@@ -2372,37 +1225,9 @@ static const classAttributes_t bg_classList[ ] =
     100.0f,                                         //float   stopSpeed;
     380.0f,                                         //float   jumpMagnitude;
     0.7f,                                           //float   knockbackScale;
-    { PCL_ALIEN_LEVEL5, PCL_ALIEN_LEVEL3, PCL_NONE },   //int     children[ 3 ];
+    { PCL_ALIEN_LEVEL3, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
     LEVEL2_UPG_COST,                                //int     cost;
-    LEVEL2_UPG_VALUE,                                //int     value;
-  },
-  {
-    PCL_ALIEN_LEVEL5,                               //int     classnum;
-    "level5",                                       //char    *classname;
-    "The Hummel is a flying alien with air pounce ability, "
-      "fast melee attacks and unlimited low damage shooting attack "
-      "that does not spread poison.",
-    STAGE_GE_4,                                     //int  stages
-    LEVEL5_UPG_HEALTH,                              //int     health;
-    0.0f,                                           //float   fallDamage;
-    LEVEL5_UPG_REGEN,                               //float   regenRate;
-    SCA_FOVWARPS|SCA_ALIENSENSE|SCA_FLYING,         //int     abilities;
-    WP_ALEVEL5,                                 	//weapon_t  startWeapon
-    0.0f,                                           //float   buildDist;
-    90,                                             //int     fov;
-    0.001f,                                         //float   bob;
-    1.5f,                                           //float   bobCycle;
-    80,                                             //int     steptime;
-    LEVEL5_UPG_SPEED,                               //float   speed;
-    9.0f,                                          //float   acceleration;
-    5.0f,                                          //float   airAcceleration;
-    6.0f,                                           //float   friction;
-    90.0f,                                         //float   stopSpeed;
-    250.0f,                                         //float   jumpMagnitude;
-    0.7f,                                           //float   knockbackScale;
-    { PCL_ALIEN_LEVEL3, PCL_ALIEN_LEVEL3_UPG, PCL_NONE },       //int     children[ 3 ];
-    LEVEL5_UPG_COST,                                //int     cost;
-    LEVEL5_UPG_VALUE,                                //int     value;
+    LEVEL2_UPG_VALUE                                //int     value;
   },
   {
     PCL_ALIEN_LEVEL3,                               //int     classnum;
@@ -2410,14 +1235,14 @@ static const classAttributes_t bg_classList[ ] =
     "Possesses a melee attack and the pounce ability, which may "
       "be used as both an attack and a means to reach remote "
       "locations inaccessible from the ground.",
-    STAGE_GE_3,                                     //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL3_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL3_REGEN,                                   //float   regenRate;
     SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
     WP_ALEVEL3,                                     //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
-    90,                                            //int     fov;
+    110,                                            //int     fov;
     0.0005f,                                        //float   bob;
     1.3f,                                           //float   bobCycle;
     90,                                             //int     steptime;
@@ -2427,25 +1252,25 @@ static const classAttributes_t bg_classList[ ] =
     6.0f,                                           //float   friction;
     200.0f,                                         //float   stopSpeed;
     270.0f,                                         //float   jumpMagnitude;
-    0.3f,                                           //float   knockbackScale;
+    0.5f,                                           //float   knockbackScale;
     { PCL_ALIEN_LEVEL4, PCL_ALIEN_LEVEL3_UPG, PCL_NONE },   //int     children[ 3 ];
     LEVEL3_COST,                                    //int     cost;
-    LEVEL3_VALUE,                                    //int     value;
+    LEVEL3_VALUE                                    //int     value;
   },
   {
     PCL_ALIEN_LEVEL3_UPG,                           //int     classnum;
     "level3upg",                                    //char    *classname;
     "In addition to the basic Dragoon abilities, the Advanced "
       "Dragoon has 3 barbs which may be used to attack humans "
-      "from a distance and it has a higher jump height.",
-    STAGE_GE_4,                                     //int  stages
+      "from a distance.",
+    ( 1 << S2 )|( 1 << S3 ),                        //int  stages
     LEVEL3_UPG_HEALTH,                              //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL3_UPG_REGEN,                               //float   regenRate;
     SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
     WP_ALEVEL3_UPG,                                 //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
-    90,                                             //int     fov;
+    110,                                            //int     fov;
     0.0005f,                                        //float   bob;
     1.3f,                                           //float   bobCycle;
     90,                                             //int     steptime;
@@ -2455,19 +1280,19 @@ static const classAttributes_t bg_classList[ ] =
     6.0f,                                           //float   friction;
     200.0f,                                         //float   stopSpeed;
     270.0f,                                         //float   jumpMagnitude;
-    0.2f,                                           //float   knockbackScale;
+    0.4f,                                           //float   knockbackScale;
     { PCL_ALIEN_LEVEL4, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
     LEVEL3_UPG_COST,                                //int     cost;
-    LEVEL3_UPG_VALUE,                               //int     value;
+    LEVEL3_UPG_VALUE                                //int     value;
   },
   {
     PCL_ALIEN_LEVEL4,                               //int     classnum;
     "level4",                                       //char    *classname;
-    "A large alien with a strong melee attack. "
-      "This class can also charge at enemy players and structures, "
-      "inflicting great damage. Any humans caught under a falling "
-      "Tyrant will be crushed by its weight.",
-    STAGE_GE_5,                                     //int  stages
+    "A large alien with a strong melee attack, this class can "
+      "also charge at enemy humans and structures, inflicting "
+      "great damage. Any humans or their structures caught under "
+      "a falling Tyrant will be crushed by its weight.",
+    ( 1 << S3 ),                                    //int  stages
     LEVEL4_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
     LEVEL4_REGEN,                                   //float   regenRate;
@@ -2487,13 +1312,13 @@ static const classAttributes_t bg_classList[ ] =
     0.1f,                                           //float   knockbackScale;
     { PCL_NONE, PCL_NONE, PCL_NONE },               //int     children[ 3 ];
     LEVEL4_COST,                                    //int     cost;
-    LEVEL4_VALUE,                                   //int     value;
+    LEVEL4_VALUE                                    //int     value;
   },
   {
     PCL_HUMAN,                                      //int     classnum;
     "human_base",                                   //char    *classname;
     "",
-    STAGE_GE_1,                                     //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     100,                                            //int     health;
     1.0f,                                           //float   fallDamage;
     0.0f,                                           //float   regenRate;
@@ -2513,13 +1338,13 @@ static const classAttributes_t bg_classList[ ] =
     1.0f,                                           //float   knockbackScale;
     { PCL_NONE, PCL_NONE, PCL_NONE },               //int     children[ 3 ];
     0,                                              //int     cost;
-    ALIEN_CREDITS_PER_KILL,                          //int     value;
+    ALIEN_CREDITS_PER_KILL                          //int     value;
   },
   {
     PCL_HUMAN_BSUIT,                                //int     classnum;
     "human_bsuit",                                  //char    *classname;
     "",
-    STAGE_GE_5,                                     //int  stages
+    ( 1 << S3 ),                                    //int  stages
     100,                                            //int     health;
     1.0f,                                           //float   fallDamage;
     0.0f,                                           //float   regenRate;
@@ -2531,7 +1356,7 @@ static const classAttributes_t bg_classList[ ] =
     0.002f,                                         //float   bob;
     1.0f,                                           //float   bobCycle;
     100,                                            //int     steptime;
-    2.0f,                                           //float   speed;
+    1.0f,                                           //float   speed;
     10.0f,                                          //float   acceleration;
     1.0f,                                           //float   airAcceleration;
     6.0f,                                           //float   friction;
@@ -2540,11 +1365,12 @@ static const classAttributes_t bg_classList[ ] =
     1.0f,                                           //float   knockbackScale;
     { PCL_NONE, PCL_NONE, PCL_NONE },               //int     children[ 3 ];
     0,                                              //int     cost;
-    ALIEN_CREDITS_PER_KILL,                          //int     value;
+    ALIEN_CREDITS_PER_KILL                          //int     value;
   }
 };
 
 int   bg_numClasses = sizeof( bg_classList ) / sizeof( bg_classList[ 0 ] );
+
 static const classAttributes_t nullClass = { 0 };
 
 /*
@@ -2561,6 +1387,7 @@ const classAttributes_t *BG_ClassByName( const char *name )
     if( !Q_stricmp( bg_classList[ i ].name, name ) )
       return &bg_classList[ i ];
   }
+
   return &nullClass;
 }
 
@@ -2577,24 +1404,6 @@ const classAttributes_t *BG_Class( class_t class )
 
 /*
 ==============
-BG_Lang
-==============
-*
-const langAttributes_t *BG_Lang( lang_t lang )
-{
-	
-}
-*
-void BG_Lang2 ( void ){
-	
-	return G_InitGame;
-	
-	trap_Cvar_Set ("g_language", "russian");
-	
-}; 
-
-/*
-==============
 BG_ClassAllowedInStage
 ==============
 */
@@ -2607,6 +1416,7 @@ qboolean BG_ClassAllowedInStage( class_t class,
 }
 
 static classConfig_t bg_classConfigList[ PCL_NUM_CLASSES ];
+
 /*
 ==============
 BG_ClassConfig
@@ -2652,6 +1462,7 @@ BG_ClassHasAbility
 qboolean BG_ClassHasAbility( class_t class, int ability )
 {
   int abilities = BG_Class( class )->abilities;
+
   return abilities & ability;
 }
 
@@ -2672,7 +1483,6 @@ int BG_ClassCanEvolveFromTo( class_t fclass,
     return -1;
 
   for( i = 0; i < bg_numClasses; i++ )
-
   {
     if( bg_classList[ i ].number != fclass )
       continue;
@@ -2722,14 +1532,15 @@ qboolean BG_AlienCanEvolve( class_t class, int credits, int stage )
     for( j = 0; j < 3; j++ )
     {
       tclass = bg_classList[ i ].children[ j ];
-      if( tclass != PCL_NONE && 
-	  BG_ClassAllowedInStage( tclass, stage ) &&
+      if( tclass != PCL_NONE && BG_ClassAllowedInStage( tclass, stage ) &&
           BG_ClassIsAllowed( tclass ) &&
           credits >= BG_Class( tclass )->cost * ALIEN_CREDITS_PER_KILL )
         return qtrue;
     }
+
     return qfalse;
   }
+
   Com_Printf( S_COLOR_YELLOW "WARNING: fallthrough in BG_AlienCanEvolve\n" );
   return qfalse;
 }
@@ -3018,17 +1829,8 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
                   token, filename );
       return qfalse;
   }
-  return qtrue;
-}
 
-/*
-===============
-SomeShitForLangs
-===============
-*
-void language ( void )
-{
-	LocINIT ();
+  return qtrue;
 }
 
 /*
@@ -3040,31 +1842,24 @@ void BG_InitClassConfigs( void )
 {
   int           i;
   classConfig_t *cc;
-  lang_t        *name;
- // float			g_language;
 
   for( i = PCL_NONE; i < PCL_NUM_CLASSES; i++ )
   {
     cc = BG_ClassConfig( i );
-/*
-	    if ( !g_language, "russian" ) {
-		BG_ParseClassFile( va( "russian/configs/classes/%s.cfg" , 
-                           BG_Class( i )->name ), cc );		
-		}*/
-  //  else 
-	//{
-		BG_ParseClassFile( va( "configs/classes/%s.cfg",
+
+    BG_ParseClassFile( va( "configs/classes/%s.cfg",
                            BG_Class( i )->name ), cc );
-		//}
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 static const weaponAttributes_t bg_weapons[ ] =
 {
   {
     WP_ALEVEL0,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level0",             //char      *weaponName;
     "Bite",               //char      *humanName;
@@ -3089,7 +1884,7 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_ALEVEL1,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level1",             //char      *weaponName;
     "Claws",              //char      *humanName;
@@ -3112,12 +1907,37 @@ static const weaponAttributes_t bg_weapons[ ] =
     TEAM_ALIENS           //team_t    team;
   },
   {
+    WP_ALEVEL1_UPG,       //int       weaponNum;
+    0,                    //int       price;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    SLOT_WEAPON,          //int       slots;
+    "level1upg",          //char      *weaponName;
+    "Claws Upgrade",      //char      *humanName;
+    "",
+    0,                    //int       maxAmmo;
+    0,                    //int       maxClips;
+    qtrue,                //int       infiniteAmmo;
+    qfalse,               //int       usesEnergy;
+    LEVEL1_CLAW_U_REPEAT, //int       repeatRate1;
+    LEVEL1_PCLOUD_REPEAT, //int       repeatRate2;
+    0,                    //int       repeatRate3;
+    0,                    //int       reloadTime;
+    LEVEL1_CLAW_U_K_SCALE,//float     knockbackScale;
+    qtrue,                //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasThirdMode;
+    qfalse,               //qboolean  canZoom;
+    90.0f,                //float     zoomFov;
+    qfalse,               //qboolean  purchasable;
+    qtrue,                //qboolean  longRanged;
+    TEAM_ALIENS           //team_t    team;
+  },
+  {
     WP_ALEVEL2,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_2,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level2",             //char      *weaponName;
-    "Claws",               //char      *humanName;
+    "Bite",               //char      *humanName;
     "",
     0,                    //int       maxAmmo;
     0,                    //int       maxClips;
@@ -3139,7 +1959,7 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_ALEVEL2_UPG,       //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_3,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level2upg",          //char      *weaponName;
     "Zap",                //char      *humanName;
@@ -3150,7 +1970,7 @@ static const weaponAttributes_t bg_weapons[ ] =
     qfalse,               //int       usesEnergy;
     LEVEL2_CLAW_U_REPEAT, //int       repeatRate1;
     LEVEL2_AREAZAP_REPEAT,//int       repeatRate2;
-    LEVEL2_BOUNCEBALL_REPEAT,//int    repeatRate3;
+    0,                    //int       repeatRate3;
     0,                    //int       reloadTime;
     LEVEL2_CLAW_U_K_SCALE,//float     knockbackScale;
     qtrue,                //qboolean  hasAltMode;
@@ -3158,38 +1978,13 @@ static const weaponAttributes_t bg_weapons[ ] =
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
     qfalse,               //qboolean  purchasable;
-    qtrue,                //qboolean  longRanged;
+    qfalse,               //qboolean  longRanged;
     TEAM_ALIENS           //team_t    team;
-  },
-  {
-    WP_ALEVEL5,       						//int       weaponNum;
-    0,                    					//int       price;
-    STAGE_GE_4, 	  //int  stages
-    SLOT_WEAPON,          					//int       slots;
-    "level5",             					//char      *weaponName;
-    "prickles",                				//char      *humanName;
-    "",
-    10,                    					//int       maxAmmo; 
-    0,                    					//int       maxClips;
-    qtrue,                					//int       infiniteAmmo;
-    qfalse,               					//int       usesEnergy;
-    LEVEL5_CLAW_U_REPEAT, 					//int       repeatRate1;
-    LEVEL5_POUNCE_REPEAT,					//int       repeatRate2;
-    LEVEL5_PRICKLES_REPEAT,				    //int       repeatRate3;
-    0,                     					//int       reloadTime;
-    LEVEL5_CLAW_U_K_SCALE,					//float     knockbackScale;
-    qfalse,                					//qboolean  hasAltMode;
-    qtrue,                					//qboolean  hasThirdMode;
-    qtrue,                					//qboolean  canZoom;
-    90.0f,                					//float     zoomFov;
-    qfalse,               					//qboolean  purchasable;
-    qtrue,                					//qboolean  longRanged;
-    TEAM_ALIENS           					//team_t    team;
   },
   {
     WP_ALEVEL3,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_3,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level3",             //char      *weaponName;
     "Pounce",             //char      *humanName;
@@ -3205,8 +2000,8 @@ static const weaponAttributes_t bg_weapons[ ] =
     LEVEL3_CLAW_K_SCALE,  //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
-    qtrue,                //qboolean  canZoom;
-    100.0f,               //float     zoomFov;
+    qfalse,               //qboolean  canZoom;
+    90.0f,                //float     zoomFov;
     qfalse,               //qboolean  purchasable;
     qfalse,               //qboolean  longRanged;
     TEAM_ALIENS           //team_t    team;
@@ -3214,7 +2009,7 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_ALEVEL3_UPG,       //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_4,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level3upg",          //char      *weaponName;
     "Pounce (upgrade)",   //char      *humanName;
@@ -3230,7 +2025,7 @@ static const weaponAttributes_t bg_weapons[ ] =
     LEVEL3_CLAW_U_K_SCALE,//float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qtrue,                //qboolean  hasThirdMode;
-    qtrue,               //qboolean  canZoom;
+    qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
     qfalse,               //qboolean  purchasable;
     qtrue,                //qboolean  longRanged;
@@ -3239,18 +2034,18 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_ALEVEL4,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_5,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "level4",             //char      *weaponName;
     "Charge",             //char      *humanName;
     "",
-    3,                    //int       maxAmmo;
+    0,                    //int       maxAmmo;
     0,                    //int       maxClips;
     qtrue,                //int       infiniteAmmo;
     qfalse,               //int       usesEnergy;
     LEVEL4_CLAW_REPEAT,   //int       repeatRate1;
     0,                    //int       repeatRate2;
-    LEVEL4_FIREBREATHREPEAT, //int    repeatRate3;
+    0,                    //int       repeatRate3;
     0,                    //int       reloadTime;
     LEVEL4_CLAW_K_SCALE,  //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
@@ -3264,10 +2059,10 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_BLASTER,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     0,                    //int       slots;
     "blaster",            //char      *weaponName;
-    "[yefarms]Blaster",   //char      *humanName;
+    "Blaster",            //char      *humanName;
     "",
     0,                    //int       maxAmmo;
     0,                    //int       maxClips;
@@ -3289,22 +2084,22 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_MACHINEGUN,        //int       weaponNum;
     RIFLE_PRICE,          //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "rifle",              //char      *weaponName;
-    "[yefarms]Rifle",              //char      *humanName;
+    "Rifle",              //char      *humanName;
     "Basic weapon. Cased projectile weapon, with a slow clip based "
-      "reload system & a fast 2nd mode.",
+      "reload system.",
     RIFLE_CLIPSIZE,       //int       maxAmmo;
     RIFLE_MAXCLIPS,       //int       maxClips;
     qfalse,               //int       infiniteAmmo;
     qfalse,               //int       usesEnergy;
     RIFLE_REPEAT,         //int       repeatRate1;
-    RIFLE_REPEAT2,        //int       repeatRate2;
+    0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
     RIFLE_RELOAD,         //int       reloadTime;
     RIFLE_K_SCALE,        //float     knockbackScale;
-    qtrue,                //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
@@ -3315,23 +2110,23 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_PAIN_SAW,          //int       weaponNum;
     PAINSAW_PRICE,        //int       price;
-    STAGE_GE_1,           //int       stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "psaw",               //char      *weaponName;
-    "[yefarms]Pain Saw",           //char      *humanName;
+    "Pain Saw",           //char      *humanName;
     "Similar to a chainsaw, but instead of a chain it has an "
       "electric arc capable of dealing a great deal of damage at "
-      "close range. It has a blade mode for secondary fire",
+      "close range.",
     0,                    //int       maxAmmo;
     0,                    //int       maxClips;
     qtrue,                //int       infiniteAmmo;
     qfalse,               //int       usesEnergy;
     PAINSAW_REPEAT,       //int       repeatRate1;
-    PAINSAW_REPEAT2,       //int       repeatRate2;
+    0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
     0,                    //int       reloadTime;
     PAINSAW_K_SCALE,      //float     knockbackScale;
-    qtrue,                //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
@@ -3342,10 +2137,10 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_SHOTGUN,           //int       weaponNum;
     SHOTGUN_PRICE,        //int       price;
-    STAGE_GE_3,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "shotgun",            //char      *weaponName;
-    "[yefarms]Shotgun",            //char      *humanName;
+    "Shotgun",            //char      *humanName;
     "Close range weapon that is useful against larger foes. "
       "It has a slow repeat rate, but can be devastatingly "
       "effective.",
@@ -3357,7 +2152,7 @@ static const weaponAttributes_t bg_weapons[ ] =
     0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
     SHOTGUN_RELOAD,       //int       reloadTime;
-    SHOTGUN_K_SCALE,       //float     knockbackScale;
+    SHOTGUN_K_SCALE,        //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
@@ -3369,10 +2164,10 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_LAS_GUN,           //int       weaponNum;
     LASGUN_PRICE,         //int       price;
-    STAGE_GE_2,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "lgun",               //char      *weaponName;
-    "[yefarms]Las Gun",            //char      *humanName;
+    "Las Gun",            //char      *humanName;
     "Slightly more powerful than the basic rifle, rapidly fires "
       "small packets of energy.",
     LASGUN_AMMO,          //int       maxAmmo;
@@ -3380,11 +2175,11 @@ static const weaponAttributes_t bg_weapons[ ] =
     qfalse,               //int       infiniteAmmo;
     qtrue,                //int       usesEnergy;
     LASGUN_REPEAT,        //int       repeatRate1;
-    LASGUN_REPEAT2,       //int       repeatRate2;
+    0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
     LASGUN_RELOAD,        //int       reloadTime;
     LASGUN_K_SCALE,       //float     knockbackScale;
-    qtrue,                //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
@@ -3395,26 +2190,26 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_MASS_DRIVER,       //int       weaponNum;
     MDRIVER_PRICE,        //int       price;
-    STAGE_GE_3,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "mdriver",            //char      *weaponName;
-    "[yefarms]Mass Driver",        //char      *humanName;
+    "Mass Driver",        //char      *humanName;
     "A portable particle accelerator which causes minor nuclear "
-    "reactions at the point of impact. It has a very large "
-    "payload, but fires slowly.",
+      "reactions at the point of impact. It has a very large "
+      "payload, but fires slowly.",
     MDRIVER_CLIPSIZE,     //int       maxAmmo;
     MDRIVER_MAXCLIPS,     //int       maxClips;
     qfalse,               //int       infiniteAmmo;
     qtrue,                //int       usesEnergy;
     MDRIVER_REPEAT,       //int       repeatRate1;
     0,                    //int       repeatRate2;
-    MDRIVER_REPEAT2,      //int       repeatRate3;
+    0,                    //int       repeatRate3;
     MDRIVER_RELOAD,       //int       reloadTime;
     MDRIVER_K_SCALE,      //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qtrue,                //qboolean  canZoom;
-    25.0f,                //float     zoomFov;
+    20.0f,                //float     zoomFov;
     qtrue,                //qboolean  purchasable;
     qtrue,                //qboolean  longRanged;
     TEAM_HUMANS           //team_t    team;
@@ -3422,10 +2217,10 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_CHAINGUN,          //int       weaponNum;
     CHAINGUN_PRICE,       //int       price;
-    STAGE_GE_3,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "chaingun",           //char      *weaponName;
-    "[yefarms]Chaingun",           //char      *humanName;
+    "Chaingun",           //char      *humanName;
     "Belt drive, cased projectile weapon. It has a high repeat "
       "rate but a wide firing angle and is therefore relatively "
       "inaccurate.",
@@ -3434,11 +2229,11 @@ static const weaponAttributes_t bg_weapons[ ] =
     qfalse,               //int       infiniteAmmo;
     qfalse,               //int       usesEnergy;
     CHAINGUN_REPEAT,      //int       repeatRate1;
-    CHAINGUN_REPEAT2,      //int       repeatRate2;
+    0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
     0,                    //int       reloadTime;
     CHAINGUN_K_SCALE,     //float     knockbackScale;
-    qtrue,               //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
@@ -3446,24 +2241,24 @@ static const weaponAttributes_t bg_weapons[ ] =
     qtrue,                //qboolean  longRanged;
     TEAM_HUMANS           //team_t    team;
   },
-   {
+  {
     WP_FLAMER,            //int       weaponNum;
     FLAMER_PRICE,         //int       price;
-    STAGE_GE_4,           //int  stages
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "flamer",             //char      *weaponName;
-    "[yefarms]Flame Thrower",      //char      *humanName;
+    "Flame Thrower",      //char      *humanName;
     "Sprays fire at its target. It is powered by compressed "
       "gas. The relatively low rate of fire means this weapon is most "
       "effective against static targets.",
-    150,           		  //int       maxAmmo;
-    1,                    //int       maxClips;
+    FLAMER_GAS,           //int       maxAmmo;
+    0,                    //int       maxClips;
     qfalse,               //int       infiniteAmmo;
     qfalse,               //int       usesEnergy;
     FLAMER_REPEAT,        //int       repeatRate1;
     0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
-    3000,                 //int       reloadTime;
+    0,                    //int       reloadTime;
     FLAMER_K_SCALE,       //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
@@ -3476,45 +2271,20 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_PULSE_RIFLE,       //int       weaponNum;
     PRIFLE_PRICE,         //int       price;
-    STAGE_GE_4,           //int  stages
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "prifle",             //char      *weaponName;
-    "[yefarms]Pulse Rifle",        //char      *humanName;
+    "Pulse Rifle",        //char      *humanName;
     "An energy weapon that fires rapid pulses of concentrated energy.",
     PRIFLE_CLIPS,         //int       maxAmmo;
     PRIFLE_MAXCLIPS,      //int       maxClips;
     qfalse,               //int       infiniteAmmo;
     qtrue,                //int       usesEnergy;
     PRIFLE_REPEAT,        //int       repeatRate1;
-    PRIFLE_SECONDARY_REPEAT,                    //int       repeatRate2;
+    0,                    //int       repeatRate2;
     0,                    //int       repeatRate3;
     PRIFLE_RELOAD,        //int       reloadTime;
     PRIFLE_K_SCALE,       //float     knockbackScale;
-    qtrue,                //qboolean  hasAltMode;
-    qfalse,               //qboolean  hasThirdMode;
-    qfalse,               //qboolean  canZoom;
-    90.0f,                //float     zoomFov;
-    qtrue,                //qboolean  purchasable;
-    qtrue,                //qboolean  longRanged;
-    TEAM_HUMANS           //team_t    team;
-  },
-  {
-    WP_LIGHTNING_GUN,     //int       weaponNum;
-    LIGHTNING_PRICE,      //int       price;
-    STAGE_GE_5,           //int  stages
-    SLOT_WEAPON,          //int       slots;
-    "lightning",          //char      *weaponName;
-    "[yefarms]Lightning Gun",     //char      *humanName;
-    "This is a lightning gun. It guns lightning.",
-    LIGHTNING_AMMO,       //int       maxAmmo;
-    0,                    //int       maxClips;
-    qfalse,               //int       infiniteAmmo;
-    qtrue,                //int       usesEnergy;
-    LIGHTNING_REPEAT,     //int       repeatRate1;
-    0,                    //int       repeatRate2;
-    0,                    //int       repeatRate3;
-    0,                    //int       reloadTime;
-    LIGHTNING_K_SCALE,    //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
@@ -3526,10 +2296,10 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_LUCIFER_CANNON,    //int       weaponNum;
     LCANNON_PRICE,        //int       price;
-    STAGE_GE_5,           //int  stages
+    ( 1 << S3 ),          //int  stages
     SLOT_WEAPON,          //int       slots;
     "lcannon",            //char      *weaponName;
-    "[yefarms]Lucifer Cannon",     //char      *humanName;
+    "Lucifer Cannon",     //char      *humanName;
     "Blaster technology scaled up to deliver devastating power. "
       "Primary fire must be charged before firing. It has a quick "
       "secondary attack that does not require charging.",
@@ -3551,37 +2321,12 @@ static const weaponAttributes_t bg_weapons[ ] =
     TEAM_HUMANS           //team_t    team;
   },
   {
-    WP_ROCKET_LAUNCHER,   //int       weaponNum;
-    ROCKETL_PRICE,        //int       price;
-    STAGE_GE_5,           //int  stages
-    SLOT_WEAPON,          //int       slots;
-    "rocketl",            //char      *weaponName;
-    "[yefarms]Rocket Launcher",     //char      *humanName;
-    "This is a rocket launcher. It launches rockets.",
-    ROCKETL_AMMO,         //int       maxAmmo;
-    ROCKETL_CLIPS,        //int       maxClips;
-    qfalse,               //int       infiniteAmmo;
-    qfalse,               //int       usesEnergy;
-    ROCKETL_REPEAT,       //int       repeatRate1;
-    0,                    //int       repeatRate2;
-    0,                    //int       repeatRate3;
-    ROCKETL_RELOAD,       //int       reloadTime;
-    ROCKETL_K_SCALE,      //float     knockbackScale;
-    qfalse,               //qboolean  hasAltMode;
-    qfalse,               //qboolean  hasThirdMode;
-    qfalse,               //qboolean  canZoom;
-    90.0f,                //float     zoomFov;
-    qtrue,                //qboolean  purchasable;
-    qtrue,                //qboolean  longRanged;
-    TEAM_HUMANS           //team_t    team;
-  },
-  {
     WP_GRENADE,           //int       weaponNum;
-    0,                    //int       price;
-    STAGE_GE_1,           //int       stages
-    0,                    //int       slots;
+    GRENADE_PRICE,        //int       price;
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
+    SLOT_NONE,            //int       slots;
     "grenade",            //char      *weaponName;
-    "[yenade]Grenades",   //char      *humanName;
+    "Grenade",            //char      *humanName;
     "",
     1,                    //int       maxAmmo;
     0,                    //int       maxClips;
@@ -3601,9 +2346,34 @@ static const weaponAttributes_t bg_weapons[ ] =
     TEAM_HUMANS           //team_t    team;
   },
   {
+    WP_LOCKBLOB_LAUNCHER, //int       weaponNum;
+    0,                    //int       price;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    SLOT_WEAPON,          //int       slots;
+    "lockblob",           //char      *weaponName;
+    "Lock Blob",          //char      *humanName;
+    "",
+    0,                    //int       maxAmmo;
+    0,                    //int       maxClips;
+    qtrue,                //int       infiniteAmmo;
+    qfalse,               //int       usesEnergy;
+    500,                  //int       repeatRate1;
+    500,                  //int       repeatRate2;
+    500,                  //int       repeatRate3;
+    0,                    //int       reloadTime;
+    LOCKBLOB_K_SCALE,     //float     knockbackScale;
+    qfalse,               //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasThirdMode;
+    qfalse,               //qboolean  canZoom;
+    90.0f,                //float     zoomFov;
+    qfalse,               //qboolean  purchasable;
+    qfalse,               //qboolean  longRanged;
+    TEAM_ALIENS           //team_t    team;
+  },
+  {
     WP_HIVE,              //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "hive",               //char      *weaponName;
     "Hive",               //char      *humanName;
@@ -3628,7 +2398,7 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_TESLAGEN,          //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "teslagen",           //char      *weaponName;
     "Tesla Generator",    //char      *humanName;
@@ -3653,7 +2423,7 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_MGTURRET,          //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "mgturret",           //char      *weaponName;
     "Machinegun Turret",  //char      *humanName;
@@ -3675,38 +2445,38 @@ static const weaponAttributes_t bg_weapons[ ] =
     qfalse,               //qboolean  longRanged;
     TEAM_HUMANS           //team_t    team;
   },
-    {
-    WP_MGTURRET2,         //int       weaponNum;
+  {
+    WP_ABUILD,            //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
-    "mgturret2",          //char      *weaponName;
-    "Machinegun Turret2", //char      *humanName;
+    "abuild",             //char      *weaponName;
+    "Alien build weapon", //char      *humanName;
     "",
     0,                    //int       maxAmmo;
     0,                    //int       maxClips;
     qtrue,                //int       infiniteAmmo;
     qfalse,               //int       usesEnergy;
-    0,                    //int       repeatRate1;
-    0,                    //int       repeatRate2;
+    ABUILDER_BUILD_REPEAT,//int       repeatRate1;
+    ABUILDER_CLAW_REPEAT, //int       repeatRate2;
     0,                    //int       repeatRate3;
     0,                    //int       reloadTime;
-    MGTURRET2_K_SCALE,    //float     knockbackScale;
-    qfalse,               //qboolean  hasAltMode;
+    ABUILDER_CLAW_K_SCALE,//float     knockbackScale;
+    qtrue,                //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
-    qfalse,               //qboolean  purchasable;
+    qtrue,                //qboolean  purchasable;
     qfalse,               //qboolean  longRanged;
-    TEAM_HUMANS           //team_t    team;
+    TEAM_ALIENS           //team_t    team;
   },
   {
-    WP_ABUILD,            //int       weaponNum;
+    WP_ABUILD2,           //int       weaponNum;
     0,                    //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
-    "abuild",             //char      *weaponName;
-    "Alien build weapon", //char      *humanName;
+    "abuildupg",          //char      *weaponName;
+    "Alien build weapon2",//char      *humanName;
     "",
     0,                    //int       maxAmmo;
     0,                    //int       maxClips;
@@ -3728,10 +2498,10 @@ static const weaponAttributes_t bg_weapons[ ] =
   {
     WP_HBUILD,            //int       weaponNum;
     HBUILD_PRICE,         //int       price;
-    STAGE_GE_1,           //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_WEAPON,          //int       slots;
     "ckit",               //char      *weaponName;
-    "[yetool]Construction Kit",   //char      *humanName;
+    "Construction Kit",   //char      *humanName;
     "Used for building structures. This includes "
       "spawns, power and basic defense. More structures become "
       "available with new stages.",
@@ -3755,6 +2525,7 @@ static const weaponAttributes_t bg_weapons[ ] =
 };
 
 int   bg_numWeapons = sizeof( bg_weapons ) / sizeof( bg_weapons[ 0 ] );
+
 static const weaponAttributes_t nullWeapon = { 0 };
 
 /*
@@ -3773,6 +2544,7 @@ const weaponAttributes_t *BG_WeaponByName( const char *name )
       return &bg_weapons[ i ];
     }
   }
+
   return &nullWeapon;
 }
 
@@ -3799,17 +2571,19 @@ qboolean BG_WeaponAllowedInStage( weapon_t weapon, stage_t stage )
   return stages & ( 1 << stage );
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 static const upgradeAttributes_t bg_upgrades[ ] =
 {
   {
     UP_LIGHTARMOUR,         //int   upgradeNum;
     LIGHTARMOUR_PRICE,      //int   price;
-    STAGE_GE_1,             //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_TORSO|SLOT_ARMS|SLOT_LEGS, //int   slots;
     "larmour",              //char  *upgradeName;
-    "[yeshield]Light Armour",         //char  *humanName;
+    "Light Armour",         //char  *humanName;
     "Protective armour that helps to defend against light alien melee "
-    "attacks.",
+      "attacks.",
     "icons/iconu_larmour",
     qtrue,                  //qboolean purchasable
     qfalse,                 //qboolean usable
@@ -3818,10 +2592,10 @@ static const upgradeAttributes_t bg_upgrades[ ] =
   {
     UP_HELMET,              //int   upgradeNum;
     HELMET_PRICE,           //int   price;
-    STAGE_GE_3,             //int  stages
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_HEAD,              //int   slots;
     "helmet",               //char  *upgradeName;
-    "[yeshield]Helmet",               //char  *humanName;
+    "Helmet",               //char  *humanName;
     "In addition to protecting your head, the helmet provides a "
       "scanner indicating the presence of any friendly or hostile "
       "lifeforms and structures in your immediate vicinity.",
@@ -3833,38 +2607,23 @@ static const upgradeAttributes_t bg_upgrades[ ] =
   {
     UP_MEDKIT,              //int   upgradeNum;
     MEDKIT_PRICE,           //int   price;
-    STAGE_GE_1,             //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_NONE,              //int   slots;
     "medkit",               //char  *upgradeName;
-    "[yemed]Medkit",        //char  *humanName;
-    "Basic health kit. ",
+    "Medkit",               //char  *humanName;
+    "",
     "icons/iconu_atoxin",
-    (SPAWN_WITH_MEDKIT ? qfalse : qtrue), //qboolean purchasable
+    qfalse,                 //qboolean purchasable
     qtrue,                  //qboolean usable
-    TEAM_HUMANS             //team_t  team;
-  },
-  {
-    UP_BIOKIT,              //int   upgradeNum;
-    BIOKIT_PRICE,           //int   price;
-    STAGE_GE_2,             //int  stages
-    SLOT_NONE,              //int   slots;
-    "biokit",               //char  *upgradeName;
-    "[yebiok]Biokit",               //char  *humanName;
-    "The Biokit is a biological enhancement system that heals "
-      "wounds, improves stamina, and provides some resistance to "
-      "alien infection.",
-    "icons/iconu_biokit",
-    qtrue,                  //qboolean purchasable
-    qfalse,                 //qboolean usable
     TEAM_HUMANS             //team_t  team;
   },
   {
     UP_BATTPACK,            //int   upgradeNum;
     BATTPACK_PRICE,         //int   price;
-    STAGE_GE_3,             //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_BACKPACK,          //int   slots;
     "battpack",             //char  *upgradeName;
-    "[yebat]Battery Pack",         //char  *humanName;
+    "Battery Pack",         //char  *humanName;
     "Back-mounted battery pack that permits storage of one and a half "
       "times the normal energy capacity for energy weapons.",
     "icons/iconu_battpack",
@@ -3875,10 +2634,10 @@ static const upgradeAttributes_t bg_upgrades[ ] =
   {
     UP_JETPACK,             //int   upgradeNum;
     JETPACK_PRICE,          //int   price;
-    STAGE_GE_4,             //int  stages
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_BACKPACK,          //int   slots;
     "jetpack",              //char  *upgradeName;
-    "[yejet]Jet Pack",             //char  *humanName;
+    "Jet Pack",             //char  *humanName;
     "Back-mounted jet pack that enables the user to fly to remote "
       "locations. It is very useful against alien spawns in hard "
       "to reach spots.",
@@ -3890,10 +2649,10 @@ static const upgradeAttributes_t bg_upgrades[ ] =
   {
     UP_BATTLESUIT,          //int   upgradeNum;
     BSUIT_PRICE,            //int   price;
-    STAGE_GE_5,             //int  stages
+    ( 1 << S3 ),            //int  stages
     SLOT_HEAD|SLOT_TORSO|SLOT_ARMS|SLOT_LEGS|SLOT_BACKPACK, //int   slots;
     "bsuit",                //char  *upgradeName;
-    "[yeshield]Megasuit",           //char  *humanName;
+    "Battlesuit",           //char  *humanName;
     "A full body armour that is highly effective at repelling alien attacks. "
       "It allows the user to enter hostile situations with a greater degree "
       "of confidence.",
@@ -3905,10 +2664,10 @@ static const upgradeAttributes_t bg_upgrades[ ] =
   {
     UP_GRENADE,             //int   upgradeNum;
     GRENADE_PRICE,          //int   price;
-    STAGE_GE_4,             //int  stages
+    ( 1 << S2 )|( 1 << S3 ),//int  stages
     SLOT_NONE,              //int   slots;
     "gren",                 //char  *upgradeName;
-    "[yenade]Grenade",      //char  *humanName;
+    "Grenade",              //char  *humanName;
     "A small incendinary device ideal for damaging tightly packed "
       "alien structures. Has a five second timer.",
     0,
@@ -3919,10 +2678,10 @@ static const upgradeAttributes_t bg_upgrades[ ] =
   {
     UP_AMMO,                //int   upgradeNum;
     0,                      //int   price;
-    STAGE_GE_1,             //int  stages
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
     SLOT_NONE,              //int   slots;
     "ammo",                 //char  *upgradeName;
-    "[yeammo]Ammunition",           //char  *humanName;
+    "Ammunition",           //char  *humanName;
     "Ammunition for the currently held weapon.",
     0,
     qtrue,                  //qboolean purchasable
@@ -3932,6 +2691,7 @@ static const upgradeAttributes_t bg_upgrades[ ] =
 };
 
 int   bg_numUpgrades = sizeof( bg_upgrades ) / sizeof( bg_upgrades[ 0 ] );
+
 static const upgradeAttributes_t nullUpgrade = { 0 };
 
 /*
@@ -3950,6 +2710,7 @@ const upgradeAttributes_t *BG_UpgradeByName( const char *name )
       return &bg_upgrades[ i ];
     }
   }
+
   return &nullUpgrade;
 }
 
@@ -3976,9 +2737,12 @@ qboolean BG_UpgradeAllowedInStage( upgrade_t upgrade, stage_t stage )
   return stages & ( 1 << stage );
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 /*
 ================
 BG_EvaluateTrajectory
+
 ================
 */
 void BG_EvaluateTrajectory( const trajectory_t *tr, int atTime, vec3_t result )
@@ -4036,6 +2800,7 @@ void BG_EvaluateTrajectory( const trajectory_t *tr, int atTime, vec3_t result )
 /*
 ================
 BG_EvaluateTrajectoryDelta
+
 For determining velocity at a given time
 ================
 */
@@ -4092,61 +2857,74 @@ void BG_EvaluateTrajectoryDelta( const trajectory_t *tr, int atTime, vec3_t resu
 char *eventnames[ ] =
 {
   "EV_NONE",
+
   "EV_FOOTSTEP",
   "EV_FOOTSTEP_METAL",
   "EV_FOOTSTEP_SQUELCH",
   "EV_FOOTSPLASH",
   "EV_FOOTWADE",
   "EV_SWIM",
+
   "EV_STEP_4",
   "EV_STEP_8",
   "EV_STEP_12",
   "EV_STEP_16",
+
   "EV_STEPDN_4",
   "EV_STEPDN_8",
   "EV_STEPDN_12",
   "EV_STEPDN_16",
+
   "EV_FALL_SHORT",
   "EV_FALL_MEDIUM",
   "EV_FALL_FAR",
   "EV_FALLING",
+
   "EV_JUMP",
-  "EV_AIRPOUNCE",
   "EV_WATER_TOUCH", // foot touches
   "EV_WATER_LEAVE", // foot leaves
   "EV_WATER_UNDER", // head touches
   "EV_WATER_CLEAR", // head leaves
+
   "EV_NOAMMO",
   "EV_CHANGE_WEAPON",
   "EV_FIRE_WEAPON",
   "EV_FIRE_WEAPON2",
   "EV_FIRE_WEAPON3",
+
   "EV_PLAYER_RESPAWN", // for fovwarp effects
   "EV_PLAYER_TELEPORT_IN",
   "EV_PLAYER_TELEPORT_OUT",
-  "EV_GRENADE_BOUNCE",  // eventParm will be the soundindex
+
+  "EV_GRENADE_BOUNCE",    // eventParm will be the soundindex
+
   "EV_GENERAL_SOUND",
-  "EV_GLOBAL_SOUND",  // no attenuation
+  "EV_GLOBAL_SOUND",    // no attenuation
+
   "EV_BULLET_HIT_FLESH",
   "EV_BULLET_HIT_WALL",
+
   "EV_SHOTGUN",
   "EV_MASS_DRIVER",
+
   "EV_MISSILE_HIT",
   "EV_MISSILE_MISS",
   "EV_MISSILE_MISS_METAL",
   "EV_TESLATRAIL",
-  "EV_SLIMETRAIL",
   "EV_BULLET",        // otherEntity is the shooter
+
   "EV_LEV1_GRAB",
   "EV_LEV4_TRAMPLE_PREPARE",
   "EV_LEV4_TRAMPLE_START",
+
   "EV_PAIN",
   "EV_DEATH1",
   "EV_DEATH2",
   "EV_DEATH3",
   "EV_OBITUARY",
+
   "EV_GIB_PLAYER",      // gib a previously living player
-  "EV_BLEED",
+
   "EV_BUILD_CONSTRUCT",
   "EV_BUILD_DESTROY",
   "EV_BUILD_DELAY",     // can't build yet
@@ -4155,28 +2933,26 @@ char *eventnames[ ] =
   "EV_HUMAN_BUILDABLE_EXPLOSION",
   "EV_ALIEN_BUILDABLE_EXPLOSION",
   "EV_ALIEN_ACIDTUBE",
-  "EV_ALIEN_SLIME",
-  "EV_FORCE_FIELD",
+
   "EV_MEDKIT_USED",
+
   "EV_ALIEN_EVOLVE",
   "EV_ALIEN_EVOLVE_FAILED",
+
   "EV_DEBUG_LINE",
   "EV_STOPLOOPINGSOUND",
   "EV_TAUNT",
-  "EV_HUMMEL",
+
   "EV_OVERMIND_ATTACK", // overmind under attack
   "EV_OVERMIND_DYING",  // overmind close to death
   "EV_OVERMIND_SPAWNS", // overmind needs spawns
+
   "EV_DCC_ATTACK",      // dcc under attack
+
   "EV_MGTURRET_SPINUP", // trigger a sound
+
   "EV_RPTUSE_SOUND",    // trigger a sound
-  "EV_LEV2_ZAP",
-  "EV_ACIDBOMB_BOUNCE",
-  "EV_ROCKETL_PRIME",
-  "EV_WARP_ENTER",
-  "EV_WARP_EXIT",
-  "EV_GRENADE_PRIME",
-  "EV_GRENADE_TICK"
+  "EV_LEV2_ZAP"
 };
 
 /*
@@ -4277,6 +3053,11 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
   else
     s->eFlags &= ~EF_DEAD;
 
+  if( ps->stats[ STAT_STATE ] & SS_BLOBLOCKED )
+    s->eFlags |= EF_BLOBLOCKED;
+  else
+    s->eFlags &= ~EF_BLOBLOCKED;
+
   if( ps->externalEvent )
   {
     s->event = ps->externalEvent;
@@ -4327,9 +3108,11 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
   s->otherEntityNum = ps->otherEntityNum;  
 }
 
+
 /*
 ========================
 BG_PlayerStateToEntityStateExtraPolate
+
 This is done after each set of usercmd_t on the server,
 and after local prediction on the client
 ========================
@@ -4377,6 +3160,11 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
     s->eFlags |= EF_DEAD;
   else
     s->eFlags &= ~EF_DEAD;
+
+  if( ps->stats[ STAT_STATE ] & SS_BLOBLOCKED )
+    s->eFlags |= EF_BLOBLOCKED;
+  else
+    s->eFlags &= ~EF_BLOBLOCKED;
 
   if( ps->externalEvent )
   {
@@ -4432,6 +3220,7 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
 /*
 ========================
 BG_WeaponIsFull
+
 Check if a weapon has full ammo
 ========================
 */
@@ -4445,21 +3234,20 @@ qboolean BG_WeaponIsFull( weapon_t weapon, int stats[ ], int ammo, int clips )
   if( BG_InventoryContainsUpgrade( UP_BATTPACK, stats ) )
     maxAmmo = (int)( (float)maxAmmo * BATTPACK_MODIFIER );
 
-
   return ( maxAmmo == ammo ) && ( maxClips == clips );
 }
 
 /*
 ========================
 BG_InventoryContainsWeapon
+
 Does the player hold a weapon?
 ========================
 */
 qboolean BG_InventoryContainsWeapon( int weapon, int stats[ ] )
 {
-  // humans always have a blaster and a grenade thrower
-  if( stats[ STAT_TEAM ] == TEAM_HUMANS &&
-      ( weapon == WP_BLASTER || weapon == WP_GRENADE ) )
+  // humans always have a blaster
+  if( stats[ STAT_TEAM ] == TEAM_HUMANS && weapon == WP_BLASTER )
     return qtrue;
 
   return ( stats[ STAT_WEAPON ] == weapon );
@@ -4468,6 +3256,7 @@ qboolean BG_InventoryContainsWeapon( int weapon, int stats[ ] )
 /*
 ========================
 BG_SlotsForInventory
+
 Calculate the slots used by an inventory and warn of conflicts
 ========================
 */
@@ -4476,12 +3265,8 @@ int BG_SlotsForInventory( int stats[ ] )
   int i, slot, slots;
 
   slots = BG_Weapon( stats[ STAT_WEAPON ] )->slots;
-
   if( stats[ STAT_TEAM ] == TEAM_HUMANS )
-  {
-    slots |= BG_Weapon( WP_BLASTER )->slots |
-             BG_Weapon( WP_GRENADE )->slots;
-  }
+    slots |= BG_Weapon( WP_BLASTER )->slots;
 
   for( i = UP_NONE; i < UP_NUM_UPGRADES; i++ )
   {
@@ -4499,12 +3284,14 @@ int BG_SlotsForInventory( int stats[ ] )
       slots |= slot;
     }
   }
+
   return slots;
 }
 
 /*
 ========================
 BG_AddUpgradeToInventory
+
 Give the player an upgrade
 ========================
 */
@@ -4516,6 +3303,7 @@ void BG_AddUpgradeToInventory( int item, int stats[ ] )
 /*
 ========================
 BG_RemoveUpgradeFromInventory
+
 Take an upgrade from the player
 ========================
 */
@@ -4527,6 +3315,7 @@ void BG_RemoveUpgradeFromInventory( int item, int stats[ ] )
 /*
 ========================
 BG_InventoryContainsUpgrade
+
 Does the player hold an upgrade?
 ========================
 */
@@ -4538,6 +3327,7 @@ qboolean BG_InventoryContainsUpgrade( int item, int stats[ ] )
 /*
 ========================
 BG_ActivateUpgrade
+
 Activates an upgrade
 ========================
 */
@@ -4549,6 +3339,7 @@ void BG_ActivateUpgrade( int item, int stats[ ] )
 /*
 ========================
 BG_DeactivateUpgrade
+
 Deactivates an upgrade
 ========================
 */
@@ -4560,6 +3351,7 @@ void BG_DeactivateUpgrade( int item, int stats[ ] )
 /*
 ========================
 BG_UpgradeIsActive
+
 Is this upgrade active?
 ========================
 */
@@ -4571,6 +3363,7 @@ qboolean BG_UpgradeIsActive( int item, int stats[ ] )
 /*
 ===============
 BG_RotateAxis
+
 Shared axis rotation function
 ===============
 */
@@ -4613,12 +3406,14 @@ qboolean BG_RotateAxis( vec3_t surfNormal, vec3_t inAxis[ 3 ],
   }
   else
     return qfalse;
+
   return qtrue;
 }
 
 /*
 ===============
 BG_GetClientNormal
+
 Get the normal for the surface the client is walking on
 ===============
 */
@@ -4637,20 +3432,8 @@ void BG_GetClientNormal( const playerState_t *ps, vec3_t normal )
 
 /*
 ===============
-BG_GetClientViewOrigin
-Get the position of the client's eye, based on the client's position, the surface's normal, and client's view height
-===============
-*/
-void BG_GetClientViewOrigin( const playerState_t *ps, vec3_t viewOrigin )
-{
-  vec3_t normal;
-  BG_GetClientNormal( ps, normal );
-  VectorMA( ps->origin, ps->viewheight, normal, viewOrigin );
-}
-
-/*
-===============
 BG_PositionBuildableRelativeToPlayer
+
 Find a place to build a buildable
 ===============
 */
@@ -4685,7 +3468,7 @@ void BG_PositionBuildableRelativeToPlayer( const playerState_t *ps,
   VectorMA( targetOrigin, -128, playerNormal, targetOrigin );
 
   // The mask is MASK_DEADSOLID on purpose to avoid collisions with other entities
-  (*trace)( tr, entityOrigin, mins, maxs, targetOrigin, ps->clientNum, MASK_PLAYERSOLID );
+  (*trace)( tr, entityOrigin, mins, maxs, targetOrigin, ps->clientNum, MASK_DEADSOLID );
   VectorCopy( tr->endpos, entityOrigin );
   VectorMA( entityOrigin, 0.1f, playerNormal, outOrigin );
   vectoangles( forward, outAngles );
@@ -4694,6 +3477,7 @@ void BG_PositionBuildableRelativeToPlayer( const playerState_t *ps,
 /*
 ===============
 BG_GetValueOfPlayer
+
 Returns the credit value of a player
 ===============
 */
@@ -4718,6 +3502,7 @@ int BG_GetValueOfPlayer( playerState_t *ps )
         worth += BG_Weapon( i )->price;
     }
   }
+      
   return worth;
 }
 
@@ -4733,13 +3518,26 @@ qboolean BG_PlayerCanChangeWeapon( playerState_t *ps )
       ps->stats[ STAT_MISC ] > LCANNON_CHARGE_TIME_MIN )
     return qfalse;
 
-  if( ps->weapon == WP_GRENADE &&
-      ps->stats[ STAT_MISC ] > 0 )
-  {
-    return qfalse;
-  }
-
   return ps->weaponTime <= 0 || ps->weaponstate != WEAPON_FIRING;
+}
+
+/*
+=================
+BG_PlayerPoisonCloudTime
+=================
+*/
+int BG_PlayerPoisonCloudTime( playerState_t *ps )
+{
+  int time = LEVEL1_PCLOUD_TIME;
+
+  if( BG_InventoryContainsUpgrade( UP_BATTLESUIT, ps->stats ) )
+    time -= BSUIT_PCLOUD_PROTECTION;
+  if( BG_InventoryContainsUpgrade( UP_HELMET, ps->stats ) )
+    time -= HELMET_PCLOUD_PROTECTION;
+  if( BG_InventoryContainsUpgrade( UP_LIGHTARMOUR, ps->stats ) )
+    time -= LIGHTARMOUR_PCLOUD_PROTECTION;
+    
+  return time;
 }
 
 /*
@@ -4761,6 +3559,7 @@ weapon_t BG_GetPlayerWeapon( playerState_t *ps )
 /*
 ===============
 atof_neg
+
 atof with an allowance for negative values
 ===============
 */
@@ -4779,6 +3578,7 @@ float atof_neg( char *token, qboolean allowNegative )
 /*
 ===============
 atoi_neg
+
 atoi with an allowance for negative values
 ===============
 */
@@ -4799,6 +3599,7 @@ int atoi_neg( char *token, qboolean allowNegative )
 /*
 ===============
 BG_PackEntityNumbers
+
 Pack entity numbers into an entityState_t
 ===============
 */
@@ -4851,6 +3652,7 @@ void BG_PackEntityNumbers( entityState_t *es, const int *entityNums, int count )
 /*
 ===============
 BG_UnpackEntityNumbers
+
 Unpack entity numbers from an entityState_t
 ===============
 */
@@ -4879,11 +3681,13 @@ int BG_UnpackEntityNumbers( entityState_t *es, int *entityNums, int count )
       case 9: *entityNum = (es->constantLight >> (GENTITYNUM_BITS * 2));  break;
       default: Com_Error( ERR_FATAL, "Entity index %d not handled", i );  break;
     }
+
     *entityNum &= GENTITYNUM_MASK;
 
     if( *entityNum == ENTITYNUM_NONE )
       break;
   }
+
   return i;
 }
 
@@ -4968,7 +3772,7 @@ void BG_ParseCSVClassList( const char *string, class_t *classes, int classesSize
 
   p = q = buffer;
 
-  while( *p != '\0' && i < classesSize - 1 )
+  while( *p != '\0' )
   {
     //skip to first , or EOS
     while( *p != ',' && *p != '\0' )
@@ -5018,7 +3822,7 @@ void BG_ParseCSVBuildableList( const char *string, buildable_t *buildables, int 
 
   p = q = buffer;
 
-  while( *p != '\0' && i < buildablesSize - 1 )
+  while( *p != '\0' )
   {
     //skip to first , or EOS
     while( *p != ',' && *p != '\0' )
@@ -5187,11 +3991,6 @@ weapon_t BG_PrimaryWeapon( int stats[ ] )
   if( BG_InventoryContainsWeapon( WP_BLASTER, stats ) )
     return WP_BLASTER;
 
-  if( BG_InventoryContainsWeapon( WP_GRENADE, stats ) )
-  {
-    return WP_GRENADE;
-  }
-
   return WP_NONE;
 }
 
@@ -5271,41 +4070,4 @@ char *BG_TeamName( team_t team )
 int cmdcmp( const void *a, const void *b )
 {
   return Q_stricmp( (const char *)a, ((dummyCmd_t *)b)->name );
-}
-
-/*
-============
-BG_ForceFieldForEntity
-============
-*/
-qboolean BG_ForceFieldForEntity( playerState_t *ps, entityState_t *es, forceField_t *ff )
-{
-  if( es->eType == ET_BUILDABLE )
-  {
-    if( !( es->eFlags & EF_B_POWERED ) )
-      return qfalse;
-
-    if( !( es->eFlags & EF_B_SPAWNED ) )
-      return qfalse;
-
-    // health
-    if( es->generic1 <= 0 )
-      return qfalse;
-
-    switch( es->modelindex )
-    {
-      case BA_H_LIGHT: //force field
-        if( ps && ps->stats[ STAT_TEAM ] != TEAM_ALIENS )
-          return qfalse;
-
-        ff->type = 0;
-        VectorCopy( es->origin, ff->origin );
-        ff->range = LIGHT_RANGE;
-        ff->force = LIGHT_FORCE;
-
-        return qtrue;
-    }
-  }
-
-  return qfalse;
 }

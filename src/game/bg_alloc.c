@@ -20,18 +20,14 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 
 #ifdef GAME
-# define  POOLSIZE ( (1024 * 1024) * 2 )
+# define  POOLSIZE ( 1024 * 1024 )
 #else
-# define  POOLSIZE ( (256 * 1024) * 2 )
+# define  POOLSIZE ( 256 * 1024 )
 #endif
 
 #define  FREEMEMCOOKIE  ((int)0xDEADBE3F)  // Any unlikely to be used value

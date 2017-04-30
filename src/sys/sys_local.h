@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MINSDL_MINOR 2
 #define MINSDL_PATCH 10
 
+#define _(String) Sys_Gettext(String)
+
 // Input subsystem
 void IN_Init( void );
 void IN_Frame( void );
@@ -51,11 +53,8 @@ char *Sys_StripAppBundle( char *pwd );
 
 void Sys_GLimpSafeInit( void );
 void Sys_GLimpInit( void );
+void Sys_InitGettext( void );
 void Sys_PlatformInit( void );
-void Sys_PlatformExit( void );
 void Sys_SigHandler( int signal );
 void Sys_ErrorDialog( const char *error );
 void Sys_AnsiColorPrint( const char *msg );
-
-int Sys_PID( void );
-qboolean Sys_PIDIsRunning( int pid );

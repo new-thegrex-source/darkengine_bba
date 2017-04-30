@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 // NULL for everyone
@@ -166,23 +162,18 @@ void G_UpdateTeamConfigStrings( void )
 G_LeaveTeam
 ==================
 */
-void G_LeaveTeamReal( gentity_t *self, qboolean reset_score )
+void G_LeaveTeam( gentity_t *self )
 {
   team_t    team = self->client->pers.teamSelection;
   gentity_t *ent;
   int       i;
 
-  if( team == TEAM_ALIENS ) {
+  if( team == TEAM_ALIENS )
     G_RemoveFromSpawnQueue( &level.alienSpawnQueue, self->client->ps.clientNum );
-    if ( reset_score && !level.intermissiontime ) {
-      G_admin_reset_score( self );
-    }
-  } else if( team == TEAM_HUMANS ) {
+  else if( team == TEAM_HUMANS )
     G_RemoveFromSpawnQueue( &level.humanSpawnQueue, self->client->ps.clientNum );
-    if ( reset_score && !level.intermissiontime ) {
-      G_admin_reset_score( self );
-    }
-  } else {
+  else
+  {
     if( self->client->sess.spectatorState == SPECTATOR_FOLLOW )
       G_StopFollowing( self );
     return;
@@ -200,21 +191,18 @@ void G_LeaveTeamReal( gentity_t *self, qboolean reset_score )
     if( !ent->inuse )
       continue;
 
-    if( ent->s.eType == ET_MISSILE && ent->r.ownerNum == self->s.number )
+    if( ent->client && ent->client->pers.connected == CON_CONNECTED )
+    {
+      // cure poison
+      if( ent->client->ps.stats[ STAT_STATE ] & SS_POISONED &&
+          ent->client->lastPoisonClient == self )
+        ent->client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
+    }
+    else if( ent->s.eType == ET_MISSILE && ent->r.ownerNum == self->s.number )
       G_FreeEntity( ent );
   }
 
-  // cut all relevant zap beams
-  G_ClearPlayerZapEffects( self );
-  
   G_namelog_update_score( self->client );
-
-  G_admin_writeconfig();
-}
-
-void G_LeaveTeam( gentity_t *self )
-{
-  G_LeaveTeamReal( self, qtrue );
 }
 
 /*
@@ -229,13 +217,12 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
   if( oldTeam == newTeam )
     return;
 
-  G_LeaveTeamReal( ent, ( newTeam == TEAM_NONE ) ? qtrue : qfalse );
-
+  G_LeaveTeam( ent );
   ent->client->pers.teamChangeTime = level.time;
   ent->client->pers.teamSelection = newTeam;
   ent->client->pers.classSelection = PCL_NONE;
   ClientSpawn( ent, NULL, NULL, NULL );
-  
+
   if( oldTeam == TEAM_HUMANS && newTeam == TEAM_ALIENS )
   {
     // Convert from human to alien credits
@@ -263,74 +250,7 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
 
   G_namelog_update_score( ent->client );
   TeamplayInfoMessage( ent );
-
 }
-
-
-/*
-  Call this method to balance teams
-*/
-void G_BalanceTeams( void )
-{
-  team_t sourceTeam;
-  gentity_t *ent;
-  int clientId,lastTime,i;
-  if( level.numAlienSpawns > 0 && level.numHumanClients - level.numAlienClients >= 2 ) {
-    sourceTeam = TEAM_HUMANS;
-  } else if( level.numHumanSpawns > 0 && level.numAlienClients - level.numHumanClients >= 2 ) {
-    sourceTeam = TEAM_ALIENS;
-  } else return;
-  clientId = -1;
-  lastTime = 0;
-  for( i = 0; i < g_maxclients.integer; i++ )
-    {
-      ent = g_entities + i;
-
-      if( ent->client->pers.connected != CON_CONNECTED )
-        continue;
-      
-      if( ent->inuse && ent->client->pers.teamSelection == sourceTeam && ent->client->pers.teamChangeTime > lastTime) {
-       clientId = i;
-       lastTime = ent->client->pers.teamChangeTime;
-      }
-    }
-  if (clientId != -1) {
-    ent = g_entities + clientId;
-
-    switch(sourceTeam) {
-    case TEAM_HUMANS:
-      // Refund all weapons and equipment before team change
-      for( i = WP_NONE+1; i < WP_NUM_WEAPONS; ++i )
-      {
-        if ( i == WP_HBUILD && ent->client->ps.stats[ STAT_BUILD_TIMER ] > 0 ) 
-		continue;
-        if (BG_InventoryContainsWeapon( i, ent->client->ps.stats ) && BG_Weapon( i )->purchasable )
-        {
-         G_AddCreditToClient( ent->client, (short)BG_Weapon( i )->price, qfalse );
-        }
-      }
-      for( i = UP_NONE+1; i < UP_NUM_UPGRADES; ++i )
-      {
-        if (BG_InventoryContainsUpgrade( i, ent->client->ps.stats ) && BG_Upgrade( i )->purchasable )
-        {
-         G_AddCreditToClient( ent->client, (short)BG_Upgrade( i )->price, qfalse );
-        }
-      }
-      trap_SendServerCommand( -1, "print \"Humans have more players. Moving last joining player to alien team...\n\"");
-      break;
-    case TEAM_ALIENS:
-      // Refund evo-points to aliens
-      G_AddCreditToClient( ent->client, (short)(BG_Class( ent->client->ps.stats[ STAT_CLASS ] )->cost * ALIEN_CREDITS_PER_KILL), qfalse );
-     
-      trap_SendServerCommand( -1, "print \"Aliens have more players. Moving last joining player to human team...\n\"");
-      break;
-    default:
-      break;
-    }
-    G_ChangeTeam(ent,(sourceTeam == TEAM_HUMANS) ? TEAM_ALIENS : TEAM_HUMANS);
-  }
-}
-
 
 /*
 ===========
@@ -512,37 +432,6 @@ void CheckTeamStatus( void )
 
       if( ent->inuse )
         TeamplayInfoMessage( ent );
-    }
-  }
-
-  // Warn on imbalanced teams
-  if( !level.humanTeamLocked && !level.alienTeamLocked &&
-      g_teamForceBalance.integer == 1 &&
-      g_teamImbalanceWarnings.integer && !level.intermissiontime &&
-      ( level.time - level.lastTeamImbalancedTime >
-        ( g_teamImbalanceWarnings.integer * 1000 ) ) &&
-      level.numTeamImbalanceWarnings < 3 && !level.restarted )
-  {
-    level.lastTeamImbalancedTime = level.time;
-    if( level.numAlienSpawns > 0 && 
-        level.numHumanClients - level.numAlienClients >= 2 )
-    {
-      trap_SendServerCommand( -1, "print \"^5Teams are imbalanced. "
-                                  "^5Humans have more players.\n\"");
-      level.numTeamImbalanceWarnings++;
-      G_BalanceTeams();
-    }
-    else if( level.numHumanSpawns > 0 && level.numHumanArmouries > 0 &&
-             level.numAlienClients - level.numHumanClients >= 2 )
-    {
-      trap_SendServerCommand ( -1, "print \"^5Teams are imbalanced. "
-                                   "^5Aliens have more players.\n\"");
-      level.numTeamImbalanceWarnings++;
-      G_BalanceTeams();
-    }
-    else
-    {
-      level.numTeamImbalanceWarnings = 0;
     }
   }
 }

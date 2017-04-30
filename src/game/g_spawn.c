@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 qboolean G_SpawnString( const char *key, const char *defaultString, char **out )
@@ -35,7 +31,6 @@ qboolean G_SpawnString( const char *key, const char *defaultString, char **out )
   {
     *out = (char *)defaultString;
 //    G_Error( "G_SpawnString() called while not spawning" );
-    return qfalse;
   }
 
   for( i = 0; i < level.numSpawnVars; i++ )
@@ -325,7 +320,7 @@ qboolean G_CallSpawn( gentity_t *ent )
   {
     // don't spawn built-in buildings if we are using a custom layout
     if( level.layout[ 0 ] && Q_stricmp( level.layout, "*BUILTIN*" ) )
-      return qfalse;
+      return qtrue;
 
     if( buildable == BA_A_SPAWN || buildable == BA_H_SPAWN )
     {
@@ -607,14 +602,38 @@ void SP_worldspawn( void )
 
   trap_SetConfigstring( CS_MOTD, g_motd.string );   // message of the day
 
-  if( G_SpawnString( "gravity", "", &s ) )
-    trap_Cvar_Set( "g_gravity", s );
+  G_SpawnString( "gravity", "800", &s );
+  trap_Cvar_Set( "g_gravity", s );
 
-  if( G_SpawnString( "humanMaxStage", "", &s ) )
-    trap_Cvar_Set( "g_humanMaxStage", s );
+  G_SpawnString( "humanBuildPoints", DEFAULT_HUMAN_BUILDPOINTS, &s );
+  trap_Cvar_Set( "g_humanBuildPoints", s );
 
-  if( G_SpawnString( "alienMaxStage", "", &s ) )
-    trap_Cvar_Set( "g_alienMaxStage", s );
+  G_SpawnString( "humanMaxStage", DEFAULT_HUMAN_MAX_STAGE, &s );
+  trap_Cvar_Set( "g_humanMaxStage", s );
+
+  G_SpawnString( "humanStage2Threshold", DEFAULT_HUMAN_STAGE2_THRESH, &s );
+  trap_Cvar_Set( "g_humanStage2Threshold", s );
+
+  G_SpawnString( "humanStage3Threshold", DEFAULT_HUMAN_STAGE3_THRESH, &s );
+  trap_Cvar_Set( "g_humanStage3Threshold", s );
+
+  G_SpawnString( "alienBuildPoints", DEFAULT_ALIEN_BUILDPOINTS, &s );
+  trap_Cvar_Set( "g_alienBuildPoints", s );
+
+  G_SpawnString( "alienMaxStage", DEFAULT_ALIEN_MAX_STAGE, &s );
+  trap_Cvar_Set( "g_alienMaxStage", s );
+
+  G_SpawnString( "alienStage2Threshold", DEFAULT_ALIEN_STAGE2_THRESH, &s );
+  trap_Cvar_Set( "g_alienStage2Threshold", s );
+
+  G_SpawnString( "alienStage3Threshold", DEFAULT_ALIEN_STAGE3_THRESH, &s );
+  trap_Cvar_Set( "g_alienStage3Threshold", s );
+
+  G_SpawnString( "enableDust", "0", &s );
+  trap_Cvar_Set( "g_enableDust", s );
+
+  G_SpawnString( "enableBreath", "0", &s );
+  trap_Cvar_Set( "g_enableBreath", s );
 
   G_SpawnString( "disabledEquipment", "", &s );
   trap_Cvar_Set( "g_disabledEquipment", s );
@@ -633,7 +652,7 @@ void SP_worldspawn( void )
 
   // see if we want a warmup time
   trap_SetConfigstring( CS_WARMUP, "-1" );
-  if( g_doWarmup.integer && !g_ForceRandomTeams.integer )
+  if( g_doWarmup.integer )
   {
     level.warmupTime = level.time - level.startTime + ( g_warmup.integer * 1000 );
     trap_SetConfigstring( CS_WARMUP, va( "%i", level.warmupTime ) );
@@ -652,6 +671,8 @@ Parses textual entity definitions out of an entstring and spawns gentities.
 */
 void G_SpawnEntitiesFromString( void )
 {
+  // allow calls to G_Spawn*()
+  level.spawning = qtrue;
   level.numSpawnVars = 0;
 
   // the worldspawn is not an actual entity, but it still
@@ -665,5 +686,7 @@ void G_SpawnEntitiesFromString( void )
   // parse ents
   while( G_ParseSpawnVars( ) )
     G_SpawnGEntityFromSpawnVars( );
+
+  level.spawning = qfalse;      // any future calls to G_Spawn*() will be errors
 }
 

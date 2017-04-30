@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // bg_lib.h -- standard C library replacement routines used by code
 // compiled for the virtual machine
 
@@ -36,7 +32,7 @@ TREMULOUS EDGE MOD SRC FILE
 #define NULL ((void *)0)
 #endif
 
-typedef unsigned int size_t;
+typedef int size_t;
 
 typedef char *  va_list;
 #define _INTSIZEOF(n)   ( (sizeof(n) + sizeof(int) - 1) & ~(sizeof(int) - 1) )
@@ -89,7 +85,6 @@ typedef unsigned  long uint32_t;
                  __FILE__, __LINE__, #expr )
 typedef int cmp_t( const void *, const void * );
 void        qsort( void *a, size_t n, size_t es, cmp_t *cmp );
-#define RAND_MAX 0x7fff
 void        srand( unsigned seed );
 int         rand( void );
 void        *bsearch( const void *key, const void *base, size_t nmemb,
@@ -113,9 +108,6 @@ double  strtod( const char *nptr, char **endptr );
 int     atoi( const char *string );
 int     _atoi( const char **stringPtr );
 long    strtol( const char *nptr, char **endptr, int base );
-
-int Q_vsnprintf( char *buffer, size_t length, const char *fmt, va_list argptr );
-int Q_snprintf( char *buffer, size_t length, const char *fmt, ... ) __attribute__ ((format (printf, 3, 4)));
 
 int     sscanf( const char *buffer, const char *fmt, ... );
 

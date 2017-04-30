@@ -98,7 +98,7 @@ void CG_TestModel_f( void )
 
   if( !cg.testModelEntity.hModel )
   {
-    CG_Printf( "Can't register model\n" );
+    CG_Printf( _("Can't register model\n") );
     return;
   }
 
@@ -177,7 +177,7 @@ static void CG_AddTestModel( void )
 
   if( !cg.testModelEntity.hModel )
   {
-    CG_Printf( "Can't register model\n" );
+    CG_Printf( _("Can't register model\n") );
     return;
   }
 
@@ -267,7 +267,6 @@ void CG_OffsetThirdPersonView( void )
   vec3_t        axis[ 3 ], rotaxis[ 3 ];
   float         deltaPitch;
   static float  pitch;
-  static vec3_t killerPos = { 0, 0, 0 };
 
   // If cg_thirdpersonShoulderViewMode == 2, do shoulder view instead
   // If cg_thirdpersonShoulderViewMode == 1, do shoulder view when chasing
@@ -292,19 +291,18 @@ void CG_OffsetThirdPersonView( void )
   // so pretend that the player was looking at the killer, then place cam behind them.
   if( cg.predictedPlayerState.stats[ STAT_HEALTH ] <= 0 )
   {
-    int killerEntNum = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
+    int killerEntNum;
+    vec3_t killerPos;
 
+    killerEntNum = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
+    
     // already looking at ourself
     if( killerEntNum != cg.snap->ps.clientNum )
     {
-      vec3_t lookDirection;
-      if( cg.wasDeadLastFrame == qfalse || !cg_staticDeathCam.integer )
-      {
-        VectorCopy( cg_entities[ killerEntNum ].lerpOrigin, killerPos );
-        cg.wasDeadLastFrame = qtrue;
-      }
-      VectorSubtract( killerPos, cg.refdef.vieworg, lookDirection );
-      vectoangles( lookDirection, cg.refdefViewAngles );
+      VectorCopy( cg_entities[ killerEntNum ].lerpOrigin, killerPos );
+
+      VectorSubtract( killerPos, cg.refdef.vieworg, killerPos );
+      vectoangles( killerPos, cg.refdefViewAngles );
     }
   }
 
@@ -537,29 +535,6 @@ static void CG_StepOffset( void )
 #define PCLOUD_ZOOM_FREQUENCY     0.625f // 2.5s / 4
 #define PCLOUD_DISORIENT_DURATION 2500
 
-/*
-===============
-CG_InduceViewQuake
-===============
-*/
-
-void CG_InduceViewQuake( vec3_t src, float mag )
-{
-  if( !src )
-  {
-    cg.viewQuake += mag;
-  }
-  else
-  {
-    float dist;
-
-    dist = Distance( src, cg.refdef.vieworg );
-    cg.viewQuake += mag / dist / dist * 1000.0f;
-  }
-
-  if( cg.viewQuake > cg_viewQuakeLimit.value )
-    cg.viewQuake = cg_viewQuakeLimit.value;
-}
 
 /*
 ===============
@@ -579,7 +554,7 @@ void CG_OffsetFirstPersonView( void )
   vec3_t        predictedVelocity;
   int           timeDelta;
   float         bob2;
-  vec3_t        normal/*, baseOrigin*/;
+  vec3_t        normal, baseOrigin;
   playerState_t *ps = &cg.predictedPlayerState;
 
   BG_GetClientNormal( ps, normal );
@@ -590,7 +565,7 @@ void CG_OffsetFirstPersonView( void )
   origin = cg.refdef.vieworg;
   angles = cg.refdefViewAngles;
 
-  // VectorCopy( origin, baseOrigin );
+  VectorCopy( origin, baseOrigin );
 
   // if dead, fix the angle and don't add any kick
   if( cg.snap->ps.stats[ STAT_HEALTH ] <= 0 )
@@ -601,6 +576,9 @@ void CG_OffsetFirstPersonView( void )
     origin[ 2 ] += cg.predictedPlayerState.viewheight;
     return;
   }
+
+  // add angles based on weapon kick
+  VectorAdd( angles, cg.kick_angles, angles );
 
   // add angles based on damage kick
   if( cg.damageTime )
@@ -708,25 +686,6 @@ void CG_OffsetFirstPersonView( void )
 
     VectorMA( origin, LEVEL3_FEEDBACK * fraction2, forward, origin );
   }
-  else if( ( cg.predictedPlayerState.weapon == WP_ALEVEL3 ||
-           cg.predictedPlayerState.weapon == WP_ALEVEL3_UPG ) &&
-           cg.predictedPlayerState.stats[ STAT_MISC ] > 0 )
-  {
-    float fraction1, fraction2;
-    vec3_t forward;
-
-    AngleVectors( angles, forward, NULL, NULL );
-    VectorNormalize( forward );
-
-    fraction1 = (float)cg.predictedPlayerState.stats[ STAT_MISC ] /
-                LEVEL3_POUNCE_TIME_UPG;
-    if( fraction1 > 1.0f )
-      fraction1 = 1.0f;
-
-    fraction2 = -sin( fraction1 * M_PI / 2 );
-
-    VectorMA( origin, LEVEL3_FEEDBACK * fraction2, forward, origin );
-  }
 
 #define STRUGGLE_DIST 5.0f
 #define STRUGGLE_TIME 250
@@ -738,7 +697,7 @@ void CG_OffsetFirstPersonView( void )
     usercmd_t cmd;
     int       cmdNum;
     float     fFraction, rFraction, uFraction;
-    // float     fFraction2, rFraction2, uFraction2;
+    float     fFraction2, rFraction2, uFraction2;
 
     cmdNum = trap_GetCurrentCmdNumber();
     trap_GetUserCmd( cmdNum, &cmd );
@@ -756,9 +715,9 @@ void CG_OffsetFirstPersonView( void )
     if( uFraction > 1.0f )
       uFraction = 1.0f;
 
-    // fFraction2 = -sin( fFraction * M_PI / 2 );
-    // rFraction2 = -sin( rFraction * M_PI / 2 );
-    // uFraction2 = -sin( uFraction * M_PI / 2 );
+    fFraction2 = -sin( fFraction * M_PI / 2 );
+    rFraction2 = -sin( rFraction * M_PI / 2 );
+    uFraction2 = -sin( uFraction * M_PI / 2 );
 
     if( cmd.forwardmove > 0 )
       VectorMA( origin, STRUGGLE_DIST * fFraction, forward, origin );
@@ -780,6 +739,27 @@ void CG_OffsetFirstPersonView( void )
       VectorMA( origin, -STRUGGLE_DIST * uFraction, up, origin );
     else
       cg.upMoveTime = cg.time;
+  }
+
+  if( ( cg.predictedPlayerEntity.currentState.eFlags & EF_POISONCLOUDED ) &&
+      ( cg.time - cg.poisonedTime < PCLOUD_DISORIENT_DURATION) &&
+      !( cg.snap->ps.pm_flags & PMF_FOLLOW ) )
+  {
+    float scale, fraction, pitchFraction;
+    
+    scale = 1.0f - (float)( cg.time - cg.poisonedTime ) /
+            BG_PlayerPoisonCloudTime( &cg.predictedPlayerState );
+    if( scale < 0.0f )
+      scale = 0.0f;
+
+    fraction = sin( ( cg.time - cg.poisonedTime ) / 500.0f * M_PI * PCLOUD_ROLL_FREQUENCY ) *
+               scale;
+    pitchFraction = sin( ( cg.time - cg.poisonedTime ) / 200.0f * M_PI * PCLOUD_ROLL_FREQUENCY ) *
+                    scale;
+
+    angles[ ROLL ] += fraction * PCLOUD_ROLL_AMPLITUDE;
+    angles[ YAW ] += fraction * PCLOUD_ROLL_AMPLITUDE;
+    angles[ PITCH ] += pitchFraction * PCLOUD_ROLL_AMPLITUDE / 2.0f;
   }
 
   // this *feels* more realisitic for humans
@@ -841,19 +821,9 @@ void CG_OffsetFirstPersonView( void )
   // add step offset
   CG_StepOffset( );
 
+  // add kick offset
 
-  // view quake
-  if( cg.thisFrameTeleport )
-  {
-    cg.viewQuake = 0;
-  }
-  else
-  {
-    angles[ PITCH ] += crandom( ) * cg.viewQuake * cg_viewQuake.value;
-    angles[ YAW ] += crandom( ) * cg.viewQuake * cg_viewQuake.value;
-
-    cg.viewQuake *= pow( 2, (float)cg.frametime * 1.0e-3 * cg_viewQuakeLambda.value );
-  }
+  VectorAdd (origin, cg.kick_origin, origin);
 }
 
 //======================================================================
@@ -1000,6 +970,21 @@ static int CG_CalcFov( void )
   }
   else
     inwater = qfalse;
+
+  if( ( cg.predictedPlayerEntity.currentState.eFlags & EF_POISONCLOUDED ) &&
+      ( cg.time - cg.poisonedTime < PCLOUD_DISORIENT_DURATION) &&
+      cg.predictedPlayerState.stats[ STAT_HEALTH ] > 0 &&
+      !( cg.snap->ps.pm_flags & PMF_FOLLOW ) )
+  {
+    float scale = 1.0f - (float)( cg.time - cg.poisonedTime ) /
+                  BG_PlayerPoisonCloudTime( &cg.predictedPlayerState );
+      
+    phase = ( cg.time - cg.poisonedTime ) / 1000.0f * PCLOUD_ZOOM_FREQUENCY * M_PI * 2.0f;
+    v = PCLOUD_ZOOM_AMPLITUDE * sin( phase ) * scale;
+    fov_x += v;
+    fov_y += v;
+  }
+
 
   // set it
   cg.refdef.fov_x = fov_x;
@@ -1261,7 +1246,8 @@ static int CG_CalcViewValues( void )
   ps = &cg.predictedPlayerState;
 
   // intermission view
-  if( ps->pm_type == PM_INTERMISSION || ps->pm_type == PM_FREEZE || ps->pm_type == PM_SPECTATOR )
+  if( ps->pm_type == PM_INTERMISSION || ps->pm_type == PM_FREEZE ||
+      ps->pm_type == PM_SPECTATOR )
   {
     VectorCopy( ps->origin, cg.refdef.vieworg );
     VectorCopy( ps->viewangles, cg.refdefViewAngles );
@@ -1317,8 +1303,6 @@ static int CG_CalcViewValues( void )
     if( CG_IsParticleSystemValid( &cg.poisonCloudPS ) )
       CG_DestroyParticleSystem( &cg.poisonCloudPS );
   }
-  else
-    cg.wasDeadLastFrame = qfalse;
 
   if( cg.renderingThirdPerson )
   {
@@ -1439,9 +1423,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
   cg.renderingThirdPerson = ( cg_thirdPerson.integer || ( cg.snap->ps.stats[ STAT_HEALTH ] <= 0 ) || 
                             ( cg.chaseFollow && cg.snap->ps.pm_flags & PMF_FOLLOW) );
 
-  cg.warping = ( cg.predictedPlayerEntity.currentState.eFlags & EF_WARPING ) &&
-               cg.predictedPlayerState.weapon == WP_ALEVEL1;
-
   // update speedometer
   CG_AddSpeed( );
 
@@ -1516,6 +1497,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
   CG_DrawActive( stereoView );
 
   if( cg_stats.integer )
-    CG_Printf( "cg.clientFrame:%i\n", cg.clientFrame );
+    CG_Printf( _("cg.clientFrame:%i\n"), cg.clientFrame );
 }
 

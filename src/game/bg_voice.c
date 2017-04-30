@@ -21,11 +21,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 // bg_voice.c -- both games voice functions
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
@@ -458,7 +454,7 @@ void BG_PrintVoices( voice_t *voices, int debugLevel )
 
   if( voice == NULL )
   {
-   // Com_Printf( "voice list is empty\n" );
+    Com_Printf( "voice list is empty\n" );
     return;
   }
 
@@ -629,7 +625,7 @@ voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
     return NULL;
 
   // return randomly selected match
-  selectedMatch = rand() / ( RAND_MAX / matchCount + 1 );
+  selectedMatch = rand() % matchCount;
   vt = head;
   i = 0;
   j = 0;

@@ -782,6 +782,26 @@ static void CG_LightFlare( centity_t *cent )
 
 /*
 =========================
+CG_LinkLocation
+=========================
+*/
+void CG_LinkLocation( centity_t *cent )
+{
+  centity_t *tempent;
+
+  for( tempent = cg.locationHead; tempent; tempent = tempent->nextLocation )
+  {
+    if( tempent == cent )
+      return;
+  }
+
+  cent->nextLocation = cg.locationHead;
+  cg.locationHead = cent;
+
+}
+
+/*
+=========================
 CG_Lev2ZapChain
 =========================
 */
@@ -836,7 +856,7 @@ void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int
 {
   centity_t *cent;
   vec3_t    oldOrigin, origin, deltaOrigin;
-  vec3_t    oldAngles, angles/*, deltaAngles*/;
+  vec3_t    oldAngles, angles, deltaAngles;
 
   if( moverNum <= 0 || moverNum >= ENTITYNUM_MAX_NORMAL )
   {
@@ -859,7 +879,7 @@ void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int
   BG_EvaluateTrajectory( &cent->currentState.apos, toTime, angles );
 
   VectorSubtract( origin, oldOrigin, deltaOrigin );
-  // VectorSubtract( angles, oldAngles, deltaAngles );
+  VectorSubtract( angles, oldAngles, deltaAngles );
 
   VectorAdd( in, deltaOrigin, out );
 
@@ -880,7 +900,7 @@ static void CG_InterpolateEntityPosition( centity_t *cent )
   // it would be an internal error to find an entity that interpolates without
   // a snapshot ahead of the current one
   if( cg.nextSnap == NULL )
-    CG_Error( "CG_InterpoateEntityPosition: cg.nextSnap == NULL" );
+    CG_Error( _("CG_InterpoateEntityPosition: cg.nextSnap == NULL") );
 
   f = cg.frameInterpolation;
 
@@ -989,7 +1009,7 @@ static void CG_CEntityPVSEnter( centity_t *cent )
   entityState_t *es = &cent->currentState;
 
   if( cg_debugPVS.integer )
-    CG_Printf( "Entity %d entered PVS\n", cent->currentState.number );
+    CG_Printf( _("Entity %d entered PVS\n"), cent->currentState.number );
 
   switch( es->eType )
   {
@@ -1030,7 +1050,7 @@ static void CG_CEntityPVSLeave( centity_t *cent )
   entityState_t *es = &cent->currentState;
 
   if( cg_debugPVS.integer )
-    CG_Printf( "Entity %d left PVS\n", cent->currentState.number );
+    CG_Printf( _("Entity %d left PVS\n"), cent->currentState.number );
   switch( es->eType )
   {
     case ET_LEV2_ZAP_CHAIN:
@@ -1065,13 +1085,12 @@ static void CG_AddCEntity( centity_t *cent )
   switch( cent->currentState.eType )
   {
     default:
-      CG_Error( "Bad entity type: %i\n", cent->currentState.eType );
+      CG_Error( _("Bad entity type: %i\n"), cent->currentState.eType );
       break;
 
     case ET_INVISIBLE:
     case ET_PUSH_TRIGGER:
     case ET_TELEPORT_TRIGGER:
-    case ET_LOCATION:
       break;
 
     case ET_GENERAL:
@@ -1128,6 +1147,10 @@ static void CG_AddCEntity( centity_t *cent )
 
     case ET_LEV2_ZAP_CHAIN:
       CG_Lev2ZapChain( cent );
+      break;
+
+    case ET_LOCATION:
+      CG_LinkLocation( cent );
       break;
   }
 }

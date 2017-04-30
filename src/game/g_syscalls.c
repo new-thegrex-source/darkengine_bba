@@ -20,11 +20,7 @@ along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-===========================================================================
-TREMULOUS EDGE MOD SRC FILE
-===========================================================================
-*/
+
 #include "g_local.h"
 
 // this file is only included when building a dll
@@ -299,5 +295,27 @@ void trap_AddCommand( const char *cmdName )
 void trap_RemoveCommand( const char *cmdName )
 {
   syscall( G_REMOVECOMMAND, cmdName );
+}
+
+void trap_Gettext( char *buffer, const char *msgid, int bufferLength )
+{
+  static int engineState = 0;
+
+  if( !( engineState & 0x01 ) )
+  {
+    char t[2];
+
+    engineState |= 0x01;
+
+    trap_Cvar_VariableStringBuffer( "\\IS_GETTEXT_SUPPORTED", t, 2 );
+
+    if( t[0] == '1' )
+      engineState |= 0x02;
+  }
+
+  if( !( engineState & 0x02 ) )
+    strncpy( buffer, msgid, bufferLength );
+  else
+    syscall( G_GETTEXT, buffer, msgid, bufferLength );
 }
 

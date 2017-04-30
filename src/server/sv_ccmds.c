@@ -42,11 +42,9 @@ Restart the server on a different map
 static void SV_Map_f( void ) {
 	char		*cmd;
 	char		*map;
-	char            *layout;
 	qboolean	killBots, cheat;
 	char		expanded[MAX_QPATH];
 	char		mapname[MAX_QPATH];
-	char            layoutname[MAX_QPATH];
 	int			i;
 
 	map = Cmd_Argv(1);
@@ -75,23 +73,6 @@ static void SV_Map_f( void ) {
 	// and thus nuke the arguments of the map command
 	Q_strncpyz(mapname, map, sizeof(mapname));
 
-	// save the layout name as well
-	if ( Cmd_Argc() > 2 ) {
-		layout = Cmd_Argv(2);
-		if( Q_stricmp( layout, "" ) ) {
-			Com_sprintf (expanded, sizeof(expanded), "layouts/%s/%s.dat", map, layout);
-			if ( FS_ReadFile (expanded, NULL) == -1 ) {
-				Com_Printf ("Can't find layout %s\n", expanded);
-				return;
-			}
-			Q_strncpyz(layoutname, layout, sizeof(layoutname));
-		} else {
-			layoutname[0] = '\0';
-		}
-	} else {
-		layoutname[0] = '\0';
-	}
-
 	// start up the map
 	SV_SpawnServer( mapname, killBots );
 
@@ -103,10 +84,6 @@ static void SV_Map_f( void ) {
 		Cvar_Set( "sv_cheats", "1" );
 	} else {
 		Cvar_Set( "sv_cheats", "0" );
-	}
-
-	if ( layoutname[0] ) {
-		Cvar_Set( "g_layouts", layoutname );
 	}
 
 	// This forces the local master server IP address cache
@@ -228,15 +205,9 @@ static void SV_MapRestart_f( void ) {
 			continue;
 		}
 
-		if(client->state == CS_ACTIVE)
-			SV_ClientEnterWorld(client, &client->lastUsercmd);
-		else
-		{
-			// If we don't reset client->lastUsercmd and are restarting during map load,
-			// the client will hang because we'll use the last Usercmd from the previous map,
-			// which is wrong obviously.
-			SV_ClientEnterWorld(client, NULL);
-		}
+		client->state = CS_ACTIVE;
+
+		SV_ClientEnterWorld( client, &client->lastUsercmd );
 	}	
 
 	// run another frame to allow things to look at all the players
@@ -280,7 +251,7 @@ Examine or change the serverinfo string
 */
 static void SV_Systeminfo_f( void ) {
 	Com_Printf ("System info settings:\n");
-	Info_Print ( Cvar_InfoString_Big( CVAR_SYSTEMINFO ) );
+	Info_Print ( Cvar_InfoString( CVAR_SYSTEMINFO ) );
 }
 
 
@@ -302,7 +273,7 @@ SV_CompleteMapName
 */
 static void SV_CompleteMapName( char *args, int argNum ) {
 	if( argNum == 2 ) {
-		Field_CompleteFilename( "maps", "bsp", qtrue, qfalse );
+		Field_CompleteFilename( "maps", "bsp", qtrue );
 	}
 }
 

@@ -94,7 +94,7 @@ void IN_KeyDown( kbutton_t *b ) {
 	} else if ( !b->down[1] ) {
 		b->down[1] = k;
 	} else {
-		Com_Printf ("Three keys down for a button!\n");
+		Com_Printf (_("Three keys down for a button!\n"));
 		return;
 	}
 	
@@ -389,7 +389,7 @@ Joystick values stay set until changed
 */
 void CL_JoystickEvent( int axis, int value, int time ) {
 	if ( axis < 0 || axis >= MAX_JOYSTICK_AXIS ) {
-		Com_Error( ERR_DROP, "CL_JoystickEvent: bad axis %i", axis );
+		Com_Error( ERR_DROP, _("CL_JoystickEvent: bad axis %i"), axis );
 	}
 	cl.joystickAxis[axis] = value;
 }
@@ -417,19 +417,15 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 	}
 
 	if ( !in_strafe.active ) {
-		cl.viewangles[YAW] += anglespeed * j_yaw->value * cl.joystickAxis[j_yaw_axis->integer];
-		cmd->rightmove = ClampChar( cmd->rightmove + (int) (j_side->value * cl.joystickAxis[j_side_axis->integer]) );
+		cl.viewangles[YAW] += anglespeed * cl_yawspeed->value * cl.joystickAxis[AXIS_SIDE];
 	} else {
-		cl.viewangles[YAW] += anglespeed * j_side->value * cl.joystickAxis[j_side_axis->integer];
-		cmd->rightmove = ClampChar( cmd->rightmove + (int) (j_yaw->value * cl.joystickAxis[j_yaw_axis->integer]) );
+		cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] );
 	}
 
 	if ( in_mlooking ) {
-		cl.viewangles[PITCH] += anglespeed * j_forward->value * cl.joystickAxis[j_forward_axis->integer];
-		cmd->forwardmove = ClampChar( cmd->forwardmove + (int) (j_pitch->value * cl.joystickAxis[j_pitch_axis->integer]) );
+		cl.viewangles[PITCH] += anglespeed * cl_pitchspeed->value * cl.joystickAxis[AXIS_FORWARD];
 	} else {
-		cl.viewangles[PITCH] += anglespeed * j_pitch->value * cl.joystickAxis[j_pitch_axis->integer];
-		cmd->forwardmove = ClampChar( cmd->forwardmove + (int) (j_forward->value * cl.joystickAxis[j_forward_axis->integer]) );
+		cmd->forwardmove = ClampChar( cmd->forwardmove + cl.joystickAxis[AXIS_FORWARD] );
 	}
 
 	cmd->upmove = ClampChar( cmd->upmove + cl.joystickAxis[AXIS_UP] );

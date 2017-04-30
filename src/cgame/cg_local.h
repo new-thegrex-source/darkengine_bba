@@ -37,7 +37,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define POWERUP_BLINKS      5
 
-
 #define POWERUP_BLINK_TIME  1000
 #define FADE_TIME           200
 #define PULSE_TIME          200
@@ -61,8 +60,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define MAX_STEP_CHANGE     32
 
-#define MAX_VERTS_ON_POLY   80
-#define MAX_MARK_POLYS      2048
+#define MAX_VERTS_ON_POLY   10
+#define MAX_MARK_POLYS      256
 
 #define STAT_MINUS          10  // num frame for '-' stats digit
 
@@ -79,6 +78,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define TEAM_OVERLAY_MAXNAME_WIDTH  12
 #define TEAM_OVERLAY_MAXLOCATION_WIDTH  16
+
+#define _(String) gettext(String)
 
 typedef enum
 {
@@ -183,14 +184,14 @@ typedef struct attachment_s
 
 #define MAX_PS_SHADER_FRAMES      32
 #define MAX_PS_MODELS             8
-#define MAX_EJECTORS_PER_SYSTEM   5
-#define MAX_PARTICLES_PER_EJECTOR 5
+#define MAX_EJECTORS_PER_SYSTEM   4
+#define MAX_PARTICLES_PER_EJECTOR 4
 
-#define MAX_BASEPARTICLE_SYSTEMS  384
+#define MAX_BASEPARTICLE_SYSTEMS  192
 #define MAX_BASEPARTICLE_EJECTORS MAX_BASEPARTICLE_SYSTEMS*MAX_EJECTORS_PER_SYSTEM
 #define MAX_BASEPARTICLES         MAX_BASEPARTICLE_EJECTORS*MAX_PARTICLES_PER_EJECTOR
 
-#define MAX_PARTICLE_SYSTEMS      96
+#define MAX_PARTICLE_SYSTEMS      48
 #define MAX_PARTICLE_EJECTORS     MAX_PARTICLE_SYSTEMS*MAX_EJECTORS_PER_SYSTEM
 #define MAX_PARTICLES             MAX_PARTICLE_EJECTORS*5
 
@@ -669,6 +670,8 @@ typedef struct centity_s
   particleSystem_t      *jetPackPS;
   jetPackState_t        jetPackState;
 
+  particleSystem_t      *poisonCloudedPS;
+
   particleSystem_t      *entityPS;
   qboolean              entityPSMissing;
 
@@ -680,9 +683,6 @@ typedef struct centity_s
 
   qboolean              valid;
   qboolean              oldValid;  
-
-  int                   invisibleTime;
-  qboolean              invisible;
   struct centity_s      *nextLocation;
 } centity_t;
 
@@ -771,11 +771,6 @@ typedef struct
 
   char        voice[ MAX_VOICE_NAME_LEN ];
   int         voiceTime;
-  
-
-  char                  chatText[ MAX_SAY_TEXT ];
-  int                   chatDurationTime;
-  int                   chatTeam;
 } clientInfo_t;
 
 
@@ -785,7 +780,6 @@ typedef struct weaponInfoMode_s
   vec3_t      flashDlightColor;
   sfxHandle_t flashSound[ 4 ];  // fast firing weapons randomly choose
   qboolean    continuousFlash;
-  float       flashQuake;
 
   qhandle_t   missileModel;
   sfxHandle_t missileSound;
@@ -806,6 +800,7 @@ typedef struct weaponInfoMode_s
   int         missileAnimLooping;
 
   sfxHandle_t firingSound;
+  qboolean    loopFireSound;
 
   qhandle_t   muzzleParticleSystem;
 
@@ -815,7 +810,6 @@ typedef struct weaponInfoMode_s
   qhandle_t   impactMarkSize;
   sfxHandle_t impactSound[ 4 ]; //random impact sound
   sfxHandle_t impactFleshSound[ 4 ]; //random impact sound
-  float       impactQuake;
 } weaponInfoMode_t;
 
 // each WP_* weapon enum has an associated weaponInfo_t
@@ -909,8 +903,8 @@ typedef struct
   int length;
 } consoleLine_t;
 
-#define MAX_CONSOLE_TEXT  16384
-#define MAX_CONSOLE_LINES 64
+#define MAX_CONSOLE_TEXT  8192
+#define MAX_CONSOLE_LINES 32
 
 // all cg.stepTime, cg.duckTime, cg.landTime, etc are set to cg.time when the action
 // occurs, and they will have visible effects for #define STEP_TIME or whatever msec after
@@ -1093,7 +1087,10 @@ typedef struct
   float         v_dmg_pitch;
   float         v_dmg_roll;
 
-  qboolean      chaseFollow;
+  vec3_t        kick_angles;                        // weapon kicks
+  vec3_t        kick_origin;
+
+  qboolean      chaseFollow;               
 
   // temp working variables for player view
   float         bobfracsin;
@@ -1144,7 +1141,6 @@ typedef struct
   float         painBlendTarget;
   float         healBlendValue;
   int           lastHealth;
-  qboolean      wasDeadLastFrame;
 
   int           lastPredictedCommand;
   int           lastServerTime;
@@ -1160,13 +1156,9 @@ typedef struct
   
   int           nextWeaponClickTime;
 
-  float         viewQuake;
-
-  qboolean      warping;
-  qboolean      warpExitBlocked;
+  centity_t     *locationHead;
 } cg_t;
 
-#define NUM_BRIGHTEN_SHADERS 5
 
 // all of the model, shader, and sound references that are
 // loaded at gamestate time are stored in cgMedia_t
@@ -1180,7 +1172,7 @@ typedef struct
 
   qhandle_t   level2ZapTS;
 
-
+  qhandle_t   balloonShader;
   qhandle_t   connectionShader;
 
   qhandle_t   viewBloodShader;
@@ -1192,28 +1184,28 @@ typedef struct
 
   qhandle_t   scannerShader;
   qhandle_t   scannerBlipShader;
-  qhandle_t   scannerBlipShaderHealing;
-  qhandle_t   scannerBlipShaderPlayer;
   qhandle_t   scannerLineShader;
-
 
   qhandle_t   teamOverlayShader;
 
   qhandle_t   numberShaders[ 11 ];
-  qhandle_t   numberShadersAlt[ 12 ];
 
   qhandle_t   shadowMarkShader;
   qhandle_t   wakeMarkShader;
-
-  // cloak shaders
-  qhandle_t   invisibleShader;
-  qhandle_t   invisibleShaderTeam;
-  qhandle_t   invisibleFadeShader;
 
   // buildable shaders
   qhandle_t   greenBuildShader;
   qhandle_t   redBuildShader;
   qhandle_t   humanSpawningShader;
+
+  // domination shaders
+  qhandle_t   noneDominationShader;
+  qhandle_t   alienDominationShader;
+  qhandle_t   humanDominationShader;
+  qhandle_t   dominationBarShader;
+  qhandle_t   dominationBarAShader;
+  qhandle_t   dominationBarHShader;
+  qhandle_t   dominationIcon[ BA_DPOINT_LAST - BA_DPOINT_FIRST + 1 ];
 
   // disconnect
   qhandle_t   disconnectPS;
@@ -1230,16 +1222,14 @@ typedef struct
   sfxHandle_t landSound;
   sfxHandle_t fallSound;
   sfxHandle_t turretSpinupSound;
+
   sfxHandle_t hardBounceSound1;
   sfxHandle_t hardBounceSound2;
 
-  sfxHandle_t airpounce;
-  sfxHandle_t acidBombBounceSound1;
-  sfxHandle_t acidBombBounceSound2;
   sfxHandle_t voteNow;
   sfxHandle_t votePassed;
   sfxHandle_t voteFailed;
-  sfxHandle_t hummelSound;
+
   sfxHandle_t watrInSound;
   sfxHandle_t watrOutSound;
   sfxHandle_t watrUnSound;
@@ -1253,19 +1243,14 @@ typedef struct
   qhandle_t   jetPackAscendPS;
 
   sfxHandle_t medkitUseSound;
-  
-  sfxHandle_t forcefieldSound;
 
   sfxHandle_t alienStageTransition;
   sfxHandle_t humanStageTransition;
-  
-  sfxHandle_t iniVote;
 
   sfxHandle_t alienOvermindAttack;
   sfxHandle_t alienOvermindDying;
   sfxHandle_t alienOvermindSpawns;
-  sfxHandle_t humanbaseunderatt;
-  
+
   sfxHandle_t alienBuildableExplosion;
   sfxHandle_t alienBuildableDamage;
   sfxHandle_t alienBuildablePrebuild;
@@ -1296,24 +1281,16 @@ typedef struct
   sfxHandle_t buildableRepairedSound;
 
   qhandle_t   poisonCloudPS;
-  qhandle_t   fireCloudPS;
   qhandle_t   poisonCloudedPS;
   qhandle_t   alienEvolvePS;
-  qhandle_t   airpounceblast;
   qhandle_t   alienAcidTubePS;
-  qhandle_t   alienSlimePS;
-  
-  qhandle_t   forcefieldPS;
 
   sfxHandle_t alienEvolveSound;
 
   qhandle_t   humanBuildableDamagedPS;
-  qhandle_t   organicbulbPS;
   qhandle_t   humanBuildableDestroyedPS;
   qhandle_t   alienBuildableDamagedPS;
   qhandle_t   alienBuildableDestroyedPS;
-  
-  qhandle_t   alienSpiteful_AbcessDestroyedPS;
 
   qhandle_t   alienBleedPS;
   qhandle_t   humanBleedPS;
@@ -1322,14 +1299,10 @@ typedef struct
 
 
   qhandle_t   teslaZapTS;
-  qhandle_t   slimeTS;
-  qhandle_t   netzTS;
-  
+
   sfxHandle_t lCannonWarningSound;
   sfxHandle_t lCannonWarningSound2;
-  sfxHandle_t FlamerWarningSound;
-  sfxHandle_t FlamerWarningSound2;
-  
+
   qhandle_t   buildWeaponTimerPie[ 8 ];
   qhandle_t   upgradeClassIconShader;
   qhandle_t   healthCross;
@@ -1337,39 +1310,6 @@ typedef struct
   qhandle_t   healthCross3X;
   qhandle_t   healthCrossMedkit;
   qhandle_t   healthCrossPoisoned;
-
-  sfxHandle_t humanGibSound;
-  qhandle_t   headShotPS;
-  qhandle_t   humanWoundsBleedPS;
-  qhandle_t   alienWoundsBleedPS;
-
-  qhandle_t   alienBuildPoolBar;
-  qhandle_t   humanBuildPoolBar;
-  qhandle_t   alienNoBPFlash;
-  qhandle_t   humanNoBPFlash;
-
-  qhandle_t   lightningBeam;
-  qhandle_t   lightningImpactPS;
-
-  sfxHandle_t hitSounds[ 5 ];
-
-  sfxHandle_t rocketlPrimeSound;
-
-  sfxHandle_t warpEnterSound;
-  qhandle_t   warpEnterPS;
-  sfxHandle_t warpExitSound;
-  qhandle_t   warpExitPS;
-  sfxHandle_t warpingSound;
-  qhandle_t   warpOverlay;
-  qhandle_t   warpOverlayBlocked;
-  qhandle_t   warpingShader;
-  qhandle_t   warpingEnvironmentShader;
-  qhandle_t   warpParticle;
-
-  qhandle_t   brightenShaders[ NUM_BRIGHTEN_SHADERS ];
-
-  sfxHandle_t grenadePrimeSound;
-  sfxHandle_t grenadeTickSound;
 } cgMedia_t;
 
 typedef struct
@@ -1468,18 +1408,13 @@ typedef struct
 
   buildStat_t   alienBuildStat;
   buildStat_t   humanBuildStat;
+  buildStat_t   domBuildStat;
 
   // media
   cgMedia_t           media;
 
   voice_t       *voices;
-
-  int           alienBuildPool;
-  int           alienBuildPoolMax;
-  int           alienNoBPFlashTime;
-  int           humanBuildPool;
-  int           humanBuildPoolMax;
-  int           humanNoBPFlashTime;
+  clientList_t  ignoreList;
 } cgs_t;
 
 typedef struct
@@ -1495,8 +1430,8 @@ extern  cg_t      cg;
 extern  centity_t cg_entities[ MAX_GENTITIES ];
 extern  displayContextDef_t  cgDC;
 
-extern  weaponInfo_t    cg_weapons[ 40 ];
-extern  upgradeInfo_t   cg_upgrades[ 40 ];
+extern  weaponInfo_t    cg_weapons[ 32 ];
+extern  upgradeInfo_t   cg_upgrades[ 32 ];
 
 extern  buildableInfo_t cg_buildables[ BA_NUM_BUILDABLES ];
 
@@ -1518,7 +1453,6 @@ extern  vmCvar_t    cg_drawCrosshair;
 extern  vmCvar_t    cg_drawCrosshairNames;
 extern  vmCvar_t    cg_crosshairSize;
 extern  vmCvar_t    cg_drawTeamOverlay;
-extern  vmCvar_t    cg_teamOverlaySortMode;
 extern  vmCvar_t    cg_teamOverlayMaxPlayers;
 extern  vmCvar_t    cg_teamOverlayUserinfo;
 extern  vmCvar_t    cg_draw2D;
@@ -1545,7 +1479,6 @@ extern  vmCvar_t    cg_tracerLength;
 extern  vmCvar_t    cg_thirdPerson;
 extern  vmCvar_t    cg_thirdPersonAngle;
 extern  vmCvar_t    cg_thirdPersonShoulderViewMode;
-extern  vmCvar_t    cg_staticDeathCam;
 extern  vmCvar_t    cg_thirdPersonPitchFollow;
 extern  vmCvar_t    cg_thirdPersonRange;
 extern  vmCvar_t    cg_stereoSeparation;
@@ -1585,8 +1518,6 @@ extern  vmCvar_t    cg_disableBuildDialogs;
 extern  vmCvar_t    cg_disableCommandDialogs;
 extern  vmCvar_t    cg_disableScannerPlane;
 extern  vmCvar_t    cg_tutorial;
-extern  vmCvar_t    cg_bleedSelfWounds;
-extern  vmCvar_t    cg_bleedSelfHeadShots;
 
 extern  vmCvar_t    cg_painBlendUpRate;
 extern  vmCvar_t    cg_painBlendDownRate;
@@ -1619,25 +1550,7 @@ extern  vmCvar_t    cg_emoticons;
 
 extern  vmCvar_t    cg_chatTeamPrefix;
 
-
-extern  vmCvar_t    cg_drawBubble;
-extern  vmCvar_t    cg_BubbleZoom;
-
-extern  vmCvar_t    cg_viewQuake;
-extern  vmCvar_t    cg_viewQuakeLambda;
-extern  vmCvar_t    cg_viewQuakeLimit;
-
-extern  vmCvar_t    cg_damageIndicatorSize;
-extern  vmCvar_t    cg_damageIndicatorAlpha;
-
-extern  vmCvar_t    cg_healthBarSize;
-extern  vmCvar_t    cg_healthBarAlpha;
-
-extern  vmCvar_t    cg_hitSounds;
-extern  vmCvar_t    cg_hitStats;
-
-extern  vmCvar_t    cg_brighten;
-extern  vmCvar_t    cg_brightenWraith;
+extern  vmCvar_t    cg_translateCenterPrint;
 
 //
 // cg_main.c
@@ -1656,11 +1569,10 @@ void        CG_UpdateCvars( void );
 int         CG_CrosshairPlayer( void );
 int         CG_LastAttacker( void );
 void        CG_LoadMenus( const char *menuFile );
-void        CG_KeyEvent( int key, qboolean down );
+void        CG_KeyEvent( int key, int state );
 void        CG_MouseEvent( int x, int y );
 void        CG_EventHandling( int type );
 void        CG_SetScoreSelection( void *menu );
-qboolean    CG_ClientIsReady( int clientNum );
 void        CG_BuildSpectatorString( void );
 
 qboolean    CG_FileExists( char *filename );
@@ -1680,7 +1592,6 @@ void        CG_TestModelNextSkin_f( void );
 void        CG_TestModelPrevSkin_f( void );
 void        CG_AddBufferedSound( sfxHandle_t sfx );
 void        CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback );
-void        CG_InduceViewQuake( vec3_t src, float mag );
 void        CG_OffsetFirstPersonView( void );
 void        CG_OffsetThirdPersonView( void );
 void        CG_OffsetShoulderView( void );
@@ -1736,7 +1647,6 @@ void        CG_UpdateMediaFraction( float newFract );
 void        CG_ResetPainBlend( void );
 void        CG_DrawField( float x, float y, int width, float cw, float ch, int value );
 
-void        CG_SpawnDamageBlob( vec3_t origin, int value, int flags );
 //
 // cg_players.c
 //
@@ -1757,13 +1667,10 @@ void        CG_GhostBuildable( buildable_t buildable );
 void        CG_Buildable( centity_t *cent );
 void        CG_BuildableStatusParse( const char *filename, buildStat_t *bs );
 void        CG_DrawBuildableStatus( void );
+void        CG_DrawDominationStatus( void );
 void        CG_InitBuildables( void );
-void        CG_HumanBuildableExplosion( vec3_t origin, vec3_t dir, int buildable );
-void        CG_AlienBuildableExplosion( vec3_t origin, vec3_t dir, int buildable );
-void        CG_AlienSpitefulAbcessExplosion( vec3_t origin, vec3_t dir );
-
-void        CG_DrawChatBubble( void );
-int CG_SortDistance( const void *a, const void *b );
+void        CG_HumanBuildableExplosion( vec3_t origin, vec3_t dir );
+void        CG_AlienBuildableExplosion( vec3_t origin, vec3_t dir );
 
 //
 // cg_animation.c
@@ -1814,6 +1721,8 @@ void        CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *pare
                                     qhandle_t parentModel, char *tagName );
 void        CG_PositionRotatedEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
                                            qhandle_t parentModel, char *tagName );
+void        CG_LinkLocation( centity_t* cent );
+
 
 
 //
@@ -1860,7 +1769,7 @@ void        CG_ImpactMark( qhandle_t markShader,
                            float r, float g, float b, float a,
                            qboolean alphaFade,
                            float radius, qboolean temporary );
-						   
+
 //
 // cg_snapshot.c
 //
@@ -2156,7 +2065,6 @@ void          LoadGlyph(face_t *face, const char *str, int img, glyphInfo_t *gly
 void          FreeGlyph(face_t *face, int img, glyphInfo_t *glyphInfo);
 void          Glyph(fontInfo_t *font, face_t *face, const char *str, glyphInfo_t *glyph);
 void          FreeCachedGlyphs(face_t *face);
-
 qboolean      trap_Key_IsDown( int keynum );
 int           trap_Key_GetCatcher( void );
 void          trap_Key_SetCatcher( int catcher );
@@ -2185,6 +2093,10 @@ qboolean      trap_GetEntityToken( char *buffer, int bufferSize );
 int           trap_GetDemoState( void );
 int           trap_GetDemoPos( void );
 void          trap_GetDemoName( char *buffer, int size );
+
+void          trap_Gettext ( char *buffer, const char *msgid, int bufferLength );
+void          Gettext ( char *buffer, const char *msgid, int bufferLength );
+char          *gettext ( const char *msgid );
 
 // cg_drawCrosshair settings
 #define CROSSHAIR_ALWAYSOFF       0

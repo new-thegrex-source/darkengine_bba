@@ -35,7 +35,7 @@ static  int     cg_numSolidEntities;
 static  centity_t *cg_solidEntities[MAX_ENTITIES_IN_SNAPSHOT];
 static  int     cg_numTriggerEntities;
 static  centity_t *cg_triggerEntities[MAX_ENTITIES_IN_SNAPSHOT];
-extern vmCvar_t cg_EDGEFPSFIX;
+
 /*
 ====================
 CG_BuildSolidList
@@ -95,7 +95,6 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins,
   trace_t       trace;
   entityState_t *ent;
   clipHandle_t  cmodel;
-  vec3_t        tmins, tmaxs;
   vec3_t        bmins, bmaxs;
   vec3_t        origin, angles;
   centity_t     *cent;
@@ -107,18 +106,6 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins,
   else
     j = cg_numSolidEntities;
 
-  if (cg_EDGEFPSFIX.integer)
-  {
-    // calculate bounding box of the trace
-    ClearBounds( tmins, tmaxs );
-    AddPointToBounds( start, tmins, tmaxs );
-    AddPointToBounds( end, tmins, tmaxs );
-    if( mins )
-      VectorAdd( mins, tmins, tmins );
-    if( maxs )
-      VectorAdd( maxs, tmaxs, tmaxs );
-  } 
-	
   for( i = 0; i < j; i++ )
   {
     if( i < cg_numSolidEntities )
@@ -153,23 +140,11 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins,
       if( i == cg_numSolidEntities )
         BG_ClassBoundingBox( ( ent->misc >> 8 ) & 0xFF, bmins, bmaxs, NULL, NULL, NULL );
 
-      if (cg_EDGEFPSFIX.integer)
-      {
-        VectorAdd( cent->lerpOrigin, bmins, bmins );
-        VectorAdd( cent->lerpOrigin, bmaxs, bmaxs );
-        if( !BoundsIntersect( bmins, bmaxs, tmins, tmaxs ) )
-          continue;
-      } 
-		
       cmodel = trap_CM_TempBoxModel( bmins, bmaxs );
       VectorCopy( vec3_origin, angles );
-//      VectorCopy( cent->lerpOrigin, origin );
-      if (cg_EDGEFPSFIX.integer)
-        VectorCopy( vec3_origin, origin );
-      else
-        VectorCopy( cent->lerpOrigin, origin );
+      VectorCopy( cent->lerpOrigin, origin );
     }
-    
+
 
     if( collisionType == TT_CAPSULE )
     {
@@ -572,7 +547,7 @@ void CG_PredictPlayerState( void )
 {
   int     cmdNum, current, i;
   playerState_t oldPlayerState;
-  // qboolean  moved;
+  qboolean  moved;
   usercmd_t oldestCmd;
   usercmd_t latestCmd;
   int stateIndex = 0, predictCmd = 0;
@@ -619,23 +594,6 @@ void CG_PredictPlayerState( void )
     cg_pmove.tracemask = MASK_DEADSOLID; // spectators can fly through bodies
 
   cg_pmove.noFootsteps = 0;
-
-/*  for( i = 0; i < cg.snap->numEntities; i++ )
-  {
-    cent  = &cg_entities[ cg.snap->entities[ i ].number ];
-    es    = &cent->currentState;*/
-
-  for( cg_pmove.numForceFields = 0, i = 0; i < cg.snap->numEntities; i++ )
-  {
-    centity_t *cent = cg_entities + cg.snap->entities[ i ].number;
-
-    if( BG_ForceFieldForEntity( &cg.predictedPlayerState, &cent->currentState,
-      cg_pmove.forceFields + cg_pmove.numForceFields ) )
-      cg_pmove.numForceFields++;
-
-    if( cg_pmove.numForceFields == MAX_FORCE_FIELDS )
-      break;
-  }
 
   // save the state before the pmove so we can detect transitions
   oldPlayerState = cg.predictedPlayerState;
@@ -776,7 +734,7 @@ void CG_PredictPlayerState( void )
   }
 
   // run cmds
-  // moved = qfalse;
+  moved = qfalse;
 
   for( cmdNum = current - CMD_BACKUP + 1; cmdNum <= current; cmdNum++ )
   {
@@ -895,7 +853,7 @@ void CG_PredictPlayerState( void )
       stateIndex = ( stateIndex + 1 ) % NUM_SAVED_STATES;
     }
 
-    // moved = qtrue;
+    moved = qtrue;
 
     // add push trigger movement effects
     CG_TouchTriggerPrediction( );
@@ -909,7 +867,6 @@ void CG_PredictPlayerState( void )
     cg.predictedPlayerState.groundEntityNum,
     cg.physicsTime, cg.time, cg.predictedPlayerState.origin );
 
-  cg.warpExitBlocked = cg.pmext.warpExitBlocked;
 
   // fire events and other transition triggered things
   CG_TransitionPlayerState( &cg.predictedPlayerState, &oldPlayerState );

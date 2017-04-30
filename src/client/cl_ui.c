@@ -96,12 +96,12 @@ qboolean GetNews( qboolean begin )
 	if( begin ) { // if not already using curl, start the download
 		if( !clc.downloadCURLM ) { 
 			if(!CL_cURL_Init()) {
-				Cvar_Set( "cl_newsString", "^1Error: Could not load cURL library" );
+				Cvar_Set( "cl_newsString", _("^1Error: Could not load cURL library") );
 				return qtrue;
 			}
 			clc.activeCURLNotGameRelated = qtrue;
 			CL_cURL_BeginDownload("news.dat", 
-				"http://tremdroid.wc.lt/nda.txt");
+				"http://tremulous.net/clientnews.txt");
 			return qfalse;
 		}
 	}
@@ -110,53 +110,6 @@ qboolean GetNews( qboolean begin )
 		readSize = FS_Read(clc.newsString, sizeof( clc.newsString ), fileIn);
 		FS_FCloseFile(fileIn);
 		clc.newsString[ readSize ] = '\0';
-		if( readSize > 0 ) {
-			finished = qtrue;
-			clc.cURLUsed = qfalse;
-			CL_cURL_Shutdown();
-			clc.activeCURLNotGameRelated = qfalse;
-		}
-	}
-	if( !finished ) 
-		strcpy( clc.newsString, "Retrieving..." );
-	Cvar_Set( "cl_newsString", clc.newsString );
-	return finished;
-#else
-	Cvar_Set( "cl_newsString", 
-		"^1You must compile your client with CURL support to use this feature" );
-	return qtrue;
-#endif
-}
-
-/*
-====================
-GetNDALicense
-====================
-*
-qboolean GetNDALicense( qboolean begin )
-{
-#ifdef USE_CURL
-	qboolean finished = qfalse;
-	fileHandle_t fileIn;
-	int readSize;
-
-	if( begin ) { // if not already using curl, start the download
-		if( !clc.downloadCURLM ) { 
-			if(!CL_cURL_Init()) {
-				Cvar_Set( "cl_newsString", "^1Error: Could not load cURL library" );
-				return qtrue;
-			}
-			clc.activeCURLNotGameRelated = qtrue;
-			CL_cURL_BeginDownload("nda.dat", 
-				"http://tremdroid.wc.lt/nda.txt");
-			return qfalse;
-		}
-	}
-
-	if ( !clc.downloadCURLM && FS_SV_FOpenFileRead("nda.dat", &fileIn)) {
-		readSize = FS_Read(clc.ndaString, sizeof( clc.newsString ), fileIn);
-		FS_FCloseFile(fileIn);
-		clc.ndaString[ readSize ] = '\0';
 		if( readSize > 0 ) {
 			finished = qtrue;
 			clc.cURLUsed = qfalse;
@@ -505,9 +458,6 @@ static int LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int
 			}
 			break;
 
-		case SORT_GAME:
-			res = Q_stricmp( server1->game, server2->game );
-			break;
 		case SORT_MAP:
 			res = Q_stricmp( server1->mapName, server2->mapName );
 			break;
@@ -771,7 +721,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_CVAR_SET:
-		Cvar_SetSafe( VMA(1), VMA(2) );
+		Cvar_Set( VMA(1), VMA(2) );
 		return 0;
 
 	case UI_CVAR_VARIABLEVALUE:
@@ -782,7 +732,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_CVAR_SETVALUE:
-		Cvar_SetValueSafe( VMA(1), VMF(2) );
+		Cvar_SetValue( VMA(1), VMF(2) );
 		return 0;
 
 	case UI_CVAR_RESET:
@@ -810,7 +760,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		|| !strncmp(VMA(2), "vid_restart", 11)
 		|| !strncmp(VMA(2), "quit", 5)))
 		{
-			Com_Printf (S_COLOR_YELLOW "turning EXEC_NOW '%.11s' into EXEC_INSERT\n", (const char*)VMA(2));
+			Com_Printf (_(S_COLOR_YELLOW "turning EXEC_NOW '%.11s' into EXEC_INSERT\n"), (const char*)VMA(2));
 			args[1] = EXEC_INSERT;
 		}
 		Cbuf_ExecuteText( args[1], VMA(2) );
@@ -1095,7 +1045,11 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 	case UI_R_REMAP_SHADER:
 		re.RemapShader( VMA(1), VMA(2), VMA(3) );
 		return 0;
-		
+
+  case UI_GETTEXT:
+    strncpy( VMA(1), _(VMA(2)), args[3] );
+    return 0;
+
   case UI_R_LOADFACE:
     re.LoadFace( VMA(1), args[2], VMA(3), VMA(4) );
     return 0;
@@ -1121,7 +1075,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
     break;
 
 	default:
-		Com_Error( ERR_DROP, "Bad UI system trap: %ld", (long int) args[0] );
+		Com_Error( ERR_DROP, _("Bad UI system trap: %ld"), (long int) args[0] );
 
 	}
 
@@ -1165,9 +1119,9 @@ void CL_InitUI( void ) {
 	}
 	uivm = VM_Create( "ui", CL_UISystemCalls, interpret );
 	if ( !uivm ) {
-		Com_Printf( "Failed to find a valid UI vm. The following paths were searched:\n" );
-		Cmd_ExecuteString( "path /\n" );
-		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
+		Com_Printf( _("Failed to find a valid UI vm. The following paths were searched:\n") );
+		Cmd_ExecuteString( "path/\n" );
+		Com_Error( ERR_FATAL, _("VM_Create on UI failed") );
 	}
 
 	// sanity check
@@ -1177,7 +1131,7 @@ void CL_InitUI( void ) {
 		VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE));
 	}
 	else if (v != UI_API_VERSION) {
-		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
+		Com_Error( ERR_DROP, _("User Interface is version %d, expected %d"), v, UI_API_VERSION );
 		cls.uiStarted = qfalse;
 	}
 	else {

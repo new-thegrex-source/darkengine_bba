@@ -38,25 +38,19 @@ void CG_RegisterUpgrade( int upgradeNum )
   upgradeInfo_t   *upgradeInfo;
   char            *icon;
 
-  if( upgradeNum <= UP_NONE || upgradeNum >= UP_NUM_UPGRADES )
-  {
-    CG_Error( "CG_RegisterUpgrade: out of range: %d", upgradeNum );
-    return;
-  }
-
   upgradeInfo = &cg_upgrades[ upgradeNum ];
 
-  if( upgradeInfo->registered )
-  {
-    CG_Printf( "CG_RegisterUpgrade: already registered: (%d) %s\n", upgradeNum,
-      BG_Upgrade( upgradeNum )->name );
+  if( upgradeNum == 0 )
     return;
-  }
 
+  if( upgradeInfo->registered )
+    return;
+
+  Com_Memset( upgradeInfo, 0, sizeof( *upgradeInfo ) );
   upgradeInfo->registered = qtrue;
 
-  if( !BG_Upgrade( upgradeNum )->name[ 0 ] )
-    CG_Error( "Couldn't find upgrade %i", upgradeNum );
+  if( strlen( BG_Upgrade( upgradeNum )->name ) <= 0 )
+    CG_Error( _("Couldn't find upgrade %i"), upgradeNum );
 
   upgradeInfo->humanName = BG_Upgrade( upgradeNum )->humanName;
 
@@ -82,6 +76,105 @@ void CG_InitUpgrades( void )
 
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
     CG_RegisterUpgrade( i );
+}
+
+
+/*
+======================
+CG_ParseWeaponAnimationFile
+
+Read a configuration file containing animation counts and rates
+models/weapons/rifle/animation.cfg, etc
+======================
+*/
+static qboolean CG_ParseWeaponAnimationFile( const char *filename, weaponInfo_t *weapon )
+{
+  char          *text_p;
+  int           len;
+  int           i;
+  char          *token;
+  float         fps;
+  char          text[ 20000 ];
+  fileHandle_t  f;
+  animation_t   *animations;
+
+  animations = weapon->animations;
+
+  // load the file
+  len = trap_FS_FOpenFile( filename, &f, FS_READ );
+  if( len < 0 )
+    return qfalse;
+
+  if( len == 0 || len >= sizeof( text ) - 1 )
+  {
+    trap_FS_FCloseFile( f );
+    CG_Printf( _("File %s is %s\n"), filename, len == 0 ? _("empty") : _("too long") );
+    return qfalse;
+  }
+
+  trap_FS_Read( text, len, f );
+  text[ len ] = 0;
+  trap_FS_FCloseFile( f );
+
+  // parse the text
+  text_p = text;
+
+  // read information for each frame
+  for( i = WANIM_NONE + 1; i < MAX_WEAPON_ANIMATIONS; i++ )
+  {
+
+    token = COM_Parse( &text_p );
+    if( !*token )
+      break;
+
+    if( !Q_stricmp( token, "noDrift" ) )
+    {
+      weapon->noDrift = qtrue;
+      continue;
+    }
+
+    animations[ i ].firstFrame = atoi( token );
+
+    token = COM_Parse( &text_p );
+    if( !*token )
+      break;
+
+    animations[ i ].numFrames = atoi( token );
+    animations[ i ].reversed = qfalse;
+    animations[ i ].flipflop = qfalse;
+
+    // if numFrames is negative the animation is reversed
+    if( animations[ i ].numFrames < 0 )
+    {
+      animations[ i ].numFrames = -animations[ i ].numFrames;
+      animations[ i ].reversed = qtrue;
+    }
+
+    token = COM_Parse( &text_p );
+    if ( !*token )
+      break;
+
+    animations[i].loopFrames = atoi( token );
+
+    token = COM_Parse( &text_p );
+    if( !*token )
+      break;
+
+    fps = atof( token );
+    if( fps == 0 )
+      fps = 1;
+
+    animations[ i ].frameLerp = 1000 / fps;
+    animations[ i ].initialLerp = 1000 / fps;
+  }
+
+  if( i != MAX_WEAPON_ANIMATIONS )
+  {
+    CG_Printf( _("Error parsing animation file: %s\n"), filename );
+    return qfalse;
+  }
+
+  return qtrue;
 }
 
 
@@ -117,7 +210,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->missileModel = trap_R_RegisterModel( token );
 
       if( !wim->missileModel )
-        CG_Printf( S_COLOR_RED "ERROR: missile model not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: missile model not found %s\n"), token );
 
       continue;
     }
@@ -143,7 +236,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->usesSpriteMissle = qtrue;
 
       if( !wim->missileSprite )
-        CG_Printf( S_COLOR_RED "ERROR: missile sprite not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: missile sprite not found %s\n"), token );
 
       continue;
     }
@@ -202,7 +295,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->missileParticleSystem = CG_RegisterParticleSystem( token );
 
       if( !wim->missileParticleSystem )
-        CG_Printf( S_COLOR_RED "ERROR: missile particle system not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: missile particle system not found %s\n"), token );
 
       continue;
     }
@@ -215,7 +308,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->missileTrailSystem = CG_RegisterTrailSystem( token );
 
       if( !wim->missileTrailSystem )
-        CG_Printf( S_COLOR_RED "ERROR: missile trail system not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: missile trail system not found %s\n"), token );
 
       continue;
     }
@@ -228,7 +321,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->muzzleParticleSystem = CG_RegisterParticleSystem( token );
 
       if( !wim->muzzleParticleSystem )
-        CG_Printf( S_COLOR_RED "ERROR: muzzle particle system not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: muzzle particle system not found %s\n"), token );
 
       continue;
     }
@@ -241,7 +334,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->impactParticleSystem = CG_RegisterParticleSystem( token );
 
       if( !wim->impactParticleSystem )
-        CG_Printf( S_COLOR_RED "ERROR: impact particle system not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: impact particle system not found %s\n"), token );
 
       continue;
     }
@@ -266,7 +359,7 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
       wim->impactMarkSize = size;
 
       if( !wim->impactMark )
-        CG_Printf( S_COLOR_RED "ERROR: impact mark shader not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: impact mark shader not found %s\n"), token );
 
       continue;
     }
@@ -414,31 +507,11 @@ static qboolean CG_ParseWeaponModeSection( weaponInfoMode_t *wim, char **text_p 
 
       continue;
     }
-    else if( !Q_stricmp( token, "impactQuake" ) )
-    {
-      token = COM_Parse( text_p );
-      if( !token )
-        break;
-
-      wim->impactQuake = atof( token );
-
-      continue;
-    }
-    else if( !Q_stricmp( token, "flashQuake" ) )
-    {
-      token = COM_Parse( text_p );
-      if( !token )
-        break;
-
-      wim->flashQuake = atof( token );
-
-      continue;
-    }
     else if( !Q_stricmp( token, "}" ) )
       return qtrue; //reached the end of this weapon section
     else
     {
-      CG_Printf( S_COLOR_RED "ERROR: unknown token '%s' in weapon section\n", token );
+      CG_Printf( _(S_COLOR_RED "ERROR: unknown token '%s' in weapon section\n"), token );
       return qfalse;
     }
   }
@@ -471,7 +544,7 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
   if( len == 0 || len >= sizeof( text ) - 1 )
   {
     trap_FS_FCloseFile( f );
-    CG_Printf( "File %s is %s\n", filename, len == 0 ? "empty" : "too long" );
+    CG_Printf( _("File %s is %s\n"), filename, len == 0 ? _("empty") : _("too long") );
     return qfalse;
   }
 
@@ -497,12 +570,12 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
     {
       if( weaponMode == WPM_NONE )
       {
-        CG_Printf( S_COLOR_RED "ERROR: weapon mode section started without a declaration\n" );
+        CG_Printf( _(S_COLOR_RED "ERROR: weapon mode section started without a declaration\n") );
         return qfalse;
       }
       else if( !CG_ParseWeaponModeSection( &wi->wim[ weaponMode ], &text_p ) )
       {
-        CG_Printf( S_COLOR_RED "ERROR: failed to parse weapon mode section\n" );
+        CG_Printf( _(S_COLOR_RED "ERROR: failed to parse weapon mode section\n") );
         return qfalse;
       }
 
@@ -537,7 +610,7 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
       wi->weaponModel = trap_R_RegisterModel( token );
 
       if( !wi->weaponModel )
-        CG_Printf( S_COLOR_RED "ERROR: weapon model not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: weapon model not found %s\n"), token );
 
       strcpy( path, token );
       COM_StripExtension( path, path, MAX_QPATH );
@@ -568,8 +641,8 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
 
       if( !wi->weaponModel3rdPerson )
       {
-        CG_Printf( S_COLOR_RED "ERROR: 3rd person weapon "
-            "model not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: 3rd person weapon "
+            "model not found %s\n"), token );
       }
 
       strcpy( path, token );
@@ -603,7 +676,7 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
       wi->weaponIcon = wi->ammoIcon = trap_R_RegisterShader( token );
 
       if( !wi->weaponIcon )
-        CG_Printf( S_COLOR_RED "ERROR: weapon icon not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: weapon icon not found %s\n"), token );
 
       continue;
     }
@@ -628,7 +701,7 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
       wi->crossHairSize = size;
 
       if( !wi->crossHair )
-        CG_Printf( S_COLOR_RED "ERROR: weapon crosshair not found %s\n", token );
+        CG_Printf( _(S_COLOR_RED "ERROR: weapon crosshair not found %s\n"), token );
 
       continue;
     }
@@ -639,7 +712,7 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
       continue;
     }
 
-    Com_Printf( S_COLOR_RED "ERROR: unknown token '%s'\n", token );
+    Com_Printf( _(S_COLOR_RED "ERROR: unknown token '%s'\n"), token );
     return qfalse;
   }
 
@@ -658,37 +731,40 @@ void CG_RegisterWeapon( int weaponNum )
   vec3_t        mins, maxs;
   int           i;
 
-  if( weaponNum <= WP_NONE || weaponNum >= WP_NUM_WEAPONS )
-  {
-    CG_Error( "CG_RegisterWeapon: out of range: %d", weaponNum );
-    return;
-  }
-
   weaponInfo = &cg_weapons[ weaponNum ];
 
-  if( weaponInfo->registered )
-  {
-    CG_Printf( "CG_RegisterWeapon: already registered: (%d) %s\n", weaponNum,
-      BG_Weapon( weaponNum )->name );
+  if( weaponNum == 0 )
     return;
-  }
 
+  if( weaponInfo->registered )
+    return;
+
+  Com_Memset( weaponInfo, 0, sizeof( *weaponInfo ) );
   weaponInfo->registered = qtrue;
 
-  if( !BG_Weapon( weaponNum )->name[ 0 ] )
-    CG_Error( "Couldn't find weapon %i", weaponNum );
+  if( strlen( BG_Weapon( weaponNum )->name ) <= 0 )
+    CG_Error( _("Couldn't find weapon %i"), weaponNum );
 
   Com_sprintf( path, MAX_QPATH, "models/weapons/%s/weapon.cfg", BG_Weapon( weaponNum )->name );
 
   weaponInfo->humanName = BG_Weapon( weaponNum )->humanName;
 
   if( !CG_ParseWeaponFile( path, weaponInfo ) )
-    Com_Printf( S_COLOR_RED "ERROR: failed to parse %s\n", path );
+    Com_Printf( _(S_COLOR_RED "ERROR: failed to parse %s\n"), path );
+
+  Com_sprintf( path, MAX_QPATH, "models/weapons/%s/animation.cfg", BG_Weapon( weaponNum )->name );
+
+  if( !CG_ParseWeaponAnimationFile( path, weaponInfo ) )
+    Com_Printf( _(S_COLOR_RED "ERROR: failed to parse %s\n"), path );
 
   // calc midpoint for rotation
   trap_R_ModelBounds( weaponInfo->weaponModel, mins, maxs );
   for( i = 0 ; i < 3 ; i++ )
     weaponInfo->weaponMidpoint[ i ] = mins[ i ] + 0.5 * ( maxs[ i ] - mins[ i ] );
+
+  //FIXME:
+  for( i = WPM_NONE + 1; i < WPM_NUM_WEAPONMODES; i++ )
+    weaponInfo->wim[ i ].loopFireSound = qfalse;
 }
 
 /*
@@ -734,7 +810,7 @@ static void CG_SetWeaponLerpFrameAnimation( weapon_t weapon, lerpFrame_t *lf, in
   newAnimation &= ~ANIM_TOGGLEBIT;
 
   if( newAnimation < 0 || newAnimation >= MAX_WEAPON_ANIMATIONS )
-    CG_Error( "Bad animation number: %i", newAnimation );
+    CG_Error( _("Bad animation number: %i"), newAnimation );
 
   anim = &cg_weapons[ weapon ].animations[ newAnimation ];
 
@@ -742,7 +818,7 @@ static void CG_SetWeaponLerpFrameAnimation( weapon_t weapon, lerpFrame_t *lf, in
   lf->animationTime = lf->frameTime + anim->initialLerp;
 
   if( cg_debugAnim.integer )
-    CG_Printf( "Anim: %i\n", newAnimation );
+    CG_Printf( _("Anim: %i\n"), newAnimation );
 }
 
 /*
@@ -884,60 +960,6 @@ static float CG_MachinegunSpinAngle( centity_t *cent, qboolean firing )
   return angle;
 }
 
-/*
-=============
-CG_RenderGenericBeam
-=============
-*/
-
-void CG_RenderGenericBeam( const vec3_t start, const vec3_t end, qhandle_t shader, float radius )
-{
-	vec3_t delta, viewdelta, side;
-	float length;
-	polyVert_t quad[ 4 ];
-
-	VectorSubtract( end, start, delta );
-	length = VectorLength( delta );
-	VectorSubtract( start, cg.refdef.vieworg, viewdelta );
-	CrossProduct( delta, viewdelta, side );
-	VectorNormalize( side );
-
-	VectorMA( start, radius, side, quad[ 3 ].xyz );
-	VectorMA( start, -radius, side, quad[ 2 ].xyz );
-	VectorMA( end, -radius, side, quad[ 1 ].xyz );
-	VectorMA( end, radius, side, quad[ 0 ].xyz );
-
-	quad[ 0 ].st[ 0 ] = length / radius * 0.1;
-	quad[ 0 ].st[ 1 ] = 0;
-	quad[ 0 ].modulate[ 0 ] = 255;
-	quad[ 0 ].modulate[ 1 ] = 255;
-	quad[ 0 ].modulate[ 2 ] = 255;
-	quad[ 0 ].modulate[ 3 ] = 255;
-
-	quad[ 1 ].st[ 0 ] = length / radius * 0.1;
-	quad[ 1 ].st[ 1 ] = 1;
-	quad[ 1 ].modulate[ 0 ] = 255;
-	quad[ 1 ].modulate[ 1 ] = 255;
-	quad[ 1 ].modulate[ 2 ] = 255;
-	quad[ 1 ].modulate[ 3 ] = 255;
-
-	quad[ 2 ].st[ 0 ] = 0;
-	quad[ 2 ].st[ 1 ] = 1;
-	quad[ 2 ].modulate[ 0 ] = 255;
-	quad[ 2 ].modulate[ 1 ] = 255;
-	quad[ 2 ].modulate[ 2 ] = 255;
-	quad[ 2 ].modulate[ 3 ] = 255;
-
-	quad[ 3 ].st[ 0 ] = 0;
-	quad[ 3 ].st[ 1 ] = 0;
-	quad[ 3 ].modulate[ 0 ] = 255;
-	quad[ 3 ].modulate[ 1 ] = 255;
-	quad[ 3 ].modulate[ 2 ] = 255;
-	quad[ 3 ].modulate[ 3 ] = 255;
-
-	trap_R_AddPolyToScene( shader, 4, quad );
-}
-
 
 /*
 =============
@@ -948,7 +970,6 @@ The main player will have this called for BOTH cases, so effects like light and
 sound should only be done on the world model case.
 =============
 */
-
 void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent )
 {
   refEntity_t   gun;
@@ -974,13 +995,8 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
   else
     firing = qfalse;
 
+  CG_RegisterWeapon( weaponNum );
   weapon = &cg_weapons[ weaponNum ];
-  if( !weapon->registered )
-  {
-    Com_Printf( S_COLOR_YELLOW "WARNING: CG_AddPlayerWeapon: weapon %d (%s) "
-        "is not registered\n", weaponNum, BG_Weapon( weaponNum )->name );
-    return;
-  }
 
   // add the weapon
   Com_Memset( &gun, 0, sizeof( gun ) );
@@ -1043,8 +1059,7 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
   }
 
   // Lucifer cannon charge warning beep
-  if( (weaponNum == WP_LUCIFER_CANNON ) &&
-
+  if( weaponNum == WP_LUCIFER_CANNON &&
       ( cent->currentState.eFlags & EF_WARN_CHARGE ) &&
       cg.snap->ps.stats[ STAT_TEAM ] != TEAM_ALIENS )
   {
@@ -1052,27 +1067,10 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
                             vec3_origin, ps ? cgs.media.lCannonWarningSound :
                                               cgs.media.lCannonWarningSound2 );
   }
-  if( (weaponNum == WP_FLAMER) &&
 
-      ( cent->currentState.eFlags & EF_WARN_CHARGE ) &&
-      cg.snap->ps.stats[ STAT_TEAM ] != TEAM_ALIENS )
-  {
-    trap_S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin,
-                            vec3_origin, ps ? cgs.media.FlamerWarningSound :
-                                              cgs.media.FlamerWarningSound2 );
-  }
   if( !noGunModel )
   {
     CG_PositionEntityOnTag( &gun, parent, parent->hModel, "tag_weapon" );
-
-    if( cent->currentState.eFlags & EF_MOVER_STOP )
-    {
-      if( cg.snap->ps.stats[ STAT_TEAM ] != TEAM_HUMANS )
-        gun.customShader = cgs.media.invisibleShader;
-      else
-        gun.customShader = cgs.media.invisibleShaderTeam;
-    }
-
     CG_WeaponAnimation( cent, &gun.oldframe, &gun.frame, &gun.backlerp );
 
     trap_R_AddRefEntityToScene( &gun );
@@ -1101,14 +1099,6 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 
       CG_PositionRotatedEntityOnTag( &barrel, &gun, gun.hModel, "tag_barrel" );
 
-      if( cent->currentState.eFlags & EF_MOVER_STOP )
-      {
-        if( cg.snap->ps.stats[ STAT_TEAM ] != TEAM_HUMANS )
-          barrel.customShader = cgs.media.invisibleShader;
-        else
-          barrel.customShader = cgs.media.invisibleShaderTeam;
-      }
-
       trap_R_AddRefEntityToScene( &barrel );
     }
   }
@@ -1127,13 +1117,6 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
     //if the PS is infinite disable it when not firing
     if( !firing && CG_IsParticleSystemInfinite( cent->muzzlePS ) )
       CG_DestroyParticleSystem( &cent->muzzlePS );
-  }
-
-
-  if( ps && cg.warping )
-  {
-    trap_S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin,
-                            vec3_origin, cgs.media.warpingSound );
   }
 
   // add the flash
@@ -1194,66 +1177,6 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
       cent->muzzlePsTrigger = qfalse;
     }
 
-		// Lightning Gun's beam
-		if( weaponNum == WP_LIGHTNING_GUN )
-		{
-			attachment_t attachment;
-			vec3_t muzzle, forward, end, beam_start;
-			trace_t tr;
-
-			if( ps )
-			{
-				BG_GetClientViewOrigin( ps, muzzle );
-				AngleVectors( ps->viewangles, forward, NULL, NULL );
-			}
-			else
-			{
-				// NOTE: this code assumes that the player's normal is (0,0,1)
-				//       it will break when humans start walking on walls
-				class_t class = ( cent->currentState.misc >> 8 ) & 0xFF;
-
-				VectorCopy( cent->lerpOrigin, muzzle );
-
-				// the only way to tell if a human is crouching is to check its bbox
-				// which is transmitted in a weird, encoded form (hence the magic number)
-				if( class == PCL_HUMAN && cent->currentState.solid == 3151887 )
-					muzzle[ 2 ] += BG_ClassConfig( class )->crouchViewheight;
-				else
-					muzzle[ 2 ] += BG_ClassConfig( class )->viewheight;
-
-				AngleVectors( cent->lerpAngles, forward, NULL, NULL );
-			}
-
-			VectorMA( muzzle, LIGHTNING_RANGE, forward, end );
-
-			CG_Trace( &tr, muzzle, NULL, NULL, end, cg.predictedPlayerState.clientNum, MASK_SHOT );
-
-			memset( &attachment, 0, sizeof( attachment ) );
-
-			if( noGunModel )
-				CG_SetAttachmentTag( &attachment, *parent, parent->hModel, "tag_weapon" );
-			else
-				CG_SetAttachmentTag( &attachment, gun, gun.hModel, "tag_flash" );
-
-			CG_AttachToTag( &attachment );
-
-			if( CG_AttachmentPoint( &attachment, beam_start ) )
-				CG_RenderGenericBeam( beam_start, tr.endpos, cgs.media.lightningBeam, 3 );
-
-			if( tr.entityNum != ENTITYNUM_NONE &&
-			    !( tr.surfaceFlags & SURF_NOIMPACT ) )
-			{
-				particleSystem_t *ps = CG_SpawnNewParticleSystem( cgs.media.lightningImpactPS );
-
-				if( CG_IsParticleSystemValid( &ps ) )
-				{
-					CG_SetAttachmentPoint( &ps->attachment, tr.endpos );
-					CG_SetParticleSystemNormal( ps, tr.plane.normal );
-					CG_AttachToPoint( &ps->attachment );
-				}
-			}
-		}
-
     // make a dlight for the flash
     if( weapon->wim[ weaponMode ].flashDlightColor[ 0 ] ||
         weapon->wim[ weaponMode ].flashDlightColor[ 1 ] ||
@@ -1288,24 +1211,18 @@ void CG_AddViewWeapon( playerState_t *ps )
   weapon_t      weapon = ps->weapon;
   weaponMode_t  weaponMode = ps->generic1;
 
-
-  // no weapon carried - can't draw it
-  if( weapon == WP_NONE )
-    return;
-
   if( weaponMode <= WPM_NONE || weaponMode >= WPM_NUM_WEAPONMODES )
     weaponMode = WPM_PRIMARY;
 
+  CG_RegisterWeapon( weapon );
   wi = &cg_weapons[ weapon ];
-  if( !wi->registered )
-  {
-    Com_Printf( S_COLOR_YELLOW "WARNING: CG_AddViewWeapon: weapon %d (%s) "
-        "is not registered\n", weapon, BG_Weapon( weapon )->name );
-    return;
-  }
   cent = &cg.predictedPlayerEntity; // &cg_entities[cg.snap->ps.clientNum];
 
   if( ps->persistant[PERS_SPECSTATE] != SPECTATOR_NOT )
+    return;
+
+  // no weapon carried - can't draw it
+  if( weapon == WP_NONE )
     return;
 
   if( ps->pm_type == PM_INTERMISSION )
@@ -1367,8 +1284,7 @@ void CG_AddViewWeapon( playerState_t *ps )
   VectorMA( hand.origin, ( cg_gun_z.value + fovOffset ), cg.refdef.viewaxis[ 2 ], hand.origin );
 
   // Lucifer Cannon vibration effect
-  if( (weapon == WP_LUCIFER_CANNON || weapon == WP_FLAMER) && ps->stats[ STAT_MISC ] > 0 )
-
+  if( weapon == WP_LUCIFER_CANNON && ps->stats[ STAT_MISC ] > 0 )
   {
     float fraction;
 
@@ -1377,54 +1293,6 @@ void CG_AddViewWeapon( playerState_t *ps )
               hand.origin );
     VectorMA( hand.origin, random( ) * fraction, cg.refdef.viewaxis[ 1 ],
               hand.origin );
-  }
-  
-  // Rifle FireMode2 vibration effect
-  
-
-  if( weapon == WP_MACHINEGUN && weaponMode == WPM_SECONDARY && ( cent->currentState.eFlags & EF_FIRING2 ) )
-
-  {
-    VectorMA( hand.origin, random( ) * 0, cg.refdef.viewaxis[ 0 ],
-              hand.origin );
-    VectorMA( hand.origin, random( ) * 3, cg.refdef.viewaxis[ 1 ],
-              hand.origin );	  
-			  
-  }
-
-  // Lightning Gun vibration effect
-  if( ( weapon == WP_LIGHTNING_GUN ) && ps->eFlags & EF_FIRING )
-  {
-    VectorMA( hand.origin, random( ) * 0.1, cg.refdef.viewaxis[ 0 ],
-              hand.origin );
-    VectorMA( hand.origin, random( ) * 0.1, cg.refdef.viewaxis[ 1 ],
-              hand.origin );
-  }
-
-  // Grenade animations
-  // too tired to do this the right way...
-  if( weapon == WP_GRENADE )
-  {
-    float dx = 8.0f, dy = -5.0f, dz = -5.0f;
-
-    if( ps->stats[ STAT_GRENADES ] <= 0 )
-    {
-      return;
-    }
-
-    if( ps->stats[ STAT_MISC ] > 0 )
-    {
-      dx -= 4.0f * ps->stats[ STAT_MISC ] / 100;
-      dz += 2.0f * ps->stats[ STAT_MISC ] / 100;
-    }
-    else if( ps->weaponTime > 0 )
-    {
-      dz -= 0.015f * ps->weaponTime;
-    }
-
-    VectorMA( hand.origin, dx, cg.refdef.viewaxis[ 0 ], hand.origin );
-    VectorMA( hand.origin, dy, cg.refdef.viewaxis[ 1 ], hand.origin );
-    VectorMA( hand.origin, dz, cg.refdef.viewaxis[ 2 ], hand.origin );
   }
 
   AnglesToAxis( angles, hand.axis );
@@ -1509,10 +1377,10 @@ void CG_DrawItemSelect( rectDef_t *rect, vec4_t color )
   int           numItems = 0, selectedItem = 0;
   int           length;
   qboolean      vertical;
-  // centity_t *cent;
+  centity_t *cent;
   playerState_t *ps;
 
-  // cent = &cg_entities[ cg.snap->ps.clientNum ];
+  cent = &cg_entities[ cg.snap->ps.clientNum ];
   ps = &cg.snap->ps;
 
   // don't display if dead
@@ -1543,28 +1411,15 @@ void CG_DrawItemSelect( rectDef_t *rect, vec4_t color )
     if( !BG_InventoryContainsWeapon( i, cg.snap->ps.stats ) )
       continue;
 
-    if( i == WP_GRENADE && ps->stats[ STAT_GRENADES ] <= 0 )
-    {
+    if( !ps->ammo && !ps->clips && !BG_Weapon( i )->infiniteAmmo )
       colinfo[ numItems ] = 1;
-    }
-    else if( i != WP_GRENADE && !ps->ammo && !ps->clips && !BG_Weapon( i )->infiniteAmmo )
-    {
-      colinfo[ numItems ] = 1;
-    }
     else
-    {
       colinfo[ numItems ] = 0;
-    }
 
     if( i == cg.weaponSelect )
       selectedItem = numItems;
 
-    if( !cg_weapons[ i ].registered )
-    {
-      Com_Printf( S_COLOR_YELLOW "WARNING: CG_DrawItemSelect: weapon %d (%s) "
-  	"is not registered\n", i, BG_Weapon( i )->name );
-      continue;
-    }
+    CG_RegisterWeapon( i );
     items[ numItems ] = i;
     numItems++;
   }
@@ -1581,12 +1436,7 @@ void CG_DrawItemSelect( rectDef_t *rect, vec4_t color )
     if( i == cg.weaponSelect - 32 )
       selectedItem = numItems;
 
-    if( !cg_upgrades[ i ].registered )
-    {
-      Com_Printf( S_COLOR_YELLOW "WARNING: CG_DrawItemSelect: upgrade %d (%s) "
-  	"is not registered\n", i, BG_Upgrade( i )->name );
-      continue;
-    }
+    CG_RegisterUpgrade( i );
     items[ numItems ] = i + 32;
     numItems++;
   }
@@ -1673,7 +1523,7 @@ void CG_DrawItemSelectText( rectDef_t *rect, float scale, int textStyle )
     {
       if( ( name = cg_weapons[ cg.weaponSelect ].humanName ) )
       {
-        w = UI_Text_Width( name, scale );
+        w = UI_Text_Width( name, scale, 0 );
         x = rect->x + rect->w / 2;
         UI_Text_Paint( x - w / 2, rect->y + rect->h, scale, color, name, 0, 0, textStyle );
       }
@@ -1686,7 +1536,7 @@ void CG_DrawItemSelectText( rectDef_t *rect, float scale, int textStyle )
     {
       if( ( name = cg_upgrades[ cg.weaponSelect - 32 ].humanName ) )
       {
-        w = UI_Text_Width( name, scale );
+        w = UI_Text_Width( name, scale, 0 );
         x = rect->x + rect->w / 2;
         UI_Text_Paint( x - w / 2, rect->y + rect->h, scale, color, name, 0, 0, textStyle );
       }
@@ -1835,7 +1685,6 @@ void CG_FireWeapon( centity_t *cent, weaponMode_t weaponMode )
   int               c;
   weaponInfo_t      *wi;
   weapon_t          weaponNum;
-  qboolean          skipSound = qfalse;
 
   es = &cent->currentState;
 
@@ -1849,15 +1698,11 @@ void CG_FireWeapon( centity_t *cent, weaponMode_t weaponMode )
 
   if( weaponNum >= WP_NUM_WEAPONS )
   {
-    CG_Error( "CG_FireWeapon: ent->weapon >= WP_NUM_WEAPONS" );
+    CG_Error( _("CG_FireWeapon: ent->weapon >= WP_NUM_WEAPONS") );
     return;
   }
 
   wi = &cg_weapons[ weaponNum ];
-
-  if( wi->wim[ weaponMode ].continuousFlash &&
-      cent->muzzleFlashTime >= cg.time - 100 )
-    skipSound = qtrue;
 
   // mark the entity as muzzle flashing, so when it is added it will
   // append the flash to the weapon model
@@ -1869,9 +1714,6 @@ void CG_FireWeapon( centity_t *cent, weaponMode_t weaponMode )
         !CG_IsParticleSystemInfinite( cent->muzzlePS ) )
       cent->muzzlePsTrigger = qtrue;
   }
-
-  if( skipSound )
-    return;
 
   // play a sound
   for( c = 0; c < 4; c++ )
@@ -1885,14 +1727,6 @@ void CG_FireWeapon( centity_t *cent, weaponMode_t weaponMode )
     c = rand( ) % c;
     if( wi->wim[ weaponMode ].flashSound[ c ] )
       trap_S_StartSound( NULL, es->number, CHAN_WEAPON, wi->wim[ weaponMode ].flashSound[ c ] );
-  }
-
-  if( cent == &cg.predictedPlayerEntity )
-  {
-    float quake;
-
-    quake = wi->wim[ weaponMode ].flashQuake;
-    CG_InduceViewQuake( NULL, quake );
   }
 }
 
@@ -1910,7 +1744,7 @@ void CG_MissileHitWall( weapon_t weaponNum, weaponMode_t weaponMode, int clientN
   qhandle_t           mark = 0;
   qhandle_t           ps = 0;
   int                 c;
-  float               radius = 1.0f, quake;
+  float               radius = 1.0f;
   weaponInfo_t        *weapon = &cg_weapons[ weaponNum ];
 
   if( weaponMode <= WPM_NONE || weaponMode >= WPM_NUM_WEAPONMODES )
@@ -1919,7 +1753,6 @@ void CG_MissileHitWall( weapon_t weaponNum, weaponMode_t weaponMode, int clientN
   mark = weapon->wim[ weaponMode ].impactMark;
   radius = weapon->wim[ weaponMode ].impactMarkSize;
   ps = weapon->wim[ weaponMode ].impactParticleSystem;
-  quake = weapon->wim[ weaponMode ].impactQuake;
 
   if( soundType == IMPACTSOUND_FLESH )
   {
@@ -1973,11 +1806,6 @@ void CG_MissileHitWall( weapon_t weaponNum, weaponMode_t weaponMode, int clientN
   //
   if( radius > 0.0f )
     CG_ImpactMark( mark, origin, dir, random( ) * 360, 1, 1, 1, 1, qfalse, radius, qfalse );
-
-  if( weaponNum == WP_LUCIFER_CANNON )
-    quake *= charge;
-
-  CG_InduceViewQuake( origin, quake );
 }
 
 
@@ -1991,7 +1819,6 @@ void CG_MissileHitEntity( weapon_t weaponNum, weaponMode_t weaponMode,
 {
   vec3_t        normal;
   weaponInfo_t  *weapon = &cg_weapons[ weaponNum ];
-  float         quake = weapon->wim[ weaponMode ].impactQuake;
 
   VectorCopy( dir, normal );
   VectorInverse( normal );
@@ -2021,11 +1848,6 @@ void CG_MissileHitEntity( weapon_t weaponNum, weaponMode_t weaponMode,
           
     CG_MissileHitWall( weaponNum, weaponMode, 0, origin, dir, sound, charge );
   }
-
-  if( weaponNum == WP_LUCIFER_CANNON )
-    quake *= charge;
-
-  CG_InduceViewQuake( origin, quake );
 }
 
 

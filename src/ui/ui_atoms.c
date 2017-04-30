@@ -183,11 +183,16 @@ static void UI_MessageMode_f( void )
 
 static void UI_Me_f( void )
 {
-  char buf[ MAX_SAY_TEXT - 4 ];
+  char buf[ MAX_SAY_TEXT - 4 ], *cmd;
 
   UI_ConcatArgs( 1, buf, sizeof( buf ) );
 
-  trap_Cmd_ExecuteText( EXEC_APPEND, va( "say \"/me %s\"", buf ) );
+  if( uiInfo.chatTeam )
+    cmd = "say_team";
+  else
+    cmd = "say";
+
+  trap_Cmd_ExecuteText( EXEC_APPEND, va( "%s \"/me %s\"", cmd, buf ) );
 }
 
 struct uicmd
