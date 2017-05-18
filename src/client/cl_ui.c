@@ -1045,6 +1045,22 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 	case UI_R_REMAP_SHADER:
 		re.RemapShader( VMA(1), VMA(2), VMA(3) );
 		return 0;
+		
+#ifdef USE_CODEC_BINK
+	case UI_CIN_PLAYBINK:
+	  Com_DPrintf("UI_CIN_PlayBink\n");
+	  return CIN_PlayBink(VMA(1), args[2], args[3], args[4], args[5], args[6]);
+
+	case UI_CIN_STOPBINK:
+	  return CIN_StopBink(args[1]);
+
+	case UI_CIN_RUNBINK:
+	  return CIN_RunBink(args[1]);
+
+	case UI_CIN_DRAWBINK:
+	  CIN_DrawBink(args[1]);
+	  return 0;
+#endif
 
   case UI_GETTEXT:
     strncpy( VMA(1), _(VMA(2)), args[3] );

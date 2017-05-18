@@ -597,12 +597,24 @@ float   SCR_ConsoleFontStringWidth( const char *s, int len );
 
 void CL_PlayCinematic_f( void );
 void SCR_DrawCinematic (void);
+
 void SCR_RunCinematic (void);
 void SCR_StopCinematic (void);
 int CIN_PlayCinematic( const char *arg0, int xpos, int ypos, int width, int height, int bits);
 e_status CIN_StopCinematic(int handle);
 e_status CIN_RunCinematic (int handle);
 void CIN_DrawCinematic (int handle);
+//#ifdef USE_CODEC_BINK
+void CL_PlayBink_f( void );
+void SCR_DrawBink (void);
+
+void SCR_RunBink (void);
+void SCR_StopBink (void);
+int CIN_PlayBink( const char *arg0, int xpos, int ypos, int width, int height, int bits);
+e_status CIN_StopBink(int handle);
+e_status CIN_RunBink (int handle);
+void CIN_DrawBink (int handle);
+//#endif
 void CIN_SetExtents (int handle, int x, int y, int w, int h);
 void CIN_SetLooping (int handle, qboolean loop);
 void CIN_UploadCinematic(int handle);

@@ -34,12 +34,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "client.h"
 #include "snd_local.h"
+#ifdef USE_CODEC_BINK
+#include "../libffmpeg/bink.c" //im sure, need do that
+#endif
 
 #define MAXSIZE				8
 #define MINSIZE				4
 
 #define DEFAULT_CIN_WIDTH	512
 #define DEFAULT_CIN_HEIGHT	512
+
+#define DEFAULT_BINK_WIDTH	512
+#define DEFAULT_BINK_HEIGHT	512
 
 #define ROQ_QUAD			0x1000
 #define ROQ_QUAD_INFO		0x1001
@@ -52,11 +58,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ZA_SOUND_STEREO		0x1021
 
 #define MAX_VIDEO_HANDLES	16
+#define MAX_BVIDEO_HANDLES	16
 
 extern glconfig_t glConfig;
 
 
 static void RoQ_init( void );
+static void BINK_init( void );
 
 /******************************************************************************
 *
@@ -91,8 +99,22 @@ typedef struct {
 } cinematics_t;
 
 typedef struct {
+	byte				linbuf[DEFAULT_BINK_WIDTH*DEFAULT_BINK_HEIGHT*4*2];
+	byte				file[65536];
+	short				sqrTable[256];
+
+	int		mcomp[256];
+	byte				*qStatus[2][32768];
+
+	long				oldXOff, oldYOff, oldysize, oldxsize;
+
+	int					currentHandle;
+} bink_t;
+
+typedef struct {
 	char				fileName[MAX_OSPATH];
 	int					CIN_WIDTH, CIN_HEIGHT;
+	int					BINK_WIDTH, BINK_HEIGHT;
 	int					xpos, ypos, width, height;
 	qboolean			looping, holdAtEnd, dirty, alterGameState, silent, shader;
 	fileHandle_t		iFile;
@@ -103,6 +125,11 @@ typedef struct {
 	long				RoQPlayed;
 	long				ROQSize;
 	unsigned int		RoQFrameSize;
+#ifdef USE_CODEC_BINK
+	long				BINKPlayed;
+	long				BINKSize;
+	unsigned int		BINKFrameSize;
+#endif
 	long				onQuad;
 	long				numQuads;
 	long				samplesPerLine;
@@ -128,10 +155,20 @@ typedef struct {
 	int					playonwalls;
 	byte*				buf;
 	long				drawX, drawY;
+	
+	long				BinkPlayed;
+	long				BinkSize;
+	unsigned int		BinkFrameSize;
+	
 } cin_cache;
-
+#ifdef USE_CODEC_BINK
+static bink_t		    bink;
+#endif
 static cinematics_t		cin;
 static cin_cache		cinTable[MAX_VIDEO_HANDLES];
+#ifdef USE_CODEC_BINK
+static cin_cache		binkTable[MAX_BVIDEO_HANDLES];
+#endif
 static int				currentHandle = -1;
 static int				CL_handle = -1;
 
@@ -161,6 +198,18 @@ static int CIN_HandleForVideo(void) {
 	return -1;
 }
 
+
+static int CIN_HandleForBVideo(void) {
+	int		i;
+
+	for ( i = 0 ; i < MAX_BVIDEO_HANDLES ; i++ ) {
+		if ( cinTable[i].fileName[0] == 0 ) {
+			return i;
+		}
+	}
+	Com_Error( ERR_DROP, _("CIN_HandleForBVideo: none free") );
+	return -1;
+}
 
 extern int CL_ScaledMilliseconds(void);
 
@@ -1051,6 +1100,20 @@ static void initRoQ( void )
 	ROQ_GenYUVTables();
 	RllSetupTable();
 }
+#ifdef USE_CODEC_BINK
+static void initBINK( void ) 
+{
+	int bundle_num;
+	
+	if (currentHandle < 0) return;
+
+	cinTable[currentHandle].VQNormal = (void (*)(byte *, void *))blitVQQuad32fs;
+	cinTable[currentHandle].VQBuffer = (void (*)(byte *, void *))blitVQQuad32fs;
+	cinTable[currentHandle].samplesPerPixel = 4;
+	return read_bundle;
+//	RllSetupTable();
+}
+#endif
 
 /******************************************************************************
 *
@@ -1254,7 +1317,26 @@ static void RoQ_init( void )
 	}
 
 }
+#ifdef USE_CODEC_BINK
+/******************************************************************************
+*
+* Function:		
+*
+* Description:	
+*
+******************************************************************************/
 
+static void BINK_init( void )
+{
+	// we need to use CL_ScaledMilliseconds because of the smp mode calls from the renderer
+	cinTable[currentHandle].startTime = binkTable[currentHandle].lastTime = CL_ScaledMilliseconds()*com_timescale->value;
+
+	cinTable[currentHandle].BINKPlayed = 24;
+	
+	return decode_init;
+
+}
+#endif
 /******************************************************************************
 *
 * Function:		
@@ -1286,6 +1368,32 @@ static void RoQShutdown( void ) {
 	cinTable[currentHandle].fileName[0] = 0;
 	currentHandle = -1;
 }
+
+#ifdef USE_CODEC_BINK
+static void binkShutdown( void ) {
+	if (!binkTable[currentHandle].buf) {
+		return;
+	}
+
+	if ( binkTable[currentHandle].status == FMV_IDLE ) {
+		return;
+	}
+	Com_DPrintf(_("finished bink\n"));
+	binkTable[currentHandle].status = FMV_IDLE;
+
+	if (binkTable[currentHandle].iFile) {
+		FS_FCloseFile( binkTable[currentHandle].iFile );
+		binkTable[currentHandle].iFile = 0;
+	}
+
+	if (binkTable[currentHandle].alterGameState) {
+		cls.state = CA_DISCONNECTED;
+		CL_handle = -1;
+	}
+	binkTable[currentHandle].fileName[0] = 0;
+	currentHandle = -1;
+}
+#endif
 
 /*
 ==================
@@ -1484,6 +1592,126 @@ int CIN_PlayCinematic( const char *arg, int x, int y, int w, int h, int systemBi
 	return -1;
 }
 
+#ifdef USE_CODEC_BINK
+
+/*
+==================
+SCR_StopBink
+==================
+*/
+e_status CIN_StopBink(int handle) {
+	
+	if (handle < 0 || handle>= MAX_BVIDEO_HANDLES == FMV_EOF) return FMV_EOF;
+	currentHandle = handle;
+
+	Com_DPrintf("trFMV::stop(), closing %s\n", cinTable[currentHandle].fileName);
+
+	if (!cinTable[currentHandle].buf) {
+		return FMV_EOF;
+	}
+
+	if (cinTable[currentHandle].alterGameState) {
+		if ( cls.state != CA_BINK ) {
+			return cinTable[currentHandle].status;
+		}
+	}
+
+	RoQShutdown();
+
+	return FMV_EOF;
+}
+#endif
+#ifdef USE_CODEC_BINK
+/*
+==================
+SCR_RunBink
+
+Fetch and decompress the pending frame
+==================
+*/
+
+
+e_status CIN_RunBink (int handle)
+{
+	int	start = 0;
+	int     thisTime = 0;
+
+	if (handle < 0 || handle>= MAX_BVIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return FMV_EOF;
+		
+	Com_Printf ("Bink Player may be buggy, it's on Alpha!");
+	
+	currentHandle = handle;
+
+/*	if (cinTable[currentHandle].alterGameState) {
+		if ( cls.state != CA_BINK ) {
+			return cinTable[currentHandle].status;
+		}
+	}*/
+	
+	//decoder_init(); //init decoder
+	
+
+}
+
+#endif
+#ifdef USE_CODEC_BINK
+/*
+=============================
+CIN_PlayBink
+
+Some Epic STUFF
+=============================
+*/
+int CIN_PlayBink( const char *arg, int x, int y, int w, int h, int systemBits ) {
+	unsigned short BnKID;
+	char	name[MAX_OSPATH];
+	int		i;
+
+	if (strstr(arg, "/") == NULL && strstr(arg, "\\") == NULL) {
+		Com_sprintf (name, sizeof(name), "binkvideo/%s", arg);
+	} else {
+		Com_sprintf (name, sizeof(name), "%s", arg);
+	}
+
+	Com_DPrintf("SCR_PlayBink( %s )\n", arg);
+
+	Com_Memset(&cin, 0, sizeof(bink_t) );
+	currentHandle = CIN_HandleForVideo();
+
+	cin.currentHandle = currentHandle;
+
+	strcpy(cinTable[currentHandle].fileName, name);
+
+	if (cinTable[currentHandle].BinkSize<=0) {
+		Com_DPrintf("play(%s), BinkSize<=0\n", arg);
+		cinTable[currentHandle].fileName[0] = 0;
+		return -1;
+	}
+
+	CIN_SetExtents(currentHandle, x, y, w, h);
+	CIN_SetLooping(currentHandle, (systemBits & CIN_loop)!=0);
+	
+	cinTable[currentHandle].BINK_HEIGHT = DEFAULT_BINK_HEIGHT;
+	cinTable[currentHandle].BINK_WIDTH  =  DEFAULT_BINK_WIDTH;
+	cinTable[currentHandle].holdAtEnd = (systemBits & CIN_hold) != 0;
+	cinTable[currentHandle].alterGameState = (systemBits & CIN_system) != 0;
+	cinTable[currentHandle].playonwalls = 1;
+	cinTable[currentHandle].silent = (systemBits & CIN_silent) != 0;
+	cinTable[currentHandle].shader = (systemBits & CIN_shader) != 0;
+
+	if (cinTable[currentHandle].alterGameState) {
+		// close the menu
+		if ( uivm ) {
+			VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_NONE );
+		}
+	} else {
+		cinTable[currentHandle].playonwalls = cl_inGameVideo->integer;
+	}
+
+	initRoQ();
+	
+	}
+#endif
 void CIN_SetExtents (int handle, int x, int y, int w, int h) {
 	if (handle < 0 || handle>= MAX_VIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return;
 	cinTable[handle].xpos = x;
@@ -1617,6 +1845,115 @@ void SCR_DrawCinematic (void) {
 		CIN_DrawCinematic(CL_handle);
 	}
 }
+
+#ifdef USE_CODEC_BINK
+/*
+==================
+SCR_DrawBink
+
+==================
+
+static int opt_show_mode(void *optctx, const char *opt, const char *arg)
+{
+    show_mode = !strcmp(arg, "video") ? SHOW_MODE_VIDEO :
+                parse_number_or_die(opt, arg, OPT_INT, 0, SHOW_MODE_NB-1);
+    return 0;
+}*/
+
+void CIN_DrawBink (int handle) {
+	float	x, y, w, h;
+	byte	*buf;
+	char	*is;
+
+	if (handle < 0 || handle>= MAX_BVIDEO_HANDLES  == FMV_EOF) return;
+
+//	if (!cinTable[handle].buf) {
+//		return;
+//	}
+	
+	/* start of FFmpeg code */
+	
+   // SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+   // SDL_RenderClear(renderer);
+    //SDL_RenderPresent(renderer);
+
+	/* end of FFmpeg code */
+	
+/*	x = cinTable[handle].xpos;
+	y = cinTable[handle].ypos;
+	w = cinTable[handle].width;
+	h = cinTable[handle].height;
+	buf = cinTable[handle].buf;*/
+	SCR_AdjustFrom640( &x, &y, &w, &h );
+
+	re.DrawStretchRaw( x, y, w, h, cinTable[handle].drawX, cinTable[handle].drawY, buf, handle, cinTable[handle].dirty);
+	cinTable[handle].dirty = qfalse;
+}
+
+void SCR_DrawBink (void) {
+	if (CL_handle >= 0 && CL_handle < MAX_BVIDEO_HANDLES) {
+		CIN_DrawBink(CL_handle);
+	}
+}
+
+void CL_PlayBink_f(void ) {
+	char	*arg, *s;
+	qboolean	holdatend;
+	int bits = CIN_system;
+//	char		*bink;
+//	char		*file;
+//	char		expanded[MAX_QPATH];
+	
+//	bink = Cmd_Argv(1);
+//	if ( !bink ) {
+//		return;
+//	}
+	
+/*	Com_Printf (expanded, sizeof(expanded), "binkvideo/%s.bik", file);
+	if ( FS_ReadFile (expanded, NULL) == -1 ) {
+		Com_Printf ("Can't find %s\n", expanded);
+		return;
+	}*/
+		
+
+	Com_DPrintf("CL_PlayBink_f\n");
+	if (cls.state == CA_BINK) {
+		SCR_StopCinematic();
+	}
+	
+	arg = Cmd_Argv( 1 );
+	s = Cmd_Argv(2);
+
+	holdatend = qfalse;
+	if ((s && s[0] == '1') || Q_stricmp(arg,"demoend.bik")==0 || Q_stricmp(arg,"end.bik")==0) {
+		bits |= CIN_hold;
+	}
+	if (s && s[0] == '2') {
+		bits |= CIN_loop;
+	}
+
+	S_StopAllSounds ();
+
+	CL_handle = CIN_PlayBink( arg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, bits );
+	if (CL_handle >= 0) {
+		do {
+			SCR_RunBink();
+		} while (binkTable[currentHandle].buf == NULL && binkTable[currentHandle].status == FMV_PLAY);		// wait for first frame (load codebook and sound)
+	}
+//omg, so crap
+//	return Bink_Init
+
+}
+
+void SCR_RunBink (void)
+{
+	if (CL_handle >= 0 && CL_handle < MAX_VIDEO_HANDLES) {
+		CIN_RunBink(CL_handle);
+	}
+}
+
+
+#endif
 
 void SCR_RunCinematic (void)
 {

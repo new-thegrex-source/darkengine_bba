@@ -3523,6 +3523,9 @@ void CL_Init( void ) {
 	Cmd_AddCommand ("demo", CL_PlayDemo_f);
 	Cmd_SetCommandCompletionFunc( "demo", CL_CompleteDemoName );
 	Cmd_AddCommand ("cinematic", CL_PlayCinematic_f);
+#ifdef USE_CODEC_BINK
+	Cmd_AddCommand ("bink", CL_PlayBink_f);
+#endif
 	Cmd_AddCommand ("stoprecord", CL_StopRecord_f);
 	Cmd_AddCommand ("connect", CL_Connect_f);
 	Cmd_AddCommand ("reconnect", CL_Reconnect_f);
@@ -3595,6 +3598,7 @@ void CL_Shutdown( void ) {
 	Cmd_RemoveCommand ("record");
 	Cmd_RemoveCommand ("demo");
 	Cmd_RemoveCommand ("cinematic");
+	Cmd_RemoveCommand ("bink");
 	Cmd_RemoveCommand ("stoprecord");
 	Cmd_RemoveCommand ("connect");
 	Cmd_RemoveCommand ("localservers");

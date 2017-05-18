@@ -737,6 +737,21 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
 
+#ifdef USE_CODEC_BINK
+	case CG_CIN_PLAYBINK:
+	  return CIN_PlayBink(VMA(1), args[2], args[3], args[4], args[5], args[6]);
+
+	case CG_CIN_STOPBINK:
+	  return CIN_StopBink(args[1]);
+
+	case CG_CIN_RUNBINK:
+	  return CIN_RunBink(args[1]);
+
+	case CG_CIN_DRAWBINK:
+	  CIN_DrawBink(args[1]);
+	  return 0;
+#endif
+		
   case CG_GETTEXT:
     strncpy( VMA(1), _(VMA(2)), args[3] );
     return 0;

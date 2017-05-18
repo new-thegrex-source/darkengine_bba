@@ -594,7 +594,7 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 
 	// wide aspect ratio screens need to have the sides cleared
 	// unless they are displaying game renderings
-	if ( cls.state != CA_ACTIVE && cls.state != CA_CINEMATIC ) {
+	if ( cls.state != CA_ACTIVE && cls.state != CA_CINEMATIC && cls.state != CA_BINK ) {
 		if ( cls.glconfig.vidWidth * 480 > cls.glconfig.vidHeight * 640 ) {
 			re.SetColor( g_color_table[0] );
 			re.DrawStretchPic( 0, 0, cls.glconfig.vidWidth, cls.glconfig.vidHeight, 0, 0, 0, 0, cls.whiteShader );
@@ -612,6 +612,11 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		case CA_CINEMATIC:
 			SCR_DrawCinematic();
 			break;
+#ifdef USE_CODEC_BINK
+		case CA_BINK:
+			SCR_DrawBink();
+			break;
+#endif
 		case CA_DISCONNECTED:
 			// force menu up
 			S_StopAllSounds();

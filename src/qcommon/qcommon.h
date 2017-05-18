@@ -248,11 +248,11 @@ extern int demo_protocols[];
 
 // override on command line, config files etc.
 #ifndef MASTER_SERVER_NAME
-#define MASTER_SERVER_NAME	"master.tremulous.net"
+#define MASTER_SERVER_NAME	"bbdemo.servegame.com"
 #endif
 
-#define	PORT_MASTER			30710
-#define	PORT_SERVER			30720
+#define	PORT_MASTER			40210
+#define	PORT_SERVER			21104
 #define	NUM_SERVER_PORTS	4		// broadcast scan this many ports after
 									// PORT_SERVER so a single machine can
 									// run multiple servers
@@ -569,7 +569,7 @@ issues.
 
 #define	MAX_FILE_HANDLES	64
 
-#define BASEGAME "base"
+#define BASEGAME "main" //
 
 #ifdef DEDICATED
 #	define Q3CONFIG_CFG "autogen_server.cfg"
@@ -774,6 +774,9 @@ typedef struct {
 	void			*evPtr;			// this must be manually freed if not NULL
 } sysEvent_t;
 
+void	Sys_ShowConsole( int level, qboolean quitOnClose );
+void	Sys_SetErrorText( const char *text );
+
 void		Com_QueueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 int			Com_EventLoop( void );
 sysEvent_t	Com_GetSystemEvent( void );
@@ -809,6 +812,9 @@ extern	cvar_t	*com_speeds;
 extern	cvar_t	*com_timescale;
 extern	cvar_t	*com_sv_running;
 extern	cvar_t	*com_cl_running;
+#ifdef Enable_Classic_Q3Q4_BlueConsole
+extern	cvar_t	*com_viewlog;
+#endif
 extern	cvar_t	*com_version;
 extern	cvar_t	*com_blood;
 extern	cvar_t	*com_buildScript;		// for building release pak files

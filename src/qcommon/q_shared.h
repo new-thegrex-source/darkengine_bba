@@ -27,17 +27,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME              "tremulous"
+#define PRODUCT_NAME              "bb_demo"
 
 #ifdef _MSC_VER
 # define PRODUCT_VERSION          "1.1.0"
 #endif
 
-#define CLIENT_WINDOW_TITLE       "Tremulous " PRODUCT_VERSION
-#define CLIENT_WINDOW_MIN_TITLE   "Tremulous"
+#define CLIENT_WINDOW_TITLE       "Bikini Bottom Arena " PRODUCT_VERSION
+#define CLIENT_WINDOW_MIN_TITLE   "BBA"
 #define Q3_VERSION                 PRODUCT_NAME " " PRODUCT_VERSION
 
-#define GAMENAME_FOR_MASTER       "Tremulous"
+#define GAMENAME_FOR_MASTER       "bba_demo"
 
 #define MAX_TEAMNAME 32
 
@@ -1143,13 +1143,13 @@ typedef struct playerState_s {
 	int			torsoAnim;		// mask off ANIM_TOGGLEBIT
 
 	int			tauntTimer;		// don't allow another taunt until this runs out
-
-	int			weaponAnim;		// mask off ANIM_TOGGLEBIT
-
-	int			movementDir;	// a number 0 to 7 that represents the reletive angle
+	
+	int			movementDir;	// a number 0 to 7 that represents the relative angle
 								// of movement to the view angle (axial and diagonals)
 								// when at rest, the value will remain unchanged
 								// used to twist the legs during strafing
+
+	int			weaponAnim;		// mask off ANIM_TOGGLEBIT
 
 	vec3_t		grapplePoint;	// location of grapple to pull towards if PMF_GRAPPLE_PULL
 
@@ -1314,7 +1314,8 @@ typedef enum {
 	CA_LOADING,			// only during cgame initialization, never during main loop
 	CA_PRIMED,			// got gamestate, waiting for first frame
 	CA_ACTIVE,			// game views should be displayed
-	CA_CINEMATIC		// playing a cinematic or a static pic, not connected to a server
+	CA_CINEMATIC,		// playing a cinematic or a static pic, not connected to a server
+	CA_BINK		        // playing a VERY UBER TOPSECRET BINK STUFF
 } connstate_t;
 
 // font support 
@@ -1418,7 +1419,7 @@ typedef enum {
 #define MAX_SERVERSTATUSREQUESTS	16
 
 #define MAX_EMOTICON_NAME_LEN 16
-#define MAX_EMOTICONS 64
+#define MAX_EMOTICONS 2048
 
 typedef struct
 {
