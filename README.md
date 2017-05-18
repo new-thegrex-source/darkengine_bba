@@ -18,6 +18,10 @@ Based in i18n patch, for Tremulous since 2008:
 * MP3 Support (in Progress)
 * OGG Video Support (in Progress)
 * XviD Video Support (Probably, in plans)
+* Bink Video Support (Probably, in plans)
+* Full Compability with Tremulous GPP1 QVM's
+* Cyrillic Support
+* UTF8 Support, Сука Блять xD
   
 ## i18n screenshots
 
