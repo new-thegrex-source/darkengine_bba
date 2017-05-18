@@ -1,50 +1,18 @@
-## Dark Engine
-Based in i18n patch, for Tremulous since 2008:
+## Documenation (ENG)
 
-* OC mod:
-  * http://tremulous.net/forum/index.php?topic=12579.0
-  * http://clanzerorisk.nfshost.com/index.php/topic,1327.0.html 
-  * superpie's demo (thanks!): https://www.youtube.com/watch?v=IJHHYkd7OKo
-
-* Domination mod:
-  * http://tremulous.net/forum/index.php?topic=14058.0
-
-* i18n (unicode and translation support):
-  * http://tremulous.net/forum/index.php?topic=14699.0
-  * [screenshots](docs/screenshots/i18n/screenshots.md)
-
-## Features:
-
-* MP3 Support (in Progress)
-* OGG Video Support (in Progress)
-* XviD Video Support (Probably, in plans)
-* Bink Video Support (Probably, in plans)
-* Full Compability with Tremulous GPP1 QVM's
-* Cyrillic Support
-* UTF8 Support, Сука Блять xD
+* For compile you need:
   
-## i18n screenshots
+  * MinGW with gcc (win32)
+  
+# Insctruction for newbies (win32)
 
-![screenshot: i18n.png](docs/screenshots/i18n/i18n.png)
+* Preparing:
 
-![screenshot: shot-i18n-chat.jpg](docs/screenshots/i18n/shot-i18n-chat.jpg)
+1.If you need compile QVMs, then open Makefile (root folder of project) and change BUILD_GAME_QVM=0 to BUILD_GAME_QVM=1
 
-![screenshot: shot-i18n-console.jpg](docs/screenshots/i18n/shot-i18n-console.jpg)
+* Building:
 
-![screenshot: i18n-shot-chatfield.jpg](docs/screenshots/i18n/i18n-shot-chatfield.jpg)
-
-![screenshot: i18n-shot-chatfeed.jpg](docs/screenshots/i18n/i18n-shot-chatfeed.jpg)
-
-## Domination screenshots
-
-![screenshot: domination9.png](docs/screenshots/domination/domination9.png)
-
-## OC screenshots
-
-Screenshots from [superpie's demo](https://www.youtube.com/watch?v=IJHHYkd7OKo).
-
-![screenshot: oc-1.png](docs/screenshots/oc/oc-1.png)
-
-![screenshot: oc-2.png](docs/screenshots/oc/oc-2.png)
-
-![screenshot: oc-3.png](docs/screenshots/oc/oc-3.png)
+1.Launch C:\MinGW\Msys\1.0\msys.bat
+2.type cd <path to ur source> and press Enter (as exemple, cd C:\Source)
+2.type make, then press enter 
+4.Compiled stuff you can find at: build/some folder inside/base/vm
