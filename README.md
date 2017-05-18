@@ -13,6 +13,11 @@ Based in i18n patch, for Tremulous since 2008:
   * http://tremulous.net/forum/index.php?topic=14699.0
   * [screenshots](docs/screenshots/i18n/screenshots.md)
 
+## Features:
+	*MP3 Support (in Progress)
+	*OGG Video Support (in Progress)
+	*XviD Video Support (Probably, in plans)
+  
 ## i18n screenshots
 
 ![screenshot: i18n.png](docs/screenshots/i18n/i18n.png)
